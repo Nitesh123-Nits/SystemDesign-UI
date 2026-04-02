@@ -886,8 +886,26 @@ function renderQuizCard() {
   if (card) card.classList.remove('flipped');
 }
 
+// ── THEME MANAGEMENT ─────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.textContent = '☀️';
+  }
+}
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  const icon = document.getElementById('themeIcon');
+  if (icon) icon.textContent = isLight ? '☀️' : '🌙';
+  showToast(isLight ? 'Light Mode Activated' : 'Dark Mode Activated');
+}
+
 // ── INIT ───────────────────────────────────────────────────
 function init() {
+  initTheme();
   updateStreak();
   renderHome();
   renderTopicChips('topicChipsQ');
@@ -941,8 +959,10 @@ function init() {
     });
   });
 
+  // Theme
+  document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+
   // Quiz
-  document.getElementById('quizModeBtn')?.addEventListener('click', startQuiz);
   document.getElementById('quizCloseBtn')?.addEventListener('click', closeQuiz);
   document.getElementById('quizCardWrap')?.addEventListener('click', () => {
     quizFlipped = !quizFlipped;
@@ -980,6 +1000,7 @@ function init() {
       if (e.key === 't') { navigateTo('tradeoffs'); renderUniversalTradeoffs(); }
       gKeyBuffer = '';
     }
+    if (!inInput && e.key === 't') toggleTheme();
     if (!inInput && e.shiftKey && e.key === 'R') shuffleQuestion();
   });
 
