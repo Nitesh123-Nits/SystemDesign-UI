@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SystemDesign.Pro — Top Interview Questions</title>
+  <meta name="description" content="One-stop interactive preparation for top system design interview questions. Master scalability, databases, caching, microservices and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&family=Inter:wght@300..900&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="retro-mode">
+  <div class="crt-scanline"></div>
+  <!-- Animated Background -->
+  <div class="bg-grid-retro"></div>
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">SystemDesign<span class="logo-accent">.Pro</span></span>
+      </div>
+      <nav class="nav" id="nav">
+        <a href="#" class="nav-link active" data-view="home" id="nav-home">Home</a>
+        <a href="#" class="nav-link" data-view="questions" id="nav-questions">Questions</a>
+        <a href="#" class="nav-link" data-view="concepts" id="nav-concepts">Concepts</a>
+        <a href="#" class="nav-link" data-view="tradeoffs" id="nav-tradeoffs">Trade-offs</a>
+        <a href="#" class="nav-link" data-view="progress" id="nav-progress">My Progress</a>
+      </nav>
+      <div class="header-actions">
+        <span class="search-shortcut-hint">⌘K</span>
+        <div class="search-btn" id="searchBtn" title="Search questions (Ctrl+K)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <button class="shortcuts-btn" id="shortcutsBtn" title="Keyboard shortcuts (?)">?</button>
+        <div class="streak-badge" id="streakDisplay" title="Your streak">🔥 <span id="streakCount">0</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Overlay -->
+  <div class="search-overlay hidden" id="searchOverlay">
+    <div class="search-modal">
+      <div class="search-input-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search system design questions..." autocomplete="off" />
+        <kbd class="search-esc" id="searchClose">ESC</kbd>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="search-backdrop" id="searchBackdrop"></div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ===== HOME VIEW ===== -->
+    <section class="view active" id="view-home">
+      <div class="hero">
+        <div class="hero-badge">LOAD "SYSTEM_DESIGN.PRO" ,8,1</div>
+        <h1 class="hero-title arcade-title"><span class="glitch-text" data-text="SYSTEM">SYSTEM</span> <span class="logo-accent arcade-glow">DESIGN</span>.PRO</h1>
+        <p class="hero-subtitle retro-text">INSERT COIN TO START YOUR ARCHITECTURAL JOURNEY. MASTER THE ART OF SCALABLE SYSTEMS WITH 16-BIT PRECISION.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="startBtn">Start Preparing →</button>
+          <button class="btn btn-ghost" id="conceptsBtn">Browse Concepts</button>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-num">14</div>
+            <div class="stat-label">Top Questions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">33</div>
+            <div class="stat-label">Core Concepts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">10</div>
+            <div class="stat-label">Universal Trade-offs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured Questions -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">🔥 Most Asked Questions</h2>
+          <button class="btn btn-sm btn-ghost" id="viewAllBtn">View All →</button>
+        </div>
+        <div class="featured-grid" id="featuredGrid"></div>
+      </div>
+
+      <!-- Topic Filter on Home -->
+      <div class="section">
+        <h2 class="section-title">📚 Browse by Topic</h2>
+        <div class="topic-chips" id="topicChipsHome"></div>
+      </div>
+    </section>
+
+    <!-- ===== QUESTIONS VIEW ===== -->
+    <section class="view hidden" id="view-questions">
+      <div class="questions-header">
+        <div>
+          <h1 class="page-title">All Questions</h1>
+          <p class="page-subtitle">Pick a question to start your interactive session</p>
+        </div>
+        <div class="filter-row">
+          <button class="shuffle-btn" id="shuffleBtn">🔀 Shuffle</button>
+          <div class="difficulty-filter">
+            <button class="filter-btn active" data-diff="all">All</button>
+            <button class="filter-btn" data-diff="easy">Easy</button>
+            <button class="filter-btn" data-diff="medium">Medium</button>
+            <button class="filter-btn" data-diff="hard">Hard</button>
+          </div>
+        </div>
+      </div>
+      <div class="topic-chips" id="topicChipsQ"></div>
+      <div class="questions-grid" id="questionsGrid"></div>
+    </section>
+
+    <!-- ===== QUESTION DETAIL VIEW ===== -->
+    <section class="view hidden" id="view-detail">
+      <div class="detail-layout">
+        <!-- Sidebar -->
+        <aside class="detail-sidebar" id="detailSidebar">
+          <button class="back-btn" id="backBtn">← Back</button>
+          <div class="sidebar-question-info" id="sidebarInfo"></div>
+          <nav class="sidebar-nav" id="sidebarNav"></nav>
+          <div class="sidebar-related" id="sidebarRelated"></div>
+        </aside>
+        <!-- Content -->
+        <div class="detail-content" id="detailContent">
+          <div id="detailMain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CONCEPTS VIEW ===== -->
+    <section class="view hidden" id="view-concepts">
+      <div class="view-header">
+        <h1>Core Design Concepts <span class="section-count-badge" id="conceptsCount">0</span></h1>
+        <p>Master the architectural building blocks of scalable systems. Use Quiz Mode to test yourself.</p>
+      </div>
+
+      <!-- Quiz Banner -->
+      <div class="quiz-banner">
+        <div class="quiz-banner-text">
+          <strong>🧠 Concept Quiz Mode</strong>
+          Flash cards for rapid revision — all 20 concepts in a flip-card quiz.
+        </div>
+        <button class="quiz-mode-btn" id="quizModeBtn">▶ Start Quiz</button>
+      </div>
+
+      <!-- Concept Search & Filter -->
+      <div class="concept-search-bar">
+        <input type="text" class="concept-search-input" id="conceptSearchInput" placeholder="🔍 Filter concepts..." />
+        <button class="concept-cat-chip active" data-cat="all">All</button>
+        <button class="concept-cat-chip" data-cat="infra">Infrastructure</button>
+        <button class="concept-cat-chip" data-cat="data">Data</button>
+        <button class="concept-cat-chip" data-cat="patterns">Patterns</button>
+        <button class="concept-cat-chip" data-cat="compare">Comparisons</button>
+      </div>
+
+      <!-- Decision Lab (Interactive) -->
+      <div class="decision-lab" id="decisionLab">
+        <div class="lab-header">
+          <div class="lab-title">🧪 Logic Lab: Technology Decision Matrix</div>
+          <p>Toggle your requirements to see which architectural patterns and technologies fit best.</p>
+        </div>
+        <div class="lab-grid">
+          <div class="lab-controls" id="labControls">
+            <!-- Toggles will be generated here -->
+          </div>
+          <div class="lab-results" id="labResults">
+            <div class="results-placeholder">Select requirements to see recommendations...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="concepts-grid" id="conceptsGrid"></div>
+    </section>
+
+    <!-- ===== PROGRESS VIEW ===== -->
+    <section class="view hidden" id="view-progress">
+      <h1 class="page-title">My Progress</h1>
+      <div class="progress-layout">
+        <div class="progress-overview">
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" class="ring-bg"/>
+              <circle cx="60" cy="60" r="50" class="ring-fill" id="progressRingCircle"/>
+            </svg>
+            <div class="progress-ring-label">
+              <div class="progress-pct" id="progressPct">0%</div>
+              <div class="progress-sub">Completed</div>
+            </div>
+          </div>
+          <div class="progress-stats">
+            <div class="p-stat"><span id="pCompleted">0</span><small>Done</small></div>
+            <div class="p-stat"><span id="pTotal">14</span><small>Total</small></div>
+            <div class="p-stat"><span id="pStreak">0</span><small>Streak 🔥</small></div>
+          </div>
+          <div class="progress-breakdown" id="progressBreakdown"></div>
+        </div>
+        <div class="progress-list" id="progressList"></div>
+      </div>
+    </section>
+
+    <!-- ===== UNIVERSAL TRADEOFFS VIEW ===== -->
+    <section class="view hidden" id="view-tradeoffs">
+      <div class="view-header">
+        <h1>System Design Trade-offs</h1>
+        <p>Master the fundamental choices that define every scalable architecture. Latency, Throughput, Consistency, and more.</p>
+      </div>
+      <div class="tradeoffs-universal-grid" id="tradeoffsUniversalGrid"></div>
+    </section>
+
+  </main>
+
+  <!-- Back to Top -->
+  <div class="back-to-top" id="backToTop" title="Back to Top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg>
+  </div>
+
+  <!-- Quiz Overlay -->
+  <div class="quiz-overlay hidden" id="quizOverlay">
+    <div class="quiz-header">
+      <div class="quiz-progress-text" id="quizProgressText">Card 1 of 20</div>
+      <button class="quiz-close-btn" id="quizCloseBtn">Close Quiz (ESC)</button>
+    </div>
+    <div class="quiz-progress-bar" id="quizProgressBar" style="width: 5%;"></div>
+    
+    <div class="quiz-card-wrap" id="quizCardWrap">
+      <div class="quiz-card" id="quizCard">
+        <div class="quiz-face front">
+          <div class="quiz-face-icon" id="quizFrontIcon">⚖️</div>
+          <div class="quiz-face-label">Question</div>
+          <div class="quiz-face-title" id="quizFrontTitle">Load Balancing</div>
+          <p class="quiz-hint">Click card to flip and see answer</p>
+        </div>
+        <div class="quiz-face back">
+          <div class="quiz-face-label">Key Concept</div>
+          <div class="quiz-face-desc" id="quizBackDesc">
+            Distribute incoming traffic across multiple servers to ensure no single server is overwhelmed.
+          </div>
+          <div class="quiz-hint">Click card to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quiz-actions">
+      <button class="quiz-nav-btn" id="quizPrevBtn">Previous</button>
+      <button class="quiz-nav-btn primary" id="quizNextBtn">Next Card →</button>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Overlay -->
+  <div class="shortcuts-overlay hidden" id="shortcutsOverlay">
+    <div class="shortcuts-modal">
+      <div class="shortcuts-title">⌨️ Keyboard Shortcuts</div>
+      <div class="shortcuts-content">
+        <div class="shortcut-row"><span>Search Questions</span><div class="shortcut-keys"><kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd></div></div>
+        <div class="shortcut-row"><span>Go to Questions</span><div class="shortcut-keys"><kbd class="kbd">g</kbd><kbd class="kbd">q</kbd></div></div>
+        <div class="shortcut-row"><span>Go to Concepts</span><div class="shortcut-keys"><kbd class="kbd">g</kbd><kbd class="kbd">c</kbd></div></div>
+        <div class="shortcut-row"><span>Shuffle Question</span><div class="shortcut-keys"><kbd class="kbd">Shift</kbd><kbd class="kbd">R</kbd></div></div>
+        <div class="shortcut-row"><span>Close Modals</span><div class="shortcut-keys"><kbd class="kbd">ESC</kbd></div></div>
+        <div class="shortcut-row"><span>Show Shortcuts</span><div class="shortcut-keys"><kbd class="kbd">?</kbd></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
