@@ -134,7 +134,7 @@ body {
 }
 #searchInput {
   flex: 1; background: none; border: none; outline: none;
-  font-family: 'Share Tech Mono', monospace; font-size: 18px; color: var(--neon-cyan);
+  font-family: 'Inter', sans-serif; font-size: 16px; color: var(--neon-cyan);
 }
 #searchInput::placeholder { color: rgba(0,240,255,0.3); }
 .search-esc {
@@ -177,9 +177,8 @@ body {
 }
 .arcade-glow { color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
 .retro-text {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 16px; color: var(--text-muted); line-height: 1.8;
-  letter-spacing: 1px;
+  font-family: 'Inter', sans-serif;
+  font-size: 17px; color: var(--text-muted); line-height: 1.7;
 }
 .glitch-text {
   position: relative; display: inline-block;
@@ -219,7 +218,7 @@ body {
 }
 .stat-card:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,240,255,0.4); }
 .stat-num { font-family: 'Orbitron', sans-serif; font-size: 32px; font-weight: 800; }
-.stat-label { font-family: 'VT323', monospace; font-size: 18px; color: var(--text-muted); text-transform: uppercase; }
+.stat-label { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* ── Buttons ── */
 .btn {
@@ -268,7 +267,7 @@ body {
 }
 .q-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 0 20px rgba(255,0,127,0.4); }
 .q-card-title { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; color: #fff; text-shadow: 0 0 5px var(--neon-pink); }
-.q-card-desc { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text-muted); margin-top: 10px; }
+.q-card-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
 .tag {
   font-family: 'VT323', monospace;
   padding: 4px 12px; border-radius: 2px;
@@ -552,8 +551,8 @@ body {
 }
 .concept-icon { font-size: 40px; filter: drop-shadow(0 0 8px var(--card-accent, var(--neon-cyan))); }
 .concept-title { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; color: #fff; margin-top: 10px; }
-.concept-desc { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
-.concept-detail { font-family: 'VT323', monospace; font-size: 16px; color: var(--neon-cyan); letter-spacing: 0.5px; border-top: 1px dashed var(--neon-cyan); padding-top: 15px; }
+.concept-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+.concept-detail { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-muted); border-top: 1px dashed var(--neon-cyan); padding-top: 15px; margin-top: 10px; line-height: 1.6; }
 
 /* ── Progress ── */
 .progress-layout { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: start; }
@@ -655,7 +654,7 @@ body {
 }
 .lrc-cat { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-pink); }
 .lrc-name { font-family: 'Share Tech Mono', monospace; font-size: 18px; color: #fff; text-shadow: 0 0 5px var(--neon-pink); margin: 4px 0; }
-.lrc-reason { font-family: 'VT323', monospace; font-size: 16px; color: var(--text-muted); line-height: 1.5; }
+.lrc-reason { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 
 @media (max-width: 900px) {
   .lab-grid { grid-template-columns: 1fr; }
@@ -1098,7 +1097,7 @@ code {
 .ut-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
 .ut-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--neon-cyan)); }
 .ut-title { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; }
-.ut-desc { font-family: 'VT323', monospace; font-size: 16px; color: var(--text-muted); margin-bottom: 24px; border-left: 2px solid var(--neon-cyan); padding-left: 15px; }
+.ut-desc { font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text-muted); margin-bottom: 24px; border-left: 2px solid var(--neon-cyan); padding-left: 15px; line-height: 1.5; }
 .ut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
 .ut-item {
   padding: 18px; border-radius: 4px;
@@ -1108,7 +1107,7 @@ code {
 .ut-label { font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; }
 .ut-item.pro .ut-label { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
 .ut-item.con .ut-label { color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink); }
-.ut-text { font-family: 'Share Tech Mono', monospace; font-size: 14px; color: var(--text-muted); }
+.ut-text { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-muted); line-height: 1.4; }
 .ut-analogy-row {
   display: flex; align-items: center; gap: 15px;
   padding: 15px; border-radius: 4px;
