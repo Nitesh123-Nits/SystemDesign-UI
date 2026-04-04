@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LLD Interview Prep</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a24;
+    --border: #2a2a3a;
+    --accent1: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --accent4: #f9c74f;
+    --text: #e8e8f0;
+    --muted: #888899;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-head);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.35;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 60px 40px 40px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(108,99,255,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent1);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 30%, var(--accent1) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 40px 0;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 10px 22px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .tab-btn:hover { border-color: var(--accent1); color: var(--text); }
+  .tab-btn.active { background: var(--accent1); border-color: var(--accent1); color: #fff; }
+  .tab-btn.active .dot { background: rgba(255,255,255,0.6); }
+
+  /* MAIN */
+  .main { padding: 32px 40px 60px; max-width: 1200px; margin: 0 auto; }
+
+  /* SECTION */
+  .section { display: none; animation: fadeUp 0.35s ease; }
+  .section.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  /* GRID */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+    background: var(--card-accent, var(--accent1));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .card:hover::before { opacity: 1; }
+  .card:hover { border-color: var(--card-accent, var(--accent1)); }
+
+  .card-icon { font-size: 28px; margin-bottom: 12px; }
+  .card-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .card-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--card-accent, var(--accent1));
+    margin-bottom: 10px;
+  }
+  .card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .card-tag {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+  }
+
+  /* PATTERN CATEGORY HEADERS */
+  .cat-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 36px 0 18px;
+  }
+  .cat-header:first-of-type { margin-top: 0; }
+  .cat-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+  .cat-pill.creational  { background: rgba(108,99,255,0.15); color: var(--accent1); border: 1px solid rgba(108,99,255,0.3); }
+  .cat-pill.structural  { background: rgba(67,233,123,0.12); color: var(--accent3); border: 1px solid rgba(67,233,123,0.3); }
+  .cat-pill.behavioral  { background: rgba(255,101,132,0.12); color: var(--accent2); border: 1px solid rgba(255,101,132,0.3); }
+  .cat-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .cat-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* MODAL */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(6px);
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 36px;
+    position: relative;
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: var(--border); border: none;
+    color: var(--muted); font-size: 18px;
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .modal-close:hover { background: var(--accent2); color: #fff; }
+  .modal-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent1);
+    margin-bottom: 8px;
+  }
+  .modal h2 { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .modal-intent {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .modal-section { margin-top: 20px; }
+  .modal-section h3 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 10px;
+  }
+  .modal-section p, .modal-section li {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .modal-section ul { padding-left: 18px; }
+  .modal-section li { margin-bottom: 6px; }
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #a8b5c8;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    margin-top: 10px;
+  }
+  .kw { color: var(--accent1); }
+  .cm { color: #555; font-style: italic; }
+  .st { color: var(--accent3); }
+  .cl { color: var(--accent4); }
+
+  /* PROGRESS BAR */
+  .stat-bar { display: flex; gap: 16px; justify-content: center; margin: 20px 0 0; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 800; }
+  .stat-lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 40px 20px 24px; }
+    .main { padding: 24px 16px 40px; }
+    .tabs { padding: 16px 16px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">// interview prep</div>
+  <h1>Low Level Design</h1>
+  <p class="hero-sub">OOP Concepts · Design Principles · 23 Design Patterns</p>
+  <div class="stat-bar">
+    <div class="stat"><div class="stat-num" style="color:var(--accent1)">8</div><div class="stat-lbl">OOP Concepts</div></div>
+    <div class="stat"><div class="stat-num" style="color:var(--accent4)">10</div><div class="stat-lbl">Principles</div></div>
+    <div class="stat"><div class="stat-num" style="color:var(--accent2)">23</div><div class="stat-lbl">Design Patterns</div></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('oop')" id="tab-oop">
+    <span class="dot" style="background:var(--accent1)"></span> OOP Concepts
+  </button>
+  <button class="tab-btn" onclick="showTab('principles')" id="tab-principles">
+    <span class="dot" style="background:var(--accent4)"></span> Design Principles
+  </button>
+  <button class="tab-btn" onclick="showTab('patterns')" id="tab-patterns">
+    <span class="dot" style="background:var(--accent2)"></span> Design Patterns
+  </button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- OOP SECTION -->
+  <div class="section active" id="sec-oop">
+    <div class="section-title">// core oop concepts</div>
+    <div class="grid" id="oop-grid"></div>
+  </div>
+
+  <!-- PRINCIPLES SECTION -->
+  <div class="section" id="sec-principles">
+    <div class="section-title">// design principles</div>
+    <div class="grid-2" id="principles-grid"></div>
+  </div>
+
+  <!-- PATTERNS SECTION -->
+  <div class="section" id="sec-patterns">
+    <div class="section-title">// gang of four — 23 patterns</div>
+    <div id="patterns-container"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-label" id="m-label"></div>
+    <h2 id="m-title"></h2>
+    <p class="modal-intent" id="m-intent"></p>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<script>
+const OOP = [
+  {
+    icon: "🔒", title: "Encapsulation",
+    sub: "Data Hiding",
+    accent: "#6c63ff",
+    tag: "Fundamental",
+    desc: "Bundling data and methods that operate on it within a class, restricting direct access from outside.",
+    detail: "Encapsulation binds together the data and functions that manipulate the data, keeping both safe from outside interference and misuse.",
+    keyPoints: ["Use private/protected fields", "Expose via getters/setters", "Prevents invalid state", "Improves maintainability"],
+    example: `<span class="kw">class</span> <span class="cl">BankAccount</span> {
+  <span class="kw">private</span> balance: <span class="kw">number</span> = <span class="st">0</span>;
+
+  deposit(amount: <span class="kw">number</span>) {
+    <span class="kw">if</span> (amount > <span class="st">0</span>) <span class="kw">this</span>.balance += amount;
+  }
+
+  getBalance(): <span class="kw">number</span> {
+    <span class="kw">return this</span>.balance; <span class="cm">// read-only access</span>
+  }
+}`
+  },
+  {
+    icon: "🧬", title: "Inheritance",
+    sub: "IS-A Relationship",
+    accent: "#43e97b",
+    tag: "Fundamental",
+    desc: "A class (child) acquires properties and behaviors of another class (parent), enabling code reuse.",
+    detail: "Inheritance establishes a parent-child relationship between classes. The child class inherits all non-private members and can override or extend them.",
+    keyPoints: ["Promotes code reuse", "Establishes IS-A relationship", "Supports method overriding", "Use carefully — prefer composition"],
+    example: `<span class="kw">class</span> <span class="cl">Animal</span> {
+  speak() { <span class="kw">return</span> <span class="st">"..."</span>; }
+}
+
+<span class="kw">class</span> <span class="cl">Dog</span> <span class="kw">extends</span> <span class="cl">Animal</span> {
+  speak() { <span class="kw">return</span> <span class="st">"Woof!"</span>; }
+}
+
+<span class="kw">class</span> <span class="cl">Cat</span> <span class="kw">extends</span> <span class="cl">Animal</span> {
+  speak() { <span class="kw">return</span> <span class="st">"Meow!"</span>; }
+}`
+  },
+  {
+    icon: "🎭", title: "Polymorphism",
+    sub: "Many Forms",
+    accent: "#ff6584",
+    tag: "Fundamental",
+    desc: "The ability for objects of different classes to be treated as instances of a common base class.",
+    detail: "Polymorphism means 'many forms'. It allows a single interface to represent different underlying data types. Two key types: compile-time (overloading) and runtime (overriding).",
+    keyPoints: ["Runtime polymorphism via overriding", "Compile-time via overloading", "Enables open/closed principle", "Core of design patterns"],
+    example: `<span class="kw">class</span> <span class="cl">Shape</span> {
+  area(): <span class="kw">number</span> { <span class="kw">return</span> <span class="st">0</span>; }
+}
+<span class="kw">class</span> <span class="cl">Circle</span> <span class="kw">extends</span> <span class="cl">Shape</span> {
+  area() { <span class="kw">return</span> Math.PI * r * r; }
+}
+<span class="kw">const</span> shapes: <span class="cl">Shape</span>[] = [<span class="kw">new</span> <span class="cl">Circle</span>()];
+shapes.forEach(s => s.area()); <span class="cm">// polymorphic call</span>`
+  },
+  {
+    icon: "🎨", title: "Abstraction",
+    sub: "Hide Complexity",
+    accent: "#f9c74f",
+    tag: "Fundamental",
+    desc: "Hiding internal implementation details and exposing only what is necessary through interfaces.",
+    detail: "Abstraction lets you focus on WHAT an object does instead of HOW it does it. Achieved via abstract classes and interfaces.",
+    keyPoints: ["Abstract classes / interfaces", "Hides implementation detail", "Reduces complexity", "Enables loose coupling"],
+    example: `<span class="kw">interface</span> <span class="cl">PaymentGateway</span> {
+  pay(amount: <span class="kw">number</span>): <span class="kw">boolean</span>;
+}
+<span class="kw">class</span> <span class="cl">Stripe</span> <span class="kw">implements</span> <span class="cl">PaymentGateway</span> {
+  pay(amount) { <span class="cm">/* Stripe logic */</span> }
+}
+<span class="kw">class</span> <span class="cl">PayPal</span> <span class="kw">implements</span> <span class="cl">PaymentGateway</span> {
+  pay(amount) { <span class="cm">/* PayPal logic */</span> }
+}`
+  },
+  {
+    icon: "🔗", title: "Association",
+    sub: "HAS-A Relationship",
+    accent: "#4cc9f0",
+    tag: "Relationship",
+    desc: "A relationship between objects where one object uses or interacts with another.",
+    detail: "Association represents a relationship where objects can exist independently. Types: Aggregation (weak HAS-A) and Composition (strong HAS-A).",
+    keyPoints: ["Objects are independent", "Aggregation: weak ownership", "Composition: strong ownership", "UML: lines and diamonds"],
+    example: `<span class="cm">// Aggregation — Teacher has Students</span>
+<span class="kw">class</span> <span class="cl">Teacher</span> {
+  students: <span class="cl">Student</span>[] = [];
+}
+<span class="cm">// Composition — House has Rooms</span>
+<span class="kw">class</span> <span class="cl">House</span> {
+  <span class="kw">private</span> rooms = [<span class="kw">new</span> <span class="cl">Room</span>()]; <span class="cm">// Room can't exist alone</span>
+}`
+  },
+  {
+    icon: "📦", title: "Composition",
+    sub: "Over Inheritance",
+    accent: "#f3722c",
+    tag: "Relationship",
+    desc: "Building complex objects by combining simpler ones. Preferred over inheritance for flexibility.",
+    detail: "Composition over inheritance is a key design principle. Instead of extending a class, hold a reference to it. Leads to more flexible and testable code.",
+    keyPoints: ["Favor has-a over is-a", "More flexible than inheritance", "Easier to test with mocks", "Follows Single Responsibility"],
+    example: `<span class="kw">class</span> <span class="cl">Logger</span> {
+  log(msg: <span class="kw">string</span>) { console.log(msg); }
+}
+<span class="kw">class</span> <span class="cl">UserService</span> {
+  <span class="kw">private</span> logger = <span class="kw">new</span> <span class="cl">Logger</span>();
+  createUser(name: <span class="kw">string</span>) {
+    <span class="kw">this</span>.logger.log(<span class="st">\`Creating \${name}\`</span>);
+  }
+}`
+  },
+  {
+    icon: "🖇️", title: "Coupling & Cohesion",
+    sub: "Design Quality",
+    accent: "#90e0ef",
+    tag: "Design Quality",
+    desc: "Coupling = dependency between modules. Cohesion = how related responsibilities within a module are.",
+    detail: "Low coupling means modules are independent. High cohesion means a module has a single, clear purpose. Aim for LOW coupling + HIGH cohesion.",
+    keyPoints: ["Low coupling = easy to change", "High cohesion = clear purpose", "Use interfaces to reduce coupling", "Related to SRP principle"],
+    example: `<span class="cm">// HIGH coupling (BAD)</span>
+<span class="kw">class</span> <span class="cl">OrderService</span> {
+  db = <span class="kw">new</span> <span class="cl">MySQLDatabase</span>(); <span class="cm">// tightly coupled</span>
+}
+<span class="cm">// LOW coupling (GOOD)</span>
+<span class="kw">class</span> <span class="cl">OrderService</span> {
+  <span class="kw">constructor</span>(<span class="kw">private</span> db: <span class="cl">IDatabase</span>) {}
+}`
+  },
+  {
+    icon: "🔄", title: "Interfaces vs Abstract",
+    sub: "Contract Design",
+    accent: "#c77dff",
+    tag: "Core Concept",
+    desc: "Interface defines a contract (what). Abstract class provides partial implementation (what + some how).",
+    detail: "Key interview topic. Interface: all abstract, no state, can implement multiple. Abstract class: can have state + implementation, single inheritance.",
+    keyPoints: ["Interface = pure contract", "Abstract = partial blueprint", "Multiple interface implementation", "Use interface for polymorphism"],
+    example: `<span class="kw">interface</span> <span class="cl">Flyable</span> { fly(): <span class="kw">void</span>; }
+<span class="kw">interface</span> <span class="cl">Swimmable</span> { swim(): <span class="kw">void</span>; }
+
+<span class="kw">abstract class</span> <span class="cl">Bird</span> {
+  <span class="kw">abstract</span> makeSound(): <span class="kw">void</span>;
+  breathe() { <span class="cm">/* shared impl */</span> }
+}
+<span class="kw">class</span> <span class="cl">Duck</span> <span class="kw">extends</span> <span class="cl">Bird</span>
+  <span class="kw">implements</span> <span class="cl">Flyable</span>, <span class="cl">Swimmable</span> { }`
+  }
+];
+
+const PRINCIPLES = [
+  { icon:"🔵", title:"Single Responsibility", sub:"SRP · SOLID[S]", accent:"#6c63ff", tag:"SOLID",
+    desc:"A class should have only ONE reason to change — one responsibility.",
+    detail:"If a class handles too many concerns, it becomes fragile. Split concerns into separate classes.",
+    keyPoints:["One class, one job","Smaller, focused classes","Easier to test","Reduce side effects"],
+    example:`<span class="cm">// BAD: two responsibilities</span>\n<span class="kw">class</span> <span class="cl">User</span> {\n  saveToDatabase() {}\n  sendWelcomeEmail() {}\n}\n<span class="cm">// GOOD: separated</span>\n<span class="kw">class</span> <span class="cl">UserRepository</span> { saveToDatabase() {} }\n<span class="kw">class</span> <span class="cl">EmailService</span> { sendWelcomeEmail() {} }` },
+
+  { icon:"🟢", title:"Open / Closed", sub:"OCP · SOLID[O]", accent:"#43e97b", tag:"SOLID",
+    desc:"Open for extension, closed for modification. Add new behavior without changing existing code.",
+    detail:"Use abstraction (interfaces/abstract classes) to allow new behaviors to be plugged in without modifying existing code.",
+    keyPoints:["Extend via new classes","Don't edit existing code","Use strategy/polymorphism","Prevents regressions"],
+    example:`<span class="kw">interface</span> <span class="cl">Discount</span> { apply(price: <span class="kw">number</span>): <span class="kw">number</span>; }\n<span class="kw">class</span> <span class="cl">SeasonalDiscount</span> <span class="kw">implements</span> <span class="cl">Discount</span> {\n  apply(p) { <span class="kw">return</span> p * <span class="st">0.9</span>; }\n}\n<span class="cm">// Add new discounts without touching old code</span>` },
+
+  { icon:"🔴", title:"Liskov Substitution", sub:"LSP · SOLID[L]", accent:"#ff6584", tag:"SOLID",
+    desc:"Objects of a subclass must be substitutable for objects of the superclass without breaking behavior.",
+    detail:"If S is a subtype of T, then objects of type T may be replaced with objects of type S. Violating LSP breaks polymorphism.",
+    keyPoints:["Subclass must honor contract","Don't strengthen preconditions","Don't weaken postconditions","Classic: Square vs Rectangle"],
+    example:`<span class="cm">// VIOLATES LSP</span>\n<span class="kw">class</span> <span class="cl">Square</span> <span class="kw">extends</span> <span class="cl">Rectangle</span> {\n  setWidth(w) { super.setWidth(w); super.setHeight(w); }\n}\n<span class="cm">// Square breaks Rectangle's contract!</span>` },
+
+  { icon:"🟣", title:"Interface Segregation", sub:"ISP · SOLID[I]", accent:"#c77dff", tag:"SOLID",
+    desc:"Clients should not be forced to depend on interfaces they don't use. Split fat interfaces.",
+    detail:"Large interfaces force implementing classes to include methods they don't need. Break them into smaller, focused interfaces.",
+    keyPoints:["Split large interfaces","No forced empty implementations","More specific contracts","Better composability"],
+    example:`<span class="cm">// BAD — fat interface</span>\n<span class="kw">interface</span> <span class="cl">Worker</span> { work(); eat(); sleep(); }\n<span class="cm">// GOOD — segregated</span>\n<span class="kw">interface</span> <span class="cl">Workable</span> { work(); }\n<span class="kw">interface</span> <span class="cl">Eatable</span> { eat(); }` },
+
+  { icon:"🟡", title:"Dependency Inversion", sub:"DIP · SOLID[D]", accent:"#f9c74f", tag:"SOLID",
+    desc:"High-level modules should not depend on low-level modules. Both should depend on abstractions.",
+    detail:"The most powerful of SOLID principles. Enables Dependency Injection and Inversion of Control. High-level policy should not depend on detail.",
+    keyPoints:["Depend on interfaces","Inject dependencies","Enables easy testing","IoC containers use this"],
+    example:`<span class="cm">// DIP via constructor injection</span>\n<span class="kw">class</span> <span class="cl">OrderService</span> {\n  <span class="kw">constructor</span>(<span class="kw">private</span> repo: <span class="cl">IOrderRepo</span>) {}\n}\n<span class="cm">// Pass MySQL or mock — both work!</span>` },
+
+  { icon:"💧", title:"DRY", sub:"Don't Repeat Yourself", accent:"#4cc9f0", tag:"General",
+    desc:"Every piece of knowledge should have a single, unambiguous representation in the system.",
+    detail:"Duplicated code leads to inconsistent changes and bugs. Extract shared logic into functions, classes, or modules.",
+    keyPoints:["Extract common logic","Single source of truth","Reduces maintenance burden","Can be over-applied — balance with readability"],
+    example:`<span class="cm">// BAD — repeated validation</span>\n<span class="kw">function</span> createUser(age) { <span class="kw">if</span>(age < <span class="st">0</span>) <span class="kw">throw</span>...; }\n<span class="kw">function</span> updateUser(age) { <span class="kw">if</span>(age < <span class="st">0</span>) <span class="kw">throw</span>...; }\n<span class="cm">// GOOD</span>\n<span class="kw">function</span> validateAge(age) { <span class="kw">if</span>(age < <span class="st">0</span>) <span class="kw">throw</span>...; }` },
+
+  { icon:"🌿", title:"KISS", sub:"Keep It Simple, Stupid", accent:"#43e97b", tag:"General",
+    desc:"Avoid unnecessary complexity. The simpler the solution, the easier it is to understand and maintain.",
+    detail:"Most systems work best when kept simple. Avoid premature optimization and over-engineering.",
+    keyPoints:["Simple > clever","Readable code > optimized","Solves current problem","Resist feature creep"],
+    example:`<span class="cm">// Over-engineered (BAD)</span>\n<span class="kw">const</span> add = <span class="kw">new</span> <span class="cl">AdditionStrategyFactory</span>()\n  .create(<span class="cl">SumStrategy</span>).execute(a, b);\n<span class="cm">// Simple (GOOD)</span>\n<span class="kw">const</span> add = (a, b) => a + b;` },
+
+  { icon:"🚫", title:"YAGNI", sub:"You Aren't Gonna Need It", accent:"#f3722c", tag:"General",
+    desc:"Don't add functionality until it is actually needed. Avoid speculative generality.",
+    detail:"Implementing features before they are required leads to bloat, complexity, and wasted effort.",
+    keyPoints:["Build only what's needed","Avoids unused code","Reduces complexity","Agile mindset"],
+    example:`<span class="cm">// YAGNI violation</span>\n<span class="kw">class</span> <span class="cl">UserService</span> {\n  <span class="cm">// "We might need this someday"</span>\n  exportToXML() { <span class="cm">/* never called */</span> }\n  syncWithFax() { <span class="cm">/* 2003 called */</span> }\n}` },
+
+  { icon:"🔀", title:"Composition Over Inheritance", sub:"Favor Composition", accent:"#90e0ef", tag:"General",
+    desc:"Prefer composing objects from smaller behaviors over deep inheritance hierarchies.",
+    detail:"Inheritance creates tight coupling between classes. Composition allows behaviors to be mixed and matched freely.",
+    keyPoints:["Flexible behavior at runtime","Avoids fragile base class","Easier to test","Strategy pattern uses this"],
+    example:`<span class="cm">// Instead of extending Logger</span>\n<span class="kw">class</span> <span class="cl">Service</span> {\n  <span class="kw">constructor</span>(<span class="kw">private</span> logger: <span class="cl">Logger</span>) {}\n  doWork() { <span class="kw">this</span>.logger.log(<span class="st">"working"</span>); }\n}` },
+
+  { icon:"🏗️", title:"Law of Demeter", sub:"Principle of Least Knowledge", accent:"#ff9f1c", tag:"General",
+    desc:"An object should only talk to its immediate friends. Don't chain method calls across multiple objects.",
+    detail:"Also called 'Don't talk to strangers'. Reduces coupling between distant objects and makes code more maintainable.",
+    keyPoints:["Only call own methods","Methods of passed params","Methods of created objects","Avoid: a.getB().getC().do()"],
+    example:`<span class="cm">// VIOLATION: train wreck</span>\norder.getCustomer().getAddress().getCity();\n<span class="cm">// BETTER: delegate</span>\norder.getCustomerCity();\n<span class="cm">// Or ask Customer directly</span>` }
+];
+
+const PATTERNS = {
+  creational: {
+    label: "Creational", color: "#6c63ff", count: 5,
+    items: [
+      { icon:"🏭", title:"Factory Method", tag:"Object Creation",
+        desc:"Define an interface for creating objects, let subclasses decide which class to instantiate.",
+        detail:"Decouples object creation from usage. Subclasses override a factory method to change the type of object created.",
+        keyPoints:["Defer instantiation to subclasses","Works with interface types","Follows OCP","Common in frameworks"],
+        example:`<span class="kw">abstract class</span> <span class="cl">Dialog</span> {\n  <span class="kw">abstract</span> createButton(): <span class="cl">Button</span>;\n  render() { <span class="kw">const</span> btn = <span class="kw">this</span>.createButton(); }\n}\n<span class="kw">class</span> <span class="cl">WebDialog</span> <span class="kw">extends</span> <span class="cl">Dialog</span> {\n  createButton() { <span class="kw">return new</span> <span class="cl">HTMLButton</span>(); }\n}` },
+
+      { icon:"🔨", title:"Abstract Factory", tag:"Object Creation",
+        desc:"Produce families of related objects without specifying their concrete classes.",
+        detail:"An abstract factory produces entire families of related products. Each concrete factory creates a specific variant.",
+        keyPoints:["Family of related objects","Product consistency guaranteed","Easy to swap families","More complex than Factory Method"],
+        example:`<span class="kw">interface</span> <span class="cl">GUIFactory</span> {\n  createButton(): <span class="cl">Button</span>;\n  createCheckbox(): <span class="cl">Checkbox</span>;\n}\n<span class="kw">class</span> <span class="cl">MacFactory</span> <span class="kw">implements</span> <span class="cl">GUIFactory</span> {\n  createButton() { <span class="kw">return new</span> <span class="cl">MacButton</span>(); }\n  createCheckbox() { <span class="kw">return new</span> <span class="cl">MacCheckbox</span>(); }\n}` },
+
+      { icon:"🧱", title:"Builder", tag:"Object Creation",
+        desc:"Construct complex objects step by step, separating construction from representation.",
+        detail:"Useful when objects require many parameters or have complex construction steps. Uses method chaining.",
+        keyPoints:["Step-by-step construction","Same process, different results","Optional parameters cleanly","Common in test data builders"],
+        example:`<span class="kw">class</span> <span class="cl">QueryBuilder</span> {\n  <span class="kw">private</span> query = <span class="st">''</span>;\n  select(cols: <span class="kw">string</span>) { <span class="kw">this</span>.query += \`SELECT \${cols}\`; <span class="kw">return this</span>; }\n  from(table: <span class="kw">string</span>) { <span class="kw">this</span>.query += \` FROM \${table}\`; <span class="kw">return this</span>; }\n  build() { <span class="kw">return this</span>.query; }\n}` },
+
+      { icon:"🃏", title:"Prototype", tag:"Object Creation",
+        desc:"Create new objects by copying (cloning) an existing object.",
+        detail:"Useful when object creation is expensive. Clone an existing instance instead of constructing from scratch.",
+        keyPoints:["Clone existing objects","Avoids expensive creation","Deep vs shallow clone","Registries of prototypes"],
+        example:`<span class="kw">class</span> <span class="cl">Shape</span> {\n  clone(): <span class="cl">Shape</span> {\n    <span class="kw">return</span> Object.create(<span class="kw">this</span>);\n  }\n}\n<span class="kw">const</span> original = <span class="kw">new</span> <span class="cl">Circle</span>(5);\n<span class="kw">const</span> copy = original.clone();\n<span class="cm">// copy is independent of original</span>` },
+
+      { icon:"1️⃣", title:"Singleton", tag:"Object Creation",
+        desc:"Ensure a class has only one instance, provide a global access point to it.",
+        detail:"Used for shared resources like config, connection pools, or loggers. Be careful — can make testing harder.",
+        keyPoints:["Single instance globally","Lazy or eager initialization","Thread safety in concurrent code","Often anti-pattern — use DI instead"],
+        example:`<span class="kw">class</span> <span class="cl">Config</span> {\n  <span class="kw">private static</span> instance: <span class="cl">Config</span>;\n  <span class="kw">private</span> <span class="kw">constructor</span>() {}\n  <span class="kw">static</span> getInstance() {\n    <span class="kw">if</span> (!<span class="kw">this</span>.instance)\n      <span class="kw">this</span>.instance = <span class="kw">new</span> <span class="cl">Config</span>();\n    <span class="kw">return this</span>.instance;\n  }\n}` }
+    ]
+  },
+  structural: {
+    label: "Structural", color: "#43e97b", count: 7,
+    items: [
+      { icon:"🔌", title:"Adapter", tag:"Structural",
+        desc:"Allows incompatible interfaces to work together by wrapping one with the other.",
+        detail:"Convert the interface of a class into another interface clients expect. Adapter lets classes work together that couldn't otherwise.",
+        keyPoints:["Translate interfaces","Wrap legacy code","Object vs class adapter","Common in third-party libs"],
+        example:`<span class="kw">class</span> <span class="cl">LegacyPrinter</span> { printOld(text) {} }\n<span class="kw">class</span> <span class="cl">PrinterAdapter</span> <span class="kw">implements</span> <span class="cl">IPrinter</span> {\n  <span class="kw">constructor</span>(<span class="kw">private</span> legacy: <span class="cl">LegacyPrinter</span>) {}\n  print(text) { <span class="kw">this</span>.legacy.printOld(text); }\n}` },
+
+      { icon:"🌉", title:"Bridge", tag:"Structural",
+        desc:"Decouples an abstraction from its implementation so both can vary independently.",
+        detail:"Separates the 'what' (abstraction hierarchy) from the 'how' (implementation hierarchy). Avoids a proliferation of subclasses.",
+        keyPoints:["Abstraction & impl vary independently","Avoids class explosion","Use composition for impl","Runtime switching possible"],
+        example:`<span class="kw">interface</span> <span class="cl">Renderer</span> { render(shape: <span class="kw">string</span>): <span class="kw">void</span>; }\n<span class="kw">abstract class</span> <span class="cl">Shape</span> {\n  <span class="kw">constructor</span>(<span class="kw">protected</span> renderer: <span class="cl">Renderer</span>) {}\n  <span class="kw">abstract</span> draw(): <span class="kw">void</span>;\n}\n<span class="kw">class</span> <span class="cl">Circle</span> <span class="kw">extends</span> <span class="cl">Shape</span> {\n  draw() { <span class="kw">this</span>.renderer.render(<span class="st">"circle"</span>); }\n}` },
+
+      { icon:"🌳", title:"Composite", tag:"Structural",
+        desc:"Compose objects into tree structures to represent part-whole hierarchies.",
+        detail:"Lets clients treat individual objects and compositions of objects uniformly. Perfect for tree-like structures.",
+        keyPoints:["Tree structure","Leaf vs composite","Uniform treatment","File system, UI trees"],
+        example:`<span class="kw">interface</span> <span class="cl">Component</span> { render(): <span class="kw">void</span>; }\n<span class="kw">class</span> <span class="cl">Leaf</span> <span class="kw">implements</span> <span class="cl">Component</span> {\n  render() { console.log(<span class="st">"Leaf"</span>); }\n}\n<span class="kw">class</span> <span class="cl">Container</span> <span class="kw">implements</span> <span class="cl">Component</span> {\n  <span class="kw">private</span> children: <span class="cl">Component</span>[] = [];\n  render() { <span class="kw">this</span>.children.forEach(c => c.render()); }\n}` },
+
+      { icon:"🎀", title:"Decorator", tag:"Structural",
+        desc:"Attach additional responsibilities to an object dynamically without subclassing.",
+        detail:"Wrap objects to add behavior at runtime. More flexible than inheritance. Can stack multiple decorators.",
+        keyPoints:["Wraps existing objects","Adds behavior at runtime","Stackable decorators","Follows OCP"],
+        example:`<span class="kw">class</span> <span class="cl">LoggingDecorator</span> <span class="kw">implements</span> <span class="cl">IService</span> {\n  <span class="kw">constructor</span>(<span class="kw">private</span> svc: <span class="cl">IService</span>) {}\n  execute() {\n    console.log(<span class="st">"Before"</span>);\n    <span class="kw">this</span>.svc.execute();\n    console.log(<span class="st">"After"</span>);\n  }\n}` },
+
+      { icon:"🏠", title:"Facade", tag:"Structural",
+        desc:"Provide a simplified interface to a complex subsystem.",
+        detail:"Facade hides the complexity of a subsystem behind a single entry point. Clients talk to the facade, not the internals.",
+        keyPoints:["Simplifies complex systems","Reduces dependencies","Hides implementation","Common in APIs/SDKs"],
+        example:`<span class="kw">class</span> <span class="cl">HomeTheaterFacade</span> {\n  turnOn() {\n    <span class="kw">this</span>.amplifier.on();\n    <span class="kw">this</span>.projector.on();\n    <span class="kw">this</span>.dvd.play();\n  }\n  <span class="cm">// Complex subsystem hidden behind one method</span>\n}` },
+
+      { icon:"🪶", title:"Flyweight", tag:"Structural",
+        desc:"Share common state among many fine-grained objects to reduce memory usage.",
+        detail:"Divide object state into intrinsic (shared) and extrinsic (context-specific). Store intrinsic state in shared objects.",
+        keyPoints:["Reduce memory by sharing","Intrinsic vs extrinsic state","Object pool/factory","Game engines, text rendering"],
+        example:`<span class="kw">class</span> <span class="cl">CharacterFlyweight</span> {\n  <span class="kw">constructor</span>(<span class="kw">public</span> font: <span class="kw">string</span>, <span class="kw">public</span> size: <span class="kw">number</span>) {}\n  <span class="cm">// Shared for all 'A' characters</span>\n}\n<span class="cm">// Extrinsic: position, color (passed per render)</span>` },
+
+      { icon:"🪞", title:"Proxy", tag:"Structural",
+        desc:"Provide a surrogate or placeholder for another object to control access to it.",
+        detail:"Proxy wraps a real object and controls access. Types: Virtual (lazy init), Protection (auth), Remote (network), Caching.",
+        keyPoints:["Controls access","Lazy initialization","Caching proxy","Security/access control"],
+        example:`<span class="kw">class</span> <span class="cl">CachingProxy</span> <span class="kw">implements</span> <span class="cl">IDatabase</span> {\n  <span class="kw">private</span> cache = <span class="kw">new</span> Map();\n  query(sql: <span class="kw">string</span>) {\n    <span class="kw">if</span> (<span class="kw">this</span>.cache.has(sql)) <span class="kw">return this</span>.cache.get(sql);\n    <span class="kw">const</span> res = <span class="kw">this</span>.db.query(sql);\n    <span class="kw">this</span>.cache.set(sql, res); <span class="kw">return</span> res;\n  }\n}` }
+    ]
+  },
+  behavioral: {
+    label: "Behavioral", color: "#ff6584", count: 11,
+    items: [
+      { icon:"⛓️", title:"Chain of Responsibility", tag:"Behavioral",
+        desc:"Pass requests along a chain of handlers, each deciding to process or pass it further.",
+        detail:"Decouples sender from receivers. Multiple handlers can process or skip a request. Think middleware pipeline.",
+        keyPoints:["Handlers linked in chain","Each handles or passes","Middleware/logging pipelines","Dynamic chain configuration"],
+        example:`<span class="kw">abstract class</span> <span class="cl">Handler</span> {\n  <span class="kw">protected</span> next: <span class="cl">Handler</span>;\n  setNext(h: <span class="cl">Handler</span>) { <span class="kw">this</span>.next = h; <span class="kw">return</span> h; }\n  <span class="kw">abstract</span> handle(req: <span class="kw">number</span>): <span class="kw">void</span>;\n}` },
+
+      { icon:"🎬", title:"Command", tag:"Behavioral",
+        desc:"Encapsulate a request as an object, allowing undo/redo, queuing, and parameterization.",
+        detail:"Turn requests into standalone objects containing all request info. Supports undo, logging, transaction.",
+        keyPoints:["Request as object","Undo/redo support","Command queue","Decouples invoker from receiver"],
+        example:`<span class="kw">interface</span> <span class="cl">Command</span> { execute(): <span class="kw">void</span>; undo(): <span class="kw">void</span>; }\n<span class="kw">class</span> <span class="cl">MoveCommand</span> <span class="kw">implements</span> <span class="cl">Command</span> {\n  execute() { player.move(<span class="kw">this</span>.dir); }\n  undo() { player.move(-<span class="kw">this</span>.dir); }\n}` },
+
+      { icon:"🔍", title:"Iterator", tag:"Behavioral",
+        desc:"Provide a way to sequentially access elements of a collection without exposing underlying structure.",
+        detail:"Decouples traversal logic from the collection. Supports multiple traversal strategies.",
+        keyPoints:["Sequential access","Hides collection internals","Built into most languages","Custom iterators for graphs/trees"],
+        example:`<span class="kw">class</span> <span class="cl">NumberRange</span> {\n  [Symbol.iterator]() {\n    <span class="kw">let</span> i = <span class="kw">this</span>.start;\n    <span class="kw">return</span> { next: () => ({\n      value: i++,\n      done: i > <span class="kw">this</span>.end\n    }) };\n  }\n}` },
+
+      { icon:"🤝", title:"Mediator", tag:"Behavioral",
+        desc:"Define a central object to encapsulate how objects interact, reducing direct dependencies.",
+        detail:"Instead of objects communicating directly, all communication goes through the mediator. Reduces coupling.",
+        keyPoints:["Central communication hub","Reduces object coupling","Chat rooms, event buses","Can become a god object"],
+        example:`<span class="kw">class</span> <span class="cl">EventBus</span> {\n  <span class="kw">private</span> handlers = <span class="kw">new</span> Map();\n  on(event, fn) { <span class="kw">this</span>.handlers.set(event, fn); }\n  emit(event, data) { <span class="kw">this</span>.handlers.get(event)?.(data); }\n}` },
+
+      { icon:"📜", title:"Memento", tag:"Behavioral",
+        desc:"Capture an object's state to be restored later, without violating encapsulation.",
+        detail:"Save snapshots of an object's state. Used for undo mechanisms, game saves, version history.",
+        keyPoints:["Save & restore state","Encapsulation preserved","Originator creates mementos","Caretaker stores history"],
+        example:`<span class="kw">class</span> <span class="cl">TextEditor</span> {\n  save() { <span class="kw">return</span> { text: <span class="kw">this</span>.text }; }\n  restore(m) { <span class="kw">this</span>.text = m.text; }\n}\n<span class="kw">const</span> history = [];\nhistory.push(editor.save());\neditor.restore(history.pop());` },
+
+      { icon:"👁️", title:"Observer", tag:"Behavioral",
+        desc:"Define a one-to-many dependency so that when one object changes, all dependents are notified.",
+        detail:"Publisher-subscriber model. Subject notifies all registered observers on state change. Core of event systems.",
+        keyPoints:["Pub-sub relationship","Loose coupling","Event systems, UI updates","Can cause update cascades"],
+        example:`<span class="kw">class</span> <span class="cl">EventEmitter</span> {\n  <span class="kw">private</span> subs: <span class="cl">Observer</span>[] = [];\n  subscribe(o: <span class="cl">Observer</span>) { <span class="kw">this</span>.subs.push(o); }\n  notify(data) { <span class="kw">this</span>.subs.forEach(s => s.update(data)); }\n}` },
+
+      { icon:"🌴", title:"State", tag:"Behavioral",
+        desc:"Allow an object to alter its behavior when its internal state changes — appears to change its class.",
+        detail:"Encapsulate state-specific behavior in separate state classes. Clean alternative to large switch/if chains.",
+        keyPoints:["State-specific behavior encapsulated","Clean state transitions","Eliminates conditionals","Traffic lights, vending machines"],
+        example:`<span class="kw">interface</span> <span class="cl">TrafficState</span> { next(): <span class="cl">TrafficState</span>; action(): <span class="kw">void</span>; }\n<span class="kw">class</span> <span class="cl">RedLight</span> <span class="kw">implements</span> <span class="cl">TrafficState</span> {\n  action() { console.log(<span class="st">"Stop"</span>); }\n  next() { <span class="kw">return new</span> <span class="cl">GreenLight</span>(); }\n}` },
+
+      { icon:"📐", title:"Strategy", tag:"Behavioral",
+        desc:"Define a family of algorithms, encapsulate each one, and make them interchangeable.",
+        detail:"Selects algorithm at runtime. Client picks which strategy to use. Eliminates conditionals and follows OCP.",
+        keyPoints:["Interchangeable algorithms","Selected at runtime","Follows OCP","Common with sorting, payment"],
+        example:`<span class="kw">interface</span> <span class="cl">SortStrategy</span> { sort(arr: <span class="kw">number</span>[]): <span class="kw">void</span>; }\n<span class="kw">class</span> <span class="cl">Sorter</span> {\n  <span class="kw">constructor</span>(<span class="kw">private</span> strategy: <span class="cl">SortStrategy</span>) {}\n  sort(arr) { <span class="kw">this</span>.strategy.sort(arr); }\n}` },
+
+      { icon:"📋", title:"Template Method", tag:"Behavioral",
+        desc:"Define the skeleton of an algorithm in a base class, deferring some steps to subclasses.",
+        detail:"Invariant algorithm in base class. Variable parts defined by subclasses via hooks. Hollywood Principle: don't call us, we'll call you.",
+        keyPoints:["Algorithm skeleton in base","Override specific steps","Avoid code duplication","IoC — base calls subclass"],
+        example:`<span class="kw">abstract class</span> <span class="cl">DataProcessor</span> {\n  process() { <span class="cm">// template method</span>\n    <span class="kw">this</span>.readData(); <span class="kw">this</span>.processData(); <span class="kw">this</span>.saveResults();\n  }\n  <span class="kw">abstract</span> processData(): <span class="kw">void</span>; <span class="cm">// hook</span>\n}` },
+
+      { icon:"🌐", title:"Visitor", tag:"Behavioral",
+        desc:"Add new operations to objects without modifying them, by separating the algorithm from the object structure.",
+        detail:"Visitor lets you add operations to a class hierarchy without changing the classes. Double dispatch enables this.",
+        keyPoints:["Separate algorithm from object","Add operations without modification","Double dispatch","AST traversal, serialization"],
+        example:`<span class="kw">interface</span> <span class="cl">ShapeVisitor</span> {\n  visitCircle(c: <span class="cl">Circle</span>): <span class="kw">void</span>;\n  visitRect(r: <span class="cl">Rect</span>): <span class="kw">void</span>;\n}\n<span class="kw">class</span> <span class="cl">AreaVisitor</span> <span class="kw">implements</span> <span class="cl">ShapeVisitor</span> {\n  visitCircle(c) { <span class="kw">return</span> Math.PI * c.r ** <span class="st">2</span>; }\n  visitRect(r) { <span class="kw">return</span> r.w * r.h; }\n}` },
+
+      { icon:"🗣️", title:"Interpreter", tag:"Behavioral",
+        desc:"Define a grammar for a language and provide an interpreter to deal with that grammar.",
+        detail:"Used for simple grammars like query languages, scripting, or expression evaluation. Represents each grammar rule as a class.",
+        keyPoints:["Grammar as class hierarchy","Each rule is a class","SQL-like expression parsing","Simple grammars only"],
+        example:`<span class="kw">interface</span> <span class="cl">Expression</span> { interpret(ctx: <span class="kw">object</span>): <span class="kw">number</span>; }\n<span class="kw">class</span> <span class="cl">AddExpression</span> <span class="kw">implements</span> <span class="cl">Expression</span> {\n  interpret(ctx) { <span class="kw">return this</span>.left.interpret(ctx) + <span class="kw">this</span>.right.interpret(ctx); }\n}` }
+    ]
+  }
+};
+
+// ============ RENDER OOP ============
+const oopGrid = document.getElementById('oop-grid');
+OOP.forEach((item, i) => {
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.style.setProperty('--card-accent', item.accent);
+  c.innerHTML = `<div class="card-icon">${item.icon}</div>
+    <div class="card-sub">${item.sub}</div>
+    <div class="card-title">${item.title}</div>
+    <div class="card-desc">${item.desc}</div>
+    <span class="card-tag">${item.tag}</span>`;
+  c.onclick = () => openModal(item, 'OOP Concept');
+  oopGrid.appendChild(c);
+});
+
+// ============ RENDER PRINCIPLES ============
+const princGrid = document.getElementById('principles-grid');
+PRINCIPLES.forEach((item) => {
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.style.setProperty('--card-accent', item.accent);
+  c.innerHTML = `<div class="card-icon">${item.icon}</div>
+    <div class="card-sub">${item.sub}</div>
+    <div class="card-title">${item.title}</div>
+    <div class="card-desc">${item.desc}</div>
+    <span class="card-tag">${item.tag}</span>`;
+  c.onclick = () => openModal(item, 'Design Principle');
+  princGrid.appendChild(c);
+});
+
+// ============ RENDER PATTERNS ============
+const patternsCont = document.getElementById('patterns-container');
+['creational','structural','behavioral'].forEach(cat => {
+  const data = PATTERNS[cat];
+  // Header
+  const header = document.createElement('div');
+  header.className = 'cat-header';
+  header.innerHTML = `
+    <span class="cat-pill ${cat}">${data.label}</span>
+    <span class="cat-count">${data.count} patterns</span>
+    <div class="cat-line"></div>`;
+  patternsCont.appendChild(header);
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  data.items.forEach(item => {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.style.setProperty('--card-accent', data.color);
+    c.innerHTML = `<div class="card-icon">${item.icon}</div>
+      <div class="card-sub">${item.tag}</div>
+      <div class="card-title">${item.title}</div>
+      <div class="card-desc">${item.desc}</div>
+      <span class="card-tag">${data.label}</span>`;
+    c.onclick = () => openModal(item, `${data.label} Pattern`);
+    grid.appendChild(c);
+  });
+  patternsCont.appendChild(grid);
+});
+
+// ============ TABS ============
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// ============ MODAL ============
+function openModal(item, category) {
+  document.getElementById('m-label').textContent = `// ${category}`;
+  document.getElementById('m-title').innerHTML = `${item.icon} ${item.title}`;
+  document.getElementById('m-intent').textContent = item.detail;
+  document.getElementById('m-body').innerHTML = `
+    <div class="modal-section">
+      <h3>Key Points</h3>
+      <ul>${item.keyPoints.map(p => `<li>${p}</li>`).join('')}</ul>
+    </div>
+    <div class="modal-section">
+      <h3>Code Example</h3>
+      <div class="code-block">${item.example}</div>
+    </div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('open');
+  }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

@@ -79,11 +79,11 @@
             <div class="stat-label">Top Questions</div>
           </div>
           <div class="stat-card">
-            <div class="stat-num">33</div>
+            <div class="stat-num">59</div>
             <div class="stat-label">Core Concepts</div>
           </div>
           <div class="stat-card">
-            <div class="stat-num">10</div>
+            <div class="stat-num">15</div>
             <div class="stat-label">Universal Trade-offs</div>
           </div>
         </div>
@@ -304,7 +304,42 @@
     </div>
   </div>
 
+  <!-- AI Assistant -->
+  <div class="ai-assistant-container" id="aiAssistant">
+    <div class="ai-chat-window hidden" id="aiChatWindow">
+      <div class="ai-chat-header">
+        <div class="ai-bot-info">
+          <div class="ai-bot-avatar">🤖</div>
+          <div class="ai-bot-details">
+            <div class="ai-bot-name">SystemDesign Assistant</div>
+            <div class="ai-bot-status">Online</div>
+          </div>
+        </div>
+        <button class="ai-chat-close" id="closeChatBtn">&times;</button>
+      </div>
+      <div class="ai-chat-body" id="chatBody">
+        <div class="ai-message bot">
+          Hello! I'm your System Design Assistant. Ask me anything about scalability, databases, or interview questions!
+        </div>
+      </div>
+      <div class="ai-chat-footer">
+        <div class="ai-suggestions" id="chatSuggestions"></div>
+        <div class="ai-input-area">
+          <input type="text" id="aiChatInput" placeholder="Ask a question..." autocomplete="off" />
+          <button id="sendChatBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <button class="ai-trigger-btn" id="aiTriggerBtn" title="Ask AI Assistant">
+      <div class="ai-trigger-icon">🤖</div>
+      <div class="ai-trigger-pulse"></div>
+    </button>
+  </div>
+
   <script src="data.js"></script>
   <script src="app.js"></script>
+  <script src="assistant.js"></script>
 </body>
 </html>

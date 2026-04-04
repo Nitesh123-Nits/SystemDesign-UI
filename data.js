@@ -2280,6 +2280,33 @@ const GUIDES_DATA = [
     tags: ["Data Engineering", "Big Data", "Architecture"],
     color: "#f59e0b",
     url: "modern-data-architecture.html"
+  },
+  {
+    id: "g11",
+    icon: "⎈",
+    title: "Kubernetes Architecture Deep Dive",
+    desc: "A comprehensive guide to Kubernetes components, control plane, worker nodes, and service mesh.",
+    tags: ["Kubernetes", "Orchestration", "Cloud Native", "Architecture"],
+    color: "#3178c6",
+    url: "kubernetes-architecture.html"
+  },
+  {
+    id: "g12",
+    icon: "🔭",
+    title: "Observability Stacks Reference",
+    desc: "A deep dive into the 3 pillars of observability: Logs, Metrics, and Traces with ELK, EFK, and Grafana stacks.",
+    tags: ["Observability", "Monitoring", "ELK", "Grafana", "Prometheus"],
+    color: "#f5a623",
+    url: "observability-stacks.html"
+  },
+  {
+    id: "g13",
+    icon: "🎨",
+    title: "LLD Interview Prep Guide",
+    desc: "Master Object-Oriented Programming (OOP) concepts, SOLID principles, and the 23 Gang of Four (GoF) design patterns.",
+    tags: ["LLD", "Object Oriented", "Design Patterns", "SOLID"],
+    color: "#6c63ff",
+    url: "lld-interview-prep.html"
   }
 ];
 

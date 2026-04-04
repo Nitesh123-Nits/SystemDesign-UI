@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observability Stacks — Complete Reference</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --ink: #04070f;
+  --paper: #080d18;
+  --surface: #0c1220;
+  --surface2: #111827;
+  --surface3: #1a2438;
+  --border: #1e2d45;
+  --border2: #2a3f5f;
+  --text: #c8d8f0;
+  --text-dim: #6b84a8;
+  --text-muted: #374a68;
+
+  /* Stack accent colors */
+  --elk: #f5a623;
+  --elk-glow: rgba(245,166,35,0.2);
+  --efk: #e8823a;
+  --efk-glow: rgba(232,130,58,0.2);
+  --grafana: #f46800;
+  --grafana-glow: rgba(244,104,0,0.2);
+  --prometheus: #e6522c;
+  --prometheus-glow: rgba(230,82,44,0.2);
+  --otel: #425cc7;
+  --otel-glow: rgba(66,92,199,0.2);
+  --tempo: #7b61ff;
+  --tempo-glow: rgba(123,97,255,0.2);
+  --micrometer: #3cb371;
+  --micrometer-glow: rgba(60,179,113,0.2);
+  --loki: #f0a500;
+
+  --flow: #00d4ff;
+  --flow-glow: rgba(0,212,255,0.15);
+  --signal: #39ff14;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--ink);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ── SCANLINE ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+}
+
+.page { position: relative; z-index: 1; }
+
+/* ════════════════════════════
+   HEADER
+════════════════════════════ */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(4,7,15,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 54px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--flow), transparent);
+  opacity: 0.4;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--flow), #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo span { font-family: 'IBM Plex Mono', monospace; font-size: 11px; -webkit-text-fill-color: var(--text-dim); letter-spacing: 1px; margin-left: 10px; }
+
+.nav { display: flex; gap: 4px; }
+.nav-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 6px 13px; border-radius: 4px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-dim); cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.nav-btn:hover { color: var(--flow); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
+.nav-btn.active { color: var(--flow); border-color: rgba(0,212,255,0.5); background: rgba(0,212,255,0.08); }
+
+.status-bar { display: flex; align-items: center; gap: 14px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 8px var(--signal); animation: blink 2s ease-in-out infinite; }
+.status-txt { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ════════════════════════════
+   VIEWS
+════════════════════════════ */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ════════════════════════════
+   HLD FLOW DIAGRAM
+════════════════════════════ */
+.hld-wrap {
+  padding: 28px 28px 40px;
+  max-width: 1500px; margin: 0 auto;
+}
+
+.section-head {
+  margin-bottom: 24px;
+  display: flex; align-items: baseline; gap: 16px;
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px; letter-spacing: 3px;
+  color: var(--flow);
+}
+.section-sub {
+  font-size: 10px; color: var(--text-muted);
+  letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* PIPELINE ROWS */
+.pipeline {
+  position: relative;
+  margin-bottom: 20px;
+}
+.pipeline-label {
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.pipeline-label::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border2), transparent);
+}
+
+.pipe-row {
+  display: flex; align-items: center; gap: 0;
+  flex-wrap: nowrap; overflow-x: auto;
+  padding: 4px 0 4px;
+}
+.pipe-row::-webkit-scrollbar { height: 3px; }
+.pipe-row::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* NODE */
+.pnode {
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px; padding: 12px 14px;
+  min-width: 120px; text-align: center;
+  cursor: pointer; transition: all 0.25s;
+  position: relative; overflow: hidden;
+}
+.pnode::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--node-color, var(--flow));
+  opacity: 0.6;
+}
+.pnode:hover {
+  transform: translateY(-3px);
+  border-color: var(--node-color, var(--flow));
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 20px var(--node-glow, var(--flow-glow));
+  z-index: 2;
+}
+.pnode-icon { font-size: 20px; margin-bottom: 5px; }
+.pnode-name { font-size: 10px; font-weight: 600; color: var(--node-color, var(--flow)); margin-bottom: 2px; }
+.pnode-desc { font-size: 8px; color: var(--text-muted); line-height: 1.4; }
+.pnode-tag {
+  display: inline-block; margin-top: 5px;
+  font-size: 7px; padding: 2px 6px; border-radius: 3px;
+  background: rgba(255,255,255,0.04); color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+/* ARROW */
+.parrow {
+  flex-shrink: 0;
+  display: flex; align-items: center; flex-direction: column;
+  width: 48px; position: relative;
+}
+.parrow-line {
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, var(--arrow-color, var(--flow)), transparent);
+  position: relative; overflow: hidden;
+}
+.parrow-line::after {
+  content: '';
+  position: absolute; top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.8), transparent);
+  animation: flow-anim var(--anim-dur, 1.8s) linear infinite;
+  animation-delay: var(--anim-delay, 0s);
+}
+@keyframes flow-anim { to { left: 200%; } }
+.parrow-head {
+  width: 0; height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--arrow-color, var(--flow));
+  margin-left: -2px; align-self: center; margin-top: -1px;
+}
+.parrow-label { font-size: 7px; color: var(--text-muted); white-space: nowrap; margin-top: 3px; letter-spacing: 1px; }
+.parrow-wrap { display: flex; align-items: center; width: 100%; }
+
+/* ── THREE PILLARS ── */
+.pillars-wrap {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px; margin: 16px 0;
+}
+@media(max-width:900px){ .pillars-wrap { grid-template-columns: 1fr; } }
+
+.pillar {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px; padding: 18px;
+  position: relative; overflow: hidden;
+}
+.pillar::after {
+  content: '';
+  position: absolute; top: -40px; right: -40px;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: var(--pillar-color, var(--flow));
+  opacity: 0.04; pointer-events: none;
+}
+.pillar-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px;
+  color: var(--pillar-color, var(--flow));
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.pillar-sub { font-size: 10px; color: var(--text-dim); margin-bottom: 14px; line-height: 1.6; }
+.pillar-items { display: flex; flex-direction: column; gap: 6px; }
+.pillar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+  font-size: 10px;
+}
+.pillar-item:hover { border-color: var(--pillar-color, var(--flow)); background: var(--surface3); }
+.pillar-item-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--pillar-color, var(--flow)); box-shadow: 0 0 6px var(--pillar-color, var(--flow)); }
+.pillar-item-name { font-weight: 600; color: var(--text); flex: 1; }
+.pillar-item-type { font-size: 8px; color: var(--text-muted); }
+
+/* ════════════════════════════
+   STACKS DETAIL VIEW
+════════════════════════════ */
+.stacks-grid {
+  padding: 28px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(380px,1fr));
+  gap: 20px; max-width: 1500px; margin: 0 auto;
+}
+
+.stack-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px; overflow: hidden;
+  cursor: pointer; transition: all 0.25s;
+  position: relative;
+}
+.stack-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 30px var(--card-glow, var(--flow-glow));
+  border-color: var(--card-color, var(--flow));
+}
+.stack-card-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.stack-card-icon { font-size: 32px; flex-shrink: 0; }
+.stack-card-meta { flex: 1; }
+.stack-card-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px;
+  color: var(--card-color, var(--flow));
+  margin-bottom: 3px;
+}
+.stack-card-sub { font-size: 10px; color: var(--text-dim); line-height: 1.5; }
+.stack-card-badge {
+  font-size: 8px; padding: 3px 9px; border-radius: 3px;
+  background: var(--card-color, var(--flow));
+  color: #000; font-weight: 700; letter-spacing: 2px;
+  margin-top: 8px; display: inline-block;
+}
+.stack-card-body { padding: 16px 20px 20px; }
+.stack-components { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+.stack-comp {
+  font-size: 9px; padding: 4px 10px; border-radius: 4px;
+  border: 1px solid var(--border2); color: var(--text-dim);
+  background: var(--surface2);
+  transition: all 0.15s; cursor: pointer;
+}
+.stack-comp:hover { border-color: var(--card-color, var(--flow)); color: var(--card-color, var(--flow)); }
+.stack-desc { font-size: 10px; color: var(--text-dim); line-height: 1.7; margin-bottom: 14px; }
+.stack-flow {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+  font-size: 9px; color: var(--text-muted); line-height: 1.8;
+}
+.stack-flow-title { font-size: 8px; letter-spacing: 2px; color: var(--card-color, var(--flow)); margin-bottom: 6px; }
+.flow-step {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px;
+}
+.flow-num {
+  font-size: 8px; font-weight: 700;
+  color: var(--card-color, var(--flow));
+  min-width: 16px; opacity: 0.7;
+}
+.stack-ports { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.port-chip {
+  font-size: 8px; padding: 3px 8px; border-radius: 3px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  color: var(--text-muted); letter-spacing: 1px;
+}
+
+/* ════════════════════════════
+   DATA FLOW ANIMATED VIEW
+════════════════════════════ */
+.dataflow-wrap { padding: 28px; max-width: 1400px; margin: 0 auto; }
+
+.df-stage {
+  margin-bottom: 32px;
+}
+.df-stage-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: 3px;
+  color: var(--text-muted); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.df-stage-title::before {
+  content: '';
+  width: 4px; height: 16px; border-radius: 2px;
+  background: var(--stage-color, var(--flow));
+}
+
+.df-row { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+
+.df-block {
+  flex: 1; min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px; padding: 14px;
+  position: relative; overflow: hidden;
+  transition: all 0.2s; cursor: pointer;
+}
+.df-block::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--block-color, var(--flow));
+}
+.df-block:hover { border-color: var(--block-color, var(--flow)); box-shadow: 0 0 20px var(--block-glow, var(--flow-glow)); }
+.df-block-name { font-size: 11px; font-weight: 600; color: var(--block-color, var(--flow)); margin-bottom: 4px; }
+.df-block-desc { font-size: 9px; color: var(--text-muted); line-height: 1.6; }
+.df-block-proto { font-size: 8px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+/* animated connector */
+.df-connector {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-width: 50px; padding: 0 4px;
+}
+.df-conn-line {
+  width: 2px; flex: 1; min-height: 40px;
+  background: linear-gradient(180deg, var(--conn-color, var(--flow)), transparent);
+  position: relative; overflow: hidden;
+}
+.df-conn-line::after {
+  content: '';
+  position: absolute; top: -100%; left: 0;
+  width: 100%; height: 40%;
+  background: linear-gradient(180deg, transparent, rgba(0,212,255,0.9), transparent);
+  animation: flow-down 1.5s linear infinite;
+  animation-delay: var(--flow-delay, 0s);
+}
+@keyframes flow-down { to { top: 200%; } }
+.df-conn-arrow {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid var(--conn-color, var(--flow));
+}
+.df-conn-label { font-size: 7px; color: var(--text-muted); letter-spacing: 1px; white-space: nowrap; margin: 3px 0; }
+
+/* ════════════════════════════
+   COMPARISON TABLE
+════════════════════════════ */
+.compare-wrap { padding: 28px; max-width: 1400px; margin: 0 auto; }
+
+.compare-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.compare-table th {
+  padding: 12px 16px; text-align: left;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted); border-bottom: 1px solid var(--border2);
+  font-weight: 500;
+}
+.compare-table th:first-child { width: 150px; }
+.compare-table td {
+  padding: 11px 16px;
+  font-size: 10px; color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top; line-height: 1.5;
+}
+.compare-table tr:hover td { background: rgba(0,212,255,0.03); }
+.compare-table td:first-child { font-weight: 600; color: var(--text); }
+.badge-yes { color: var(--signal); font-size: 9px; }
+.badge-no { color: var(--text-muted); font-size: 9px; }
+.badge-partial { color: var(--elk); font-size: 9px; }
+.col-elk { color: var(--elk); }
+.col-efk { color: var(--efk); }
+.col-grafana { color: var(--grafana); }
+.col-otel { color: var(--otel); }
+.col-prom { color: var(--prometheus); }
+.col-tempo { color: var(--tempo); }
+
+/* ════════════════════════════
+   DETAIL PANEL
+════════════════════════════ */
+.detail-panel {
+  position: fixed; right: 0; top: 54px;
+  width: 380px; height: calc(100vh - 54px);
+  background: var(--surface);
+  border-left: 1px solid var(--border2);
+  padding: 0;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto; z-index: 200;
+}
+.detail-panel.open { transform: translateX(0); }
+.dp-header {
+  padding: 20px; position: sticky; top: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.dp-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 28px; height: 28px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; cursor: pointer;
+  color: var(--text-dim); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-family: monospace;
+}
+.dp-close:hover { border-color: #ef4444; color: #ef4444; }
+.dp-icon { font-size: 28px; }
+.dp-title-wrap { flex: 1; }
+.dp-category { font-size: 8px; letter-spacing: 2px; color: var(--dp-color, var(--flow)); margin-bottom: 4px; text-transform: uppercase; }
+.dp-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--dp-color, var(--flow)); }
+.dp-sub { font-size: 9px; color: var(--text-dim); margin-top: 2px; line-height: 1.5; }
+.dp-body { padding: 18px 20px; }
+.dp-section { margin-bottom: 18px; }
+.dp-section-title { font-size: 8px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.dp-kv { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+.dp-key { font-size: 9px; color: var(--text-muted); min-width: 110px; }
+.dp-val { font-size: 9px; color: var(--text-dim); line-height: 1.5; word-break: break-word; }
+.dp-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.dp-tag { font-size: 8px; padding: 3px 8px; border-radius: 3px; letter-spacing: 1px; }
+.dp-code {
+  background: var(--ink); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 12px;
+  font-size: 9px; color: #7dd3fc; line-height: 1.7;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-top: 6px; overflow-x: auto;
+}
+.dp-list { list-style: none; }
+.dp-list li { padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 9px; color: var(--text-dim); line-height: 1.5; display: flex; gap: 8px; }
+.dp-list li::before { content: '▸'; color: var(--dp-color, var(--flow)); flex-shrink: 0; margin-top: 1px; }
+.dp-list li:last-child { border-bottom: none; }
+
+/* ════════════════════════════
+   MISC
+════════════════════════════ */
+.badge-stack {
+  display: inline-block; font-size: 8px; padding: 2px 8px;
+  border-radius: 3px; letter-spacing: 2px; font-weight: 700;
+}
+
+.announce-bar {
+  background: rgba(0,212,255,0.05);
+  border-bottom: 1px solid rgba(0,212,255,0.15);
+  padding: 8px 28px; font-size: 9px; color: var(--text-muted);
+  display: flex; gap: 24px; overflow: hidden;
+}
+.announce-item { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.announce-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--flow); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* Stagger reveal */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fadein { animation: fadeUp 0.4s ease forwards; }
+.fadein:nth-child(1){animation-delay:0.05s}
+.fadein:nth-child(2){animation-delay:0.1s}
+.fadein:nth-child(3){animation-delay:0.15s}
+.fadein:nth-child(4){animation-delay:0.2s}
+.fadein:nth-child(5){animation-delay:0.25s}
+.fadein:nth-child(6){animation-delay:0.3s}
+.fadein:nth-child(7){animation-delay:0.35s}
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(0,212,255,0.1); }
+  50%{ box-shadow: 0 0 0 6px rgba(0,212,255,0); }
+}
+
+.signal-node { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* metric mini chart */
+.mini-chart { display: flex; align-items: flex-end; gap: 2px; height: 28px; margin-top: 8px; }
+.mini-bar { flex: 1; border-radius: 1px; transition: all 0.3s; }
+
+.tag-pill { display: inline-block; font-size: 8px; padding: 2px 7px; border-radius: 10px; margin: 2px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="logo">OBS<span>// observability stacks</span></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchView('hld')">HLD Overview</button>
+    <button class="nav-btn" onclick="switchView('stacks')">Stack Details</button>
+    <button class="nav-btn" onclick="switchView('dataflow')">Data Flow</button>
+    <button class="nav-btn" onclick="switchView('compare')">Compare</button>
+  </nav>
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <div class="status-txt">7 STACKS · 3 PILLARS</div>
+  </div>
+</header>
+
+<!-- announce bar -->
+<div class="announce-bar">
+  <div class="announce-item"><div class="announce-dot"></div>ELK Stack v8.x</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#e8823a"></div>EFK Stack (Kubernetes native)</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#f46800"></div>Grafana LGTM Stack</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#e6522c"></div>Prometheus + Alertmanager</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#425cc7"></div>OpenTelemetry (OTel)</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#7b61ff"></div>Grafana Tempo (Tracing)</div>
+  <div class="announce-item"><div class="announce-dot" style="background:#3cb371"></div>Micrometer (JVM metrics)</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     VIEW: HLD OVERVIEW
+════════════════════════════════════════ -->
+<div class="view active" id="view-hld">
+<div class="hld-wrap">
+  <div class="section-head">
+    <div class="section-title">HIGH-LEVEL ARCHITECTURE</div>
+    <div class="section-sub">Three Pillars of Observability · Complete Data Flow</div>
+  </div>
+
+  <!-- THREE PILLARS -->
+  <div class="pillars-wrap">
+    <div class="pillar fadein" style="--pillar-color:#f5a623">
+      <div class="pillar-title">📋 LOGS</div>
+      <div class="pillar-sub">Timestamped records of discrete events. Provides the "what happened" narrative.</div>
+      <div class="pillar-items">
+        <div class="pillar-item" onclick="showDetail('elasticsearch')">
+          <div class="pillar-item-dot" style="background:#f5a623;box-shadow:0 0 6px #f5a623"></div>
+          <div class="pillar-item-name">Elasticsearch</div>
+          <div class="pillar-item-type">ELK — Index & Search</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('logstash')">
+          <div class="pillar-item-dot" style="background:#f5a623;box-shadow:0 0 6px #f5a623"></div>
+          <div class="pillar-item-name">Logstash</div>
+          <div class="pillar-item-type">ELK — Parse & Transform</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('kibana')">
+          <div class="pillar-item-dot" style="background:#f5a623;box-shadow:0 0 6px #f5a623"></div>
+          <div class="pillar-item-name">Kibana</div>
+          <div class="pillar-item-type">ELK — Visualization</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('fluentd')">
+          <div class="pillar-item-dot" style="background:#e8823a;box-shadow:0 0 6px #e8823a"></div>
+          <div class="pillar-item-name">Fluentd / Fluent Bit</div>
+          <div class="pillar-item-type">EFK — Collector</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('loki')">
+          <div class="pillar-item-dot" style="background:#f0a500;box-shadow:0 0 6px #f0a500"></div>
+          <div class="pillar-item-name">Grafana Loki</div>
+          <div class="pillar-item-type">Grafana Stack — Log DB</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('otel_collector')">
+          <div class="pillar-item-dot" style="background:#425cc7;box-shadow:0 0 6px #425cc7"></div>
+          <div class="pillar-item-name">OTel Collector</div>
+          <div class="pillar-item-type">OpenTelemetry — Pipeline</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pillar fadein" style="--pillar-color:#e6522c">
+      <div class="pillar-title">📊 METRICS</div>
+      <div class="pillar-sub">Numerical measurements over time. Enables trending, alerting, capacity planning.</div>
+      <div class="pillar-items">
+        <div class="pillar-item" onclick="showDetail('prometheus')">
+          <div class="pillar-item-dot" style="background:#e6522c;box-shadow:0 0 6px #e6522c"></div>
+          <div class="pillar-item-name">Prometheus</div>
+          <div class="pillar-item-type">TSDB + Alertmanager</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('micrometer')">
+          <div class="pillar-item-dot" style="background:#3cb371;box-shadow:0 0 6px #3cb371"></div>
+          <div class="pillar-item-name">Micrometer</div>
+          <div class="pillar-item-type">JVM Metrics Facade</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('grafana_main')">
+          <div class="pillar-item-dot" style="background:#f46800;box-shadow:0 0 6px #f46800"></div>
+          <div class="pillar-item-name">Grafana</div>
+          <div class="pillar-item-type">Visualization Platform</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('alertmanager')">
+          <div class="pillar-item-dot" style="background:#e6522c;box-shadow:0 0 6px #e6522c"></div>
+          <div class="pillar-item-name">Alertmanager</div>
+          <div class="pillar-item-type">Alert routing</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('otel_metrics')">
+          <div class="pillar-item-dot" style="background:#425cc7;box-shadow:0 0 6px #425cc7"></div>
+          <div class="pillar-item-name">OTel SDK Metrics</div>
+          <div class="pillar-item-type">OpenTelemetry</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('node_exporter')">
+          <div class="pillar-item-dot" style="background:#e6522c;box-shadow:0 0 6px #e6522c"></div>
+          <div class="pillar-item-name">Node Exporter</div>
+          <div class="pillar-item-type">Host metrics</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pillar fadein" style="--pillar-color:#7b61ff">
+      <div class="pillar-title">🔭 TRACES</div>
+      <div class="pillar-sub">End-to-end request journeys across services. Reveals latency and bottlenecks.</div>
+      <div class="pillar-items">
+        <div class="pillar-item" onclick="showDetail('tempo')">
+          <div class="pillar-item-dot" style="background:#7b61ff;box-shadow:0 0 6px #7b61ff"></div>
+          <div class="pillar-item-name">Grafana Tempo</div>
+          <div class="pillar-item-type">Trace backend (object store)</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('otel_traces')">
+          <div class="pillar-item-dot" style="background:#425cc7;box-shadow:0 0 6px #425cc7"></div>
+          <div class="pillar-item-name">OTel SDK Traces</div>
+          <div class="pillar-item-type">Auto-instrumentation</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('jaeger')">
+          <div class="pillar-item-dot" style="background:#7b61ff;box-shadow:0 0 6px #7b61ff"></div>
+          <div class="pillar-item-name">Jaeger</div>
+          <div class="pillar-item-type">Distributed tracing UI</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('zipkin')">
+          <div class="pillar-item-dot" style="background:#7b61ff;box-shadow:0 0 6px #7b61ff"></div>
+          <div class="pillar-item-name">Zipkin</div>
+          <div class="pillar-item-type">Lightweight tracer</div>
+        </div>
+        <div class="pillar-item" onclick="showDetail('propagation')">
+          <div class="pillar-item-dot" style="background:#425cc7;box-shadow:0 0 6px #425cc7"></div>
+          <div class="pillar-item-name">Context Propagation</div>
+          <div class="pillar-item-type">W3C TraceContext / B3</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL HLD PIPELINE -->
+  <div style="margin-top:28px;">
+    <div class="pipeline-label">APPLICATION LAYER → COLLECTION → PROCESSING → STORAGE → VISUALIZATION</div>
+
+    <!-- ROW 1: SOURCE -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:18px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;">① APPLICATION SOURCES</div>
+      <div class="pipe-row">
+        <div class="pnode fadein" style="--node-color:#3cb371;--node-glow:rgba(60,179,113,0.2);" onclick="showDetail('micrometer')">
+          <div class="pnode-icon">🌿</div>
+          <div class="pnode-name">Spring Boot App</div>
+          <div class="pnode-desc">Micrometer + Actuator</div>
+          <span class="pnode-tag">JVM / Kotlin</span>
+        </div>
+        <div class="parrow" style="--arrow-color:#3cb371"><div class="parrow-wrap"><div class="parrow-line" style="--anim-dur:1.4s"></div><div class="parrow-head" style="border-left-color:#3cb371"></div></div><div class="parrow-label">metrics</div></div>
+        <div class="pnode fadein" style="--node-color:#425cc7;--node-glow:rgba(66,92,199,0.2);" onclick="showDetail('otel_collector')">
+          <div class="pnode-icon">🔷</div>
+          <div class="pnode-name">OTel SDK</div>
+          <div class="pnode-desc">Traces + Metrics + Logs</div>
+          <span class="pnode-tag">Auto-Instrument</span>
+        </div>
+        <div class="parrow" style="--arrow-color:#425cc7"><div class="parrow-wrap"><div class="parrow-line" style="--anim-dur:1.6s;--anim-delay:0.2s"></div><div class="parrow-head" style="border-left-color:#425cc7"></div></div><div class="parrow-label">OTLP gRPC</div></div>
+        <div class="pnode fadein" style="--node-color:#f5a623;--node-glow:rgba(245,166,35,0.2);" onclick="showDetail('filebeat')">
+          <div class="pnode-icon">📂</div>
+          <div class="pnode-name">Filebeat / Logagent</div>
+          <div class="pnode-desc">Lightweight log shipper</div>
+          <span class="pnode-tag">sidecar / DaemonSet</span>
+        </div>
+        <div class="parrow" style="--arrow-color:#f5a623"><div class="parrow-wrap"><div class="parrow-line" style="--anim-dur:2s;--anim-delay:0.4s"></div><div class="parrow-head" style="border-left-color:#f5a623"></div></div><div class="parrow-label">stdout/file</div></div>
+        <div class="pnode fadein" style="--node-color:#e6522c;--node-glow:rgba(230,82,44,0.2);" onclick="showDetail('node_exporter')">
+          <div class="pnode-icon">🖥️</div>
+          <div class="pnode-name">Node Exporter</div>
+          <div class="pnode-desc">CPU, MEM, Disk, Net</div>
+          <span class="pnode-tag">:9100/metrics</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div style="display:flex;justify-content:center;margin:-6px 0;z-index:2;position:relative;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="width:2px;height:20px;background:linear-gradient(180deg,var(--flow),transparent);"></div>
+        <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--flow)"></div>
+      </div>
+    </div>
+
+    <!-- ROW 2: COLLECTION & PROCESSING -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:18px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;">② COLLECTION & PROCESSING LAYER</div>
+      <div class="pipe-row" style="justify-content:center;flex-wrap:wrap;gap:12px;">
+        <div class="pnode fadein" style="--node-color:#425cc7;--node-glow:rgba(66,92,199,0.2);min-width:150px;" onclick="showDetail('otel_collector')">
+          <div class="pnode-icon">⚙️</div>
+          <div class="pnode-name">OTel Collector</div>
+          <div class="pnode-desc">Receive → Process → Export</div>
+          <span class="pnode-tag">:4317 gRPC · :4318 HTTP</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#f5a623;--node-glow:rgba(245,166,35,0.2);min-width:150px;" onclick="showDetail('logstash')">
+          <div class="pnode-icon">🔄</div>
+          <div class="pnode-name">Logstash</div>
+          <div class="pnode-desc">Grok parse, filter, mutate, enrich</div>
+          <span class="pnode-tag">:5044 Beats · :5000 TCP</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#e8823a;--node-glow:rgba(232,130,58,0.2);min-width:150px;" onclick="showDetail('fluentd')">
+          <div class="pnode-icon">🌊</div>
+          <div class="pnode-name">Fluentd / Fluent Bit</div>
+          <div class="pnode-desc">Tag-based routing, buffering</div>
+          <span class="pnode-tag">:24224 forward</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#f46800;--node-glow:rgba(244,104,0,0.2);min-width:150px;" onclick="showDetail('prometheus')">
+          <div class="pnode-icon">🔥</div>
+          <div class="pnode-name">Prometheus Scraper</div>
+          <div class="pnode-desc">Pull metrics every 15-30s</div>
+          <span class="pnode-tag">:9090 HTTP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div style="display:flex;justify-content:center;margin:-6px 0;z-index:2;position:relative;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="width:2px;height:20px;background:linear-gradient(180deg,var(--flow),transparent);"></div>
+        <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--flow)"></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: STORAGE -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:18px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;">③ STORAGE BACKENDS</div>
+      <div class="pipe-row" style="justify-content:center;flex-wrap:wrap;gap:12px;">
+        <div class="pnode fadein" style="--node-color:#f5a623;--node-glow:rgba(245,166,35,0.2);min-width:140px;" onclick="showDetail('elasticsearch')">
+          <div class="pnode-icon">🔍</div>
+          <div class="pnode-name">Elasticsearch</div>
+          <div class="pnode-desc">Log index & full-text search</div>
+          <span class="pnode-tag">:9200 REST</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#f0a500;--node-glow:rgba(240,165,0,0.2);min-width:140px;" onclick="showDetail('loki')">
+          <div class="pnode-icon">🪵</div>
+          <div class="pnode-name">Loki</div>
+          <div class="pnode-desc">Label-indexed log store</div>
+          <span class="pnode-tag">:3100 gRPC/HTTP</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#e6522c;--node-glow:rgba(230,82,44,0.2);min-width:140px;" onclick="showDetail('prometheus')">
+          <div class="pnode-icon">📊</div>
+          <div class="pnode-name">Prometheus TSDB</div>
+          <div class="pnode-desc">Time-series metric storage</div>
+          <span class="pnode-tag">15d local / Thanos</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#7b61ff;--node-glow:rgba(123,97,255,0.2);min-width:140px;" onclick="showDetail('tempo')">
+          <div class="pnode-icon">🌀</div>
+          <div class="pnode-name">Tempo</div>
+          <div class="pnode-desc">Trace storage on object store</div>
+          <span class="pnode-tag">S3 / GCS / Azure</span>
+        </div>
+        <div class="pnode fadein" style="--node-color:#7b61ff;--node-glow:rgba(123,97,255,0.2);min-width:140px;" onclick="showDetail('jaeger')">
+          <div class="pnode-icon">🔭</div>
+          <div class="pnode-name">Jaeger / Zipkin</div>
+          <div class="pnode-desc">Distributed tracing UI + storage</div>
+          <span class="pnode-tag">:16686 UI</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div style="display:flex;justify-content:center;margin:-6px 0;z-index:2;position:relative;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="width:2px;height:20px;background:linear-gradient(180deg,var(--flow),transparent);"></div>
+        <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--flow)"></div>
+      </div>
+    </div>
+
+    <!-- ROW 4: VISUALIZATION & ALERTING -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:18px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;">④ VISUALIZATION, ALERTING & RESPONSE</div>
+      <div class="pipe-row" style="justify-content:center;flex-wrap:wrap;gap:12px;">
+        <div class="pnode fadein signal-node" style="--node-color:#f5a623;--node-glow:rgba(245,166,35,0.2);min-width:130px;" onclick="showDetail('kibana')">
+          <div class="pnode-icon">📊</div>
+          <div class="pnode-name">Kibana</div>
+          <div class="pnode-desc">ELK dashboards, KQL search</div>
+          <span class="pnode-tag">:5601</span>
+        </div>
+        <div class="pnode fadein signal-node" style="--node-color:#f46800;--node-glow:rgba(244,104,0,0.2);min-width:130px;" onclick="showDetail('grafana_main')">
+          <div class="pnode-icon">📈</div>
+          <div class="pnode-name">Grafana</div>
+          <div class="pnode-desc">Universal viz: Prom+Loki+Tempo</div>
+          <span class="pnode-tag">:3000</span>
+        </div>
+        <div class="pnode fadein signal-node" style="--node-color:#e6522c;--node-glow:rgba(230,82,44,0.2);min-width:130px;" onclick="showDetail('alertmanager')">
+          <div class="pnode-icon">🚨</div>
+          <div class="pnode-name">Alertmanager</div>
+          <div class="pnode-desc">Route, dedupe, silence alerts</div>
+          <span class="pnode-tag">:9093</span>
+        </div>
+        <div class="pnode fadein signal-node" style="--node-color:#7b61ff;--node-glow:rgba(123,97,255,0.2);min-width:130px;" onclick="showDetail('jaeger')">
+          <div class="pnode-icon">🔭</div>
+          <div class="pnode-name">Jaeger UI</div>
+          <div class="pnode-desc">Trace timeline, dependency graph</div>
+          <span class="pnode-tag">:16686</span>
+        </div>
+        <div class="pnode fadein signal-node" style="--node-color:#e6522c;--node-glow:rgba(230,82,44,0.2);min-width:130px;" onclick="showDetail('pagerduty')">
+          <div class="pnode-icon">📟</div>
+          <div class="pnode-name">PagerDuty / Slack</div>
+          <div class="pnode-desc">On-call notification routing</div>
+          <span class="pnode-tag">webhook</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     VIEW: STACK DETAILS
+════════════════════════════════════════ -->
+<div class="view" id="view-stacks">
+<div class="stacks-grid">
+
+  <!-- ELK -->
+  <div class="stack-card fadein" style="--card-color:var(--elk);--card-glow:var(--elk-glow);" onclick="showDetail('elk_stack')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🔍</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">ELK STACK</div>
+        <div class="stack-card-sub">Elasticsearch · Logstash · Kibana — The original centralized logging platform</div>
+        <div class="stack-card-badge" style="background:var(--elk)">LOGGING</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">Elasticsearch</span><span class="stack-comp">Logstash</span>
+        <span class="stack-comp">Kibana</span><span class="stack-comp">Filebeat</span><span class="stack-comp">Metricbeat</span>
+      </div>
+      <div class="stack-desc">Full-text search-grade log aggregation. Logstash ingests, parses, and transforms; Elasticsearch indexes in near-real-time with inverted index; Kibana visualizes with KQL queries, dashboards, and APM.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>App/Filebeat ships logs → Logstash :5044 (Beats input)</div>
+        <div class="flow-step"><span class="flow-num">02</span>Logstash parses (Grok), filters, enriches (GeoIP, DNS)</div>
+        <div class="flow-step"><span class="flow-num">03</span>Output to Elasticsearch index (logs-YYYY.MM.DD)</div>
+        <div class="flow-step"><span class="flow-num">04</span>Kibana queries via REST API, renders dashboards</div>
+        <div class="flow-step"><span class="flow-num">05</span>Watcher triggers alerts on query conditions</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">ES :9200 REST</span><span class="port-chip">ES :9300 cluster</span>
+        <span class="port-chip">Logstash :5044</span><span class="port-chip">Kibana :5601</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EFK -->
+  <div class="stack-card fadein" style="--card-color:var(--efk);--card-glow:var(--efk-glow);" onclick="showDetail('efk_stack')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🌊</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">EFK STACK</div>
+        <div class="stack-card-sub">Elasticsearch · Fluentd · Kibana — Kubernetes-native logging</div>
+        <div class="stack-card-badge" style="background:var(--efk)">K8S LOGGING</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">Elasticsearch</span><span class="stack-comp">Fluentd</span>
+        <span class="stack-comp">Fluent Bit</span><span class="stack-comp">Kibana</span>
+      </div>
+      <div class="stack-desc">Kubernetes-first logging. Fluent Bit (lightweight) runs as DaemonSet collecting container logs from /var/log/containers; Fluentd aggregates and routes; Elasticsearch stores. Lower memory footprint than Logstash.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>Fluent Bit DaemonSet reads /var/log/containers/*.log</div>
+        <div class="flow-step"><span class="flow-num">02</span>Tail plugin → Kubernetes metadata filter enriches</div>
+        <div class="flow-step"><span class="flow-num">03</span>Forward to Fluentd aggregator (tag-based routing)</div>
+        <div class="flow-step"><span class="flow-num">04</span>Fluentd parses, buffers → Elasticsearch output</div>
+        <div class="flow-step"><span class="flow-num">05</span>Kibana visualizes; Index Lifecycle Management (ILM)</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">Fluentd :24224</span><span class="port-chip">Fluent Bit :2020</span>
+        <span class="port-chip">ES :9200</span><span class="port-chip">Kibana :5601</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grafana Stack -->
+  <div class="stack-card fadein" style="--card-color:var(--grafana);--card-glow:var(--grafana-glow);" onclick="showDetail('grafana_stack')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">📈</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">GRAFANA LGTM</div>
+        <div class="stack-card-sub">Loki · Grafana · Tempo · Mimir — Full observability platform</div>
+        <div class="stack-card-badge" style="background:var(--grafana)">ALL-IN-ONE</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">Grafana</span><span class="stack-comp">Loki</span>
+        <span class="stack-comp">Tempo</span><span class="stack-comp">Mimir</span><span class="stack-comp">Alloy</span>
+      </div>
+      <div class="stack-desc">The LGTM stack unifies logs (Loki), metrics (Grafana + Mimir), and traces (Tempo) with correlations. Grafana Alloy replaces Grafana Agent as the unified telemetry collector. Jump from log line → trace → metric.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>Grafana Alloy/Agent collects logs, metrics, traces</div>
+        <div class="flow-step"><span class="flow-num">02</span>Logs → Loki (label index, chunk store S3)</div>
+        <div class="flow-step"><span class="flow-num">03</span>Metrics → Mimir / Prometheus remote_write</div>
+        <div class="flow-step"><span class="flow-num">04</span>Traces → Tempo (object store: S3/GCS)</div>
+        <div class="flow-step"><span class="flow-num">05</span>Grafana correlates: logs ↔ traces (TraceID in logs)</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">Grafana :3000</span><span class="port-chip">Loki :3100</span>
+        <span class="port-chip">Tempo :3200</span><span class="port-chip">Mimir :9009</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prometheus -->
+  <div class="stack-card fadein" style="--card-color:var(--prometheus);--card-glow:var(--prometheus-glow);" onclick="showDetail('prometheus')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🔥</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">PROMETHEUS</div>
+        <div class="stack-card-sub">Pull-based metrics + Alertmanager + PromQL</div>
+        <div class="stack-card-badge" style="background:var(--prometheus)">METRICS</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">Prometheus</span><span class="stack-comp">Alertmanager</span>
+        <span class="stack-comp">Pushgateway</span><span class="stack-comp">Node Exporter</span><span class="stack-comp">Thanos</span>
+      </div>
+      <div class="stack-desc">Industry-standard metrics system. Pull model: Prometheus scrapes /metrics every N seconds. Multi-dimensional data model with labels. PromQL for powerful queries. Alertmanager for routing, deduplication, silencing.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>Exporters expose /metrics (Node, cAdvisor, app)</div>
+        <div class="flow-step"><span class="flow-num">02</span>Prometheus scrapes on schedule (ServiceMonitor CRD)</div>
+        <div class="flow-step"><span class="flow-num">03</span>Stores in local TSDB (Chunks + Index + WAL)</div>
+        <div class="flow-step"><span class="flow-num">04</span>PrometheusRule CRD triggers → Alertmanager :9093</div>
+        <div class="flow-step"><span class="flow-num">05</span>Alertmanager routes to Slack/PagerDuty/webhook</div>
+        <div class="flow-step"><span class="flow-num">06</span>Thanos extends: global query + long-term S3 storage</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">Prometheus :9090</span><span class="port-chip">Alertmanager :9093</span>
+        <span class="port-chip">Pushgateway :9091</span><span class="port-chip">Node Exporter :9100</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenTelemetry -->
+  <div class="stack-card fadein" style="--card-color:var(--otel);--card-glow:var(--otel-glow);" onclick="showDetail('otel_full')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🔷</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">OPENTELEMETRY</div>
+        <div class="stack-card-sub">Vendor-neutral observability framework — CNCF standard</div>
+        <div class="stack-card-badge" style="background:var(--otel)">FRAMEWORK</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">OTel SDK</span><span class="stack-comp">OTel Collector</span>
+        <span class="stack-comp">OTLP protocol</span><span class="stack-comp">Auto-Instrument</span><span class="stack-comp">Semantic Conventions</span>
+      </div>
+      <div class="stack-desc">CNCF standard for generating and collecting telemetry. Replaces Jaeger/Zipkin clients. SDK instruments apps → OTel Collector (Receiver → Processor → Exporter) → any backend. Supports all three signals: traces, metrics, logs.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>Auto-instrumentation (Java Agent, Node SDK) attaches</div>
+        <div class="flow-step"><span class="flow-num">02</span>SDK creates spans, records metrics, emits log records</div>
+        <div class="flow-step"><span class="flow-num">03</span>OTLP export → OTel Collector :4317 (gRPC) / :4318 (HTTP)</div>
+        <div class="flow-step"><span class="flow-num">04</span>Collector: batch, memory_limiter, attributes processors</div>
+        <div class="flow-step"><span class="flow-num">05</span>Export to Tempo (traces), Prometheus (metrics), Loki (logs)</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">OTLP gRPC :4317</span><span class="port-chip">OTLP HTTP :4318</span>
+        <span class="port-chip">Collector :55679 (zpages)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tempo -->
+  <div class="stack-card fadein" style="--card-color:var(--tempo);--card-glow:var(--tempo-glow);" onclick="showDetail('tempo')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🌀</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">GRAFANA TEMPO</div>
+        <div class="stack-card-sub">Cost-efficient distributed tracing — no indexing, pure object storage</div>
+        <div class="stack-card-badge" style="background:var(--tempo)">TRACING</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">Distributor</span><span class="stack-comp">Ingester</span>
+        <span class="stack-comp">Querier</span><span class="stack-comp">Compactor</span><span class="stack-comp">TraceQL</span>
+      </div>
+      <div class="stack-desc">Unlike Jaeger/Zipkin which require Cassandra/ES, Tempo stores traces directly in object storage (S3/GCS) with no indexing cost. TraceQL for structured trace queries. Integrates with Grafana for log-to-trace correlation via TraceID.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>OTel Collector / Grafana Alloy sends traces (OTLP/Jaeger)</div>
+        <div class="flow-step"><span class="flow-num">02</span>Distributor receives, hashes by TraceID</div>
+        <div class="flow-step"><span class="flow-num">03</span>Ingester buffers in WAL → flushes to object store</div>
+        <div class="flow-step"><span class="flow-num">04</span>Compactor merges blocks, applies retention</div>
+        <div class="flow-step"><span class="flow-num">05</span>Querier fetches from object store on TraceID lookup</div>
+        <div class="flow-step"><span class="flow-num">06</span>Grafana renders: timeline, spans, service map</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">HTTP :3200</span><span class="port-chip">gRPC :9095</span>
+        <span class="port-chip">OTLP :4317</span><span class="port-chip">Jaeger :14268</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Micrometer -->
+  <div class="stack-card fadein" style="--card-color:var(--micrometer);--card-glow:var(--micrometer-glow);" onclick="showDetail('micrometer')">
+    <div class="stack-card-header">
+      <div class="stack-card-icon">🌿</div>
+      <div class="stack-card-meta">
+        <div class="stack-card-name">MICROMETER</div>
+        <div class="stack-card-sub">JVM application metrics facade — "SLF4J for metrics"</div>
+        <div class="stack-card-badge" style="background:var(--micrometer)">JVM METRICS</div>
+      </div>
+    </div>
+    <div class="stack-card-body">
+      <div class="stack-components">
+        <span class="stack-comp">MeterRegistry</span><span class="stack-comp">Counter</span>
+        <span class="stack-comp">Timer</span><span class="stack-comp">Gauge</span>
+        <span class="stack-comp">DistributionSummary</span><span class="stack-comp">Spring Actuator</span>
+      </div>
+      <div class="stack-desc">Vendor-neutral metrics API for JVM applications. Write once, publish to Prometheus, Datadog, InfluxDB, Cloudwatch, Dynatrace. Spring Boot Actuator auto-configures Micrometer. Records JVM heap, GC, HTTP request durations, DB pool metrics.</div>
+      <div class="stack-flow">
+        <div class="stack-flow-title">▸ DATA FLOW</div>
+        <div class="flow-step"><span class="flow-num">01</span>App code: Counter/Timer.record() via MeterRegistry</div>
+        <div class="flow-step"><span class="flow-num">02</span>Auto-metrics: Spring MVC, JDBC, JVM, Tomcat, Kafka</div>
+        <div class="flow-step"><span class="flow-num">03</span>PrometheusMeterRegistry → /actuator/prometheus</div>
+        <div class="flow-step"><span class="flow-num">04</span>Prometheus scrapes :8080/actuator/prometheus</div>
+        <div class="flow-step"><span class="flow-num">05</span>Grafana queries PromQL: rate(http_requests_total[5m])</div>
+      </div>
+      <div class="stack-ports">
+        <span class="port-chip">Actuator :8080/actuator</span><span class="port-chip">/health</span>
+        <span class="port-chip">/prometheus</span><span class="port-chip">/metrics</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     VIEW: DATA FLOW (Animated)
+════════════════════════════════════════ -->
+<div class="view" id="view-dataflow">
+<div class="dataflow-wrap">
+  <div class="section-head">
+    <div class="section-title">ANIMATED DATA FLOW</div>
+    <div class="section-sub">Click any block to see details</div>
+  </div>
+
+  <!-- SIGNAL 1: METRICS FLOW -->
+  <div class="df-stage" style="--stage-color:#e6522c">
+    <div class="df-stage-title" style="--stage-color:#e6522c">📊 METRICS PIPELINE — Micrometer → Prometheus → Grafana</div>
+    <div style="display:flex;gap:8px;flex-direction:column;align-items:stretch;">
+
+      <div class="df-row">
+        <div class="df-block fadein" style="--block-color:#3cb371;--block-glow:rgba(60,179,113,0.15);" onclick="showDetail('micrometer')">
+          <div class="df-block-name">Spring Boot App</div>
+          <div class="df-block-desc">Micrometer MeterRegistry auto-instruments HTTP, DB, JVM, Cache metrics</div>
+          <div class="df-block-proto">Exposes: /actuator/prometheus (OpenMetrics)</div>
+          <div class="mini-chart">
+            <div class="mini-bar" style="height:40%;background:#3cb371;opacity:0.6"></div>
+            <div class="mini-bar" style="height:70%;background:#3cb371;opacity:0.7"></div>
+            <div class="mini-bar" style="height:55%;background:#3cb371;opacity:0.6"></div>
+            <div class="mini-bar" style="height:90%;background:#3cb371"></div>
+            <div class="mini-bar" style="height:60%;background:#3cb371;opacity:0.7"></div>
+            <div class="mini-bar" style="height:80%;background:#3cb371;opacity:0.8"></div>
+            <div class="mini-bar" style="height:45%;background:#3cb371;opacity:0.6"></div>
+            <div class="mini-bar" style="height:100%;background:#3cb371"></div>
+          </div>
+        </div>
+
+        <div class="df-connector" style="--conn-color:#e6522c">
+          <div class="df-conn-label">scrape</div>
+          <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#e6522c,transparent);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#e6522c,transparent);animation:flow-anim 1.5s linear infinite;"></div>
+          </div>
+          <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #e6522c;"></div>
+          <div class="df-conn-label">every 15s</div>
+        </div>
+
+        <div class="df-block fadein" style="--block-color:#e6522c;--block-glow:rgba(230,82,44,0.15);" onclick="showDetail('prometheus')">
+          <div class="df-block-name">Prometheus Server</div>
+          <div class="df-block-desc">Pulls metrics from all targets. Evaluates alerting rules. Stores in TSDB with WAL + chunks</div>
+          <div class="df-block-proto">ServiceMonitor (CRD) auto-discovers targets in k8s</div>
+        </div>
+
+        <div class="df-connector" style="--conn-color:#f46800">
+          <div class="df-conn-label">PromQL</div>
+          <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#f46800,transparent);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#f46800,transparent);animation:flow-anim 1.2s linear infinite;animation-delay:0.3s"></div>
+          </div>
+          <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #f46800;"></div>
+          <div class="df-conn-label">query</div>
+        </div>
+
+        <div class="df-block fadein" style="--block-color:#f46800;--block-glow:rgba(244,104,0,0.15);" onclick="showDetail('grafana_main')">
+          <div class="df-block-name">Grafana Dashboard</div>
+          <div class="df-block-desc">Renders panels from PromQL. Alerting rules. Annotations on events</div>
+          <div class="df-block-proto">DataSource: Prometheus, Loki, Tempo, Mimir</div>
+        </div>
+
+        <div class="df-connector" style="--conn-color:#e6522c">
+          <div class="df-conn-label">fire alert</div>
+          <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#e6522c,transparent);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#e6522c,transparent);animation:flow-anim 2s linear infinite;animation-delay:0.6s"></div>
+          </div>
+          <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #e6522c;"></div>
+          <div class="df-conn-label">webhook</div>
+        </div>
+
+        <div class="df-block fadein" style="--block-color:#e6522c;--block-glow:rgba(230,82,44,0.15);" onclick="showDetail('alertmanager')">
+          <div class="df-block-name">Alertmanager</div>
+          <div class="df-block-desc">Deduplicates, groups, routes alerts. Handles silences & inhibitions</div>
+          <div class="df-block-proto">→ Slack · PagerDuty · OpsGenie · Email</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNAL 2: LOGS FLOW -->
+  <div class="df-stage" style="--stage-color:#f5a623">
+    <div class="df-stage-title" style="--stage-color:#f5a623">📋 LOGS PIPELINE — App → Fluentd/Logstash → Loki/ES → Kibana/Grafana</div>
+    <div class="df-row">
+      <div class="df-block fadein" style="--block-color:#f5a623;--block-glow:rgba(245,166,35,0.15);" onclick="showDetail('app_logs')">
+        <div class="df-block-name">Application (stdout)</div>
+        <div class="df-block-desc">Structured JSON logs (logback, log4j2). Kubernetes captures stdout → /var/log/containers</div>
+        <div class="df-block-proto">Format: JSON · Level: INFO/WARN/ERROR</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#e8823a">
+        <div class="df-conn-label">tail</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#e8823a,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#e8823a,transparent);animation:flow-anim 1.8s linear infinite;"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #e8823a;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#e8823a;--block-glow:rgba(232,130,58,0.15);" onclick="showDetail('fluentd')">
+        <div class="df-block-name">Fluent Bit (DaemonSet)</div>
+        <div class="df-block-desc">Tail /var/log/containers. Add k8s metadata: pod name, namespace, labels</div>
+        <div class="df-block-proto">Parser: json, regex, multiline</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#f0a500">
+        <div class="df-conn-label">forward</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#f0a500,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#f0a500,transparent);animation:flow-anim 1.5s linear infinite;animation-delay:0.3s"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #f0a500;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#f0a500;--block-glow:rgba(240,165,0,0.15);" onclick="showDetail('loki')">
+        <div class="df-block-name">Loki (Log Aggregator)</div>
+        <div class="df-block-desc">Index only labels (not full text). Stores log chunks in object store. LogQL query language</div>
+        <div class="df-block-proto">Labels: {app="api", namespace="prod"}</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#f46800">
+        <div class="df-conn-label">LogQL</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#f46800,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#f46800,transparent);animation:flow-anim 1.3s linear infinite;animation-delay:0.5s"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #f46800;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#f46800;--block-glow:rgba(244,104,0,0.15);" onclick="showDetail('grafana_main')">
+        <div class="df-block-name">Grafana Explore</div>
+        <div class="df-block-desc">LogQL queries. Correlate log lines with traces via TraceID field. Live tail mode</div>
+        <div class="df-block-proto">Derived fields: TraceID → Tempo link</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNAL 3: TRACES FLOW -->
+  <div class="df-stage" style="--stage-color:#7b61ff">
+    <div class="df-stage-title" style="--stage-color:#7b61ff">🔭 TRACES PIPELINE — OTel SDK → Collector → Tempo → Grafana</div>
+    <div class="df-row">
+      <div class="df-block fadein" style="--block-color:#425cc7;--block-glow:rgba(66,92,199,0.15);" onclick="showDetail('otel_traces')">
+        <div class="df-block-name">App + OTel SDK</div>
+        <div class="df-block-desc">Java Agent / Node SDK auto-instruments HTTP clients, DB calls. Creates spans with TraceID, SpanID, parent context</div>
+        <div class="df-block-proto">W3C traceparent header propagation</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#425cc7">
+        <div class="df-conn-label">OTLP gRPC</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#425cc7,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#425cc7,transparent);animation:flow-anim 1.6s linear infinite;"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #425cc7;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#425cc7;--block-glow:rgba(66,92,199,0.15);" onclick="showDetail('otel_collector')">
+        <div class="df-block-name">OTel Collector</div>
+        <div class="df-block-desc">Receivers: OTLP, Jaeger, Zipkin. Processors: batch, tail_sampling, attributes. Exporters: Tempo, Jaeger, OTLP</div>
+        <div class="df-block-proto">:4317 gRPC · :4318 HTTP</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#7b61ff">
+        <div class="df-conn-label">push spans</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#7b61ff,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#7b61ff,transparent);animation:flow-anim 1.4s linear infinite;animation-delay:0.4s"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #7b61ff;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#7b61ff;--block-glow:rgba(123,97,255,0.15);" onclick="showDetail('tempo')">
+        <div class="df-block-name">Grafana Tempo</div>
+        <div class="df-block-desc">Writes trace data to object store. Distributor → Ingester → S3 blocks. TraceQL for structured queries</div>
+        <div class="df-block-proto">Storage: S3 / GCS / Azure Blob</div>
+      </div>
+      <div class="df-connector" style="--conn-color:#f46800">
+        <div class="df-conn-label">TraceID</div>
+        <div class="df-conn-line" style="width:40px;height:2px;min-height:2px;background:linear-gradient(90deg,#f46800,transparent);position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,#f46800,transparent);animation:flow-anim 1.1s linear infinite;animation-delay:0.7s"></div></div>
+        <div class="df-conn-arrow" style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #f46800;"></div>
+      </div>
+      <div class="df-block fadein" style="--block-color:#f46800;--block-glow:rgba(244,104,0,0.15);" onclick="showDetail('grafana_main')">
+        <div class="df-block-name">Grafana Trace View</div>
+        <div class="df-block-desc">Span timeline, service map, exemplars linking metric spike → trace. Click log TraceID → jump to trace</div>
+        <div class="df-block-proto">Exemplars: metric → trace correlation</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CORRELATION CALLOUT -->
+  <div style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:18px 20px;margin-top:8px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--flow);margin-bottom:10px;">⚡ SIGNAL CORRELATION — The Power of Unified Observability</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:6px;">LOG → TRACE</div>
+        <div style="font-size:10px;color:var(--text-dim);line-height:1.7;">Inject TraceID into log lines (MDC in Java). In Grafana, configure Derived Fields on Loki datasource → clicking TraceID jumps directly to Tempo trace.</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:6px;">METRIC → TRACE (EXEMPLARS)</div>
+        <div style="font-size:10px;color:var(--text-dim);line-height:1.7;">Prometheus Exemplars embed a TraceID sample into metric data points. When you see a latency spike in Grafana, click the exemplar dot → lands on the exact Tempo trace that caused it.</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:6px;">TRACE → LOG → METRIC</div>
+        <div style="font-size:10px;color:var(--text-dim);line-height:1.7;">From Tempo span view, click "Logs for this span" → filtered Loki view. Click service → pre-filtered Grafana dashboard for that service's RED metrics (Rate, Errors, Duration).</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     VIEW: COMPARE TABLE
+════════════════════════════════════════ -->
+<div class="view" id="view-compare">
+<div class="compare-wrap">
+  <div class="section-head">
+    <div class="section-title">STACK COMPARISON</div>
+    <div class="section-sub">Feature matrix across all observability stacks</div>
+  </div>
+
+  <div style="overflow-x:auto;">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th class="col-elk">ELK Stack</th>
+        <th class="col-efk">EFK Stack</th>
+        <th class="col-grafana">Grafana LGTM</th>
+        <th class="col-prom">Prometheus</th>
+        <th class="col-otel">OpenTelemetry</th>
+        <th class="col-tempo">Tempo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Primary Signal</td><td>Logs</td><td>Logs</td><td>Logs+Metrics+Traces</td><td>Metrics</td><td>All three</td><td>Traces</td></tr>
+      <tr><td>K8s Native</td><td class="badge-partial">◑ partial</td><td class="badge-yes">✓ yes</td><td class="badge-yes">✓ yes</td><td class="badge-yes">✓ yes</td><td class="badge-yes">✓ yes</td><td class="badge-yes">✓ yes</td></tr>
+      <tr><td>Storage Backend</td><td>Elasticsearch</td><td>Elasticsearch</td><td>Object Store (S3)</td><td>Local TSDB</td><td>Pluggable</td><td>S3/GCS/Azure</td></tr>
+      <tr><td>Query Language</td><td>KQL / Lucene</td><td>KQL / Lucene</td><td>PromQL + LogQL + TraceQL</td><td>PromQL</td><td>OTLP / vendor</td><td>TraceQL</td></tr>
+      <tr><td>Alerting</td><td class="badge-yes">✓ Watcher</td><td class="badge-yes">✓ Watcher</td><td class="badge-yes">✓ Grafana Alerting</td><td class="badge-yes">✓ Alertmanager</td><td class="badge-no">✗ (backend)</td><td class="badge-no">✗ (backend)</td></tr>
+      <tr><td>Resource Cost</td><td>High (ES heap)</td><td>Medium</td><td>Low (object store)</td><td>Medium</td><td>Low</td><td>Low</td></tr>
+      <tr><td>Log Indexing</td><td class="badge-yes">Full-text</td><td class="badge-yes">Full-text</td><td class="badge-partial">Labels only (Loki)</td><td class="badge-no">✗</td><td class="badge-partial">via exporter</td><td class="badge-no">✗</td></tr>
+      <tr><td>Metrics Support</td><td class="badge-partial">Metricbeat</td><td class="badge-partial">Metricbeat</td><td class="badge-yes">✓ Prometheus/Mimir</td><td class="badge-yes">✓ native</td><td class="badge-yes">✓ OTLP</td><td class="badge-no">✗</td></tr>
+      <tr><td>Distributed Tracing</td><td class="badge-no">✗</td><td class="badge-no">✗</td><td class="badge-yes">✓ Tempo</td><td class="badge-no">✗</td><td class="badge-yes">✓ native</td><td class="badge-yes">✓ native</td></tr>
+      <tr><td>Log-Trace Correlation</td><td class="badge-partial">◑ APM</td><td class="badge-no">✗</td><td class="badge-yes">✓ Derived Fields</td><td class="badge-no">✗</td><td class="badge-yes">✓ TraceID inject</td><td class="badge-yes">✓ via Grafana</td></tr>
+      <tr><td>Metric-Trace (Exemplars)</td><td class="badge-no">✗</td><td class="badge-no">✗</td><td class="badge-yes">✓ Exemplars</td><td class="badge-yes">✓ Exemplars</td><td class="badge-yes">✓ OTel</td><td class="badge-yes">✓ via Prometheus</td></tr>
+      <tr><td>Auto-Instrumentation</td><td class="badge-partial">◑ APM agents</td><td class="badge-no">✗</td><td class="badge-yes">✓ OTel agents</td><td class="badge-partial">◑ exporters</td><td class="badge-yes">✓ Java/Node/Go</td><td class="badge-yes">✓ via OTel</td></tr>
+      <tr><td>Vendor Lock-in</td><td>Medium (Elastic)</td><td>Medium (Elastic)</td><td>Low (OSS)</td><td>None</td><td>None (standard)</td><td>Low (Grafana)</td></tr>
+      <tr><td>Typical Use Case</td><td>Enterprise logs, compliance</td><td>K8s pod logging</td><td>Full-stack OSS observability</td><td>K8s metrics, alerting</td><td>Vendor-neutral telemetry</td><td>Microservices tracing</td></tr>
+      <tr><td>Cardinality Limits</td><td>No (index)</td><td>No (index)</td><td>Labels-limited (Loki)</td><td>High cardinality warning</td><td>Backend dependent</td><td>No (by TraceID)</td></tr>
+      <tr><td>Default Retention</td><td>ILM policy</td><td>ILM policy</td><td>Config-based</td><td>15 days local</td><td>Backend setting</td><td>S3 lifecycle</td></tr>
+      <tr><td>HA / Clustering</td><td class="badge-yes">✓ ES cluster</td><td class="badge-yes">✓ ES cluster</td><td class="badge-yes">✓ microservices</td><td class="badge-yes">✓ Thanos/Cortex</td><td class="badge-yes">✓ Collector HA</td><td class="badge-yes">✓ Tempo cluster</td></tr>
+      <tr><td>Visualization UI</td><td>Kibana</td><td>Kibana</td><td>Grafana</td><td>Grafana / built-in</td><td>Vendor UI</td><td>Grafana</td></tr>
+      <tr><td>License</td><td>Elastic (SSPL)</td><td>Elastic (SSPL)</td><td>AGPLv3 / Enterprise</td><td>Apache 2.0</td><td>Apache 2.0</td><td>AGPLv3</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:20px;margin-top:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;">
+    <div style="font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><span class="badge-yes">✓</span> Fully Supported</div>
+    <div style="font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><span class="badge-partial">◑</span> Partial / Via Plugin</div>
+    <div style="font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;"><span class="badge-no">✗</span> Not Supported</div>
+  </div>
+</div>
+</div>
+
+</div><!-- end page -->
+
+<!-- ════════════════════════════════════
+     DETAIL PANEL
+════════════════════════════════════ -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-header" id="dpHeader">
+    <div class="dp-icon" id="dpIcon">📊</div>
+    <div class="dp-title-wrap">
+      <div class="dp-category" id="dpCategory">LOADING</div>
+      <div class="dp-title" id="dpTitle">Component</div>
+      <div class="dp-sub" id="dpSub"></div>
+    </div>
+    <button class="dp-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<script>
+const DETAILS = {
+  elasticsearch: {
+    icon:'🔍', category:'ELK / EFK STACK', color:'#f5a623',
+    title:'Elasticsearch',
+    sub:'Distributed, RESTful search and analytics engine built on Apache Lucene',
+    sections:[
+      {title:'Core Concepts', items:[
+        ['Architecture','Nodes → Shards → Replicas (primary + N replicas)'],
+        ['Index','Logical namespace for data; maps to physical shards'],
+        ['Inverted Index','Maps term → document IDs for full-text search'],
+        ['Mapping','Schema definition for field types (keyword, text, date)'],
+        ['Query DSL','JSON-based query language (match, term, range, bool)'],
+        ['Node Roles','master, data, coordinating, ingest, ml'],
+      ]},
+      {title:'Key Features', list:[
+        'Near real-time search (NRT) — 1s refresh interval',
+        'Horizontal scaling: add data nodes, rebalance automatically',
+        'Index Lifecycle Management (ILM): hot → warm → cold → delete',
+        'Cross-cluster search (CCS) for multi-cluster queries',
+        'Aggregations: terms, date_histogram, percentiles, cardinality',
+        'Snapshot/Restore to S3, GCS, Azure for backup',
+      ]},
+      {title:'Config Sample', code:`# elasticsearch.yml\ncluster.name: prod-logs\nnode.name: node-1\nnode.roles: [master, data]\nhttp.port: 9200\ntransport.port: 9300\ndiscovery.seed_hosts: ["es-node-1","es-node-2","es-node-3"]\ncluster.initial_master_nodes: ["node-1","node-2","node-3"]\nxpack.security.enabled: true`},
+      {title:'Ports', items:[['HTTP REST',':9200'],['Cluster Transport',':9300']]},
+    ],
+    tags:[['Full-text Search','#f5a623'],['TSDB','#f5a623'],['Lucene','#f5a623'],['ILM','#f5a623']],
+  },
+  logstash: {
+    icon:'🔄', category:'ELK STACK', color:'#f5a623',
+    title:'Logstash',
+    sub:'Server-side data processing pipeline: ingest, transform, and forward data',
+    sections:[
+      {title:'Pipeline Stages', items:[
+        ['Input','beats, file, tcp, udp, kafka, http, stdin'],
+        ['Filter','grok (regex parse), mutate, date, geoip, useragent, drop'],
+        ['Output','elasticsearch, kafka, s3, stdout, http, email'],
+        ['Codec','json, plain, multiline, dots'],
+        ['Multiple Pipelines','Isolate workloads with pipeline.yml'],
+      ]},
+      {title:'Grok Example', code:`filter {\n  grok {\n    match => { "message" => \n      "%{COMBINEDAPACHELOG}" }\n  }\n  date {\n    match => ["timestamp",\n      "dd/MMM/yyyy:HH:mm:ss Z"]\n  }\n  geoip { source => "clientip" }\n  mutate {\n    remove_field => ["message"]\n  }\n}`},
+      {title:'Performance Tips', list:[
+        'Use Fluent Bit instead for k8s — lower memory (< 1MB vs 300MB)',
+        'Persistent queues: queue.type: persisted for durability',
+        'Workers: pipeline.workers = CPU cores',
+        'Dead letter queue (DLQ) for failed events',
+      ]},
+    ],
+    tags:[['Grok','#f5a623'],['ETL','#f5a623'],['Pipeline','#f5a623']],
+  },
+  kibana: {
+    icon:'📊', category:'ELK STACK', color:'#f5a623',
+    title:'Kibana',
+    sub:'Visualization and exploration UI for Elasticsearch data',
+    sections:[
+      {title:'Key Features', items:[
+        ['Discover','Ad-hoc log search with KQL/Lucene'],
+        ['Dashboards','Drag-drop panels: charts, maps, metrics, TSVB'],
+        ['Lens','AI-suggested visualization builder'],
+        ['APM','Application Performance Monitoring UI'],
+        ['SIEM/Security','Threat detection, timeline investigation'],
+        ['Alerting','Rules → actions (email, Slack, PagerDuty)'],
+      ]},
+      {title:'KQL Example', code:`# Find errors in last hour\nerror AND response: 5*\n  AND NOT host: "healthcheck"\n\n# Slow requests\nrequest_time > 2000\n  AND method: "POST"`},
+      {title:'Index Pattern / Data View', list:[
+        'Create Data View matching index pattern: logs-*',
+        'Field type overrides and scripted fields',
+        'Cross-cluster search with remote clusters',
+      ]},
+    ],
+    tags:[['KQL','#f5a623'],['Dashboard','#f5a623'],['APM','#f5a623']],
+  },
+  fluentd: {
+    icon:'🌊', category:'EFK STACK', color:'#e8823a',
+    title:'Fluentd / Fluent Bit',
+    sub:'Open source unified log collection layer — CNCF graduated project',
+    sections:[
+      {title:'Architecture', items:[
+        ['Fluent Bit','Lightweight forwarder (C, ~650KB, <1MB RAM) — DaemonSet'],
+        ['Fluentd','Full aggregator (Ruby, ~40MB) — central processor'],
+        ['Input Plugins','tail, forward, http, systemd, kafka, syslog'],
+        ['Parser','json, regex, apache2, nginx, multiline'],
+        ['Filter','kubernetes metadata, grep, record_transformer, throttle'],
+        ['Output','elasticsearch, kafka, s3, loki, forward, null'],
+        ['Buffer','memory or file-based with chunk/flush control'],
+      ]},
+      {title:'Kubernetes Config', code:`[INPUT]\n  Name  tail\n  Path  /var/log/containers/*.log\n  Parser  docker\n  Tag   kube.*\n\n[FILTER]\n  Name  kubernetes\n  Match kube.*\n  Kube_Tag_Prefix kube.var.log.containers.\n\n[OUTPUT]\n  Name  loki\n  Match *\n  Host  loki.monitoring.svc\n  Port  3100\n  Labels job=fluentbit`},
+      {title:'Tips', list:[
+        'Fluent Bit for DaemonSet (node-level), Fluentd for aggregation',
+        'Use buffer chunks to handle Elasticsearch unavailability',
+        'multiline parser for Java stack traces',
+        'throttle filter to handle log bursts',
+      ]},
+    ],
+    tags:[['DaemonSet','#e8823a'],['CNCF','#e8823a'],['Tag Routing','#e8823a']],
+  },
+  loki: {
+    icon:'🪵', category:'GRAFANA LGTM', color:'#f0a500',
+    title:'Grafana Loki',
+    sub:'"Like Prometheus, but for logs" — label-indexed, cost-efficient log aggregation',
+    sections:[
+      {title:'Key Concepts', items:[
+        ['Label Index','Only labels indexed (not full text) → cheap at scale'],
+        ['Log Streams','{app="api", env="prod"} — label set identifies stream'],
+        ['Chunks','Compressed log blocks stored in object storage'],
+        ['LogQL','Log Query Language: filter pipeline + metric queries'],
+        ['Ruler','Alerting rules with LogQL expressions'],
+        ['Compactor','Deduplicates, applies retention, builds bloom filters'],
+      ]},
+      {title:'LogQL Examples', code:`# Filter logs\n{app="api"} |= "ERROR"\n\n# Parse JSON and filter\n{app="api"} | json\n  | status_code >= 500\n\n# Error rate metric\nsum(rate({app="api"}\n  |= "ERROR" [5m]))\n  by (pod)\n\n# Latency percentile\nquantile_over_time(0.99,\n  {app="api"} | json\n  | unwrap duration [5m])`},
+      {title:'vs Elasticsearch', list:[
+        '10-20x cheaper storage: no per-field inverted index',
+        'No full-text search — use label selectors + grep',
+        'Scales horizontally: Distributor → Ingester → Querier',
+        'Derived Fields in Grafana: TraceID in logs → link to Tempo',
+      ]},
+    ],
+    tags:[['LogQL','#f0a500'],['Object Store','#f0a500'],['Low Cost','#f0a500']],
+  },
+  prometheus: {
+    icon:'🔥', category:'METRICS', color:'#e6522c',
+    title:'Prometheus',
+    sub:'Pull-based monitoring system and time series database — CNCF graduated',
+    sections:[
+      {title:'Data Model', items:[
+        ['Metric Name','http_requests_total — describes what is measured'],
+        ['Labels','Dimensions: {method="GET", status="200", app="api"}'],
+        ['Sample','A float64 value + millisecond timestamp'],
+        ['Series','Unique {metric_name + label set} combination'],
+        ['Types','Counter, Gauge, Histogram, Summary'],
+      ]},
+      {title:'PromQL Examples', code:`# Request rate per second\nrate(http_requests_total[5m])\n\n# Error ratio\nsum(rate(http_req_total\n  {status=~"5.."}[5m]))\n/ sum(rate(http_req_total[5m]))\n\n# P99 latency (Histogram)\nhistogram_quantile(0.99,\n  rate(http_duration_seconds\n    _bucket[5m]))\n\n# CPU usage %\n100 - (avg by(instance)\n  (irate(node_cpu_seconds\n    _total{mode="idle"}[5m]))*100)`},
+      {title:'k8s Integration', list:[
+        'kube-prometheus-stack Helm chart: Prometheus + Grafana + Alertmanager',
+        'ServiceMonitor/PodMonitor CRDs for automatic target discovery',
+        'PrometheusRule CRD for alert and recording rules',
+        'Thanos: global query view + S3 long-term storage',
+        'Remote Write to Mimir / Cortex for horizontally scalable TSDB',
+      ]},
+    ],
+    tags:[['PromQL','#e6522c'],['TSDB','#e6522c'],['Pull Model','#e6522c'],['Thanos','#e6522c']],
+  },
+  micrometer: {
+    icon:'🌿', category:'JVM METRICS', color:'#3cb371',
+    title:'Micrometer',
+    sub:'Vendor-neutral application metrics facade for JVM — "SLF4J for metrics"',
+    sections:[
+      {title:'Meter Types', items:[
+        ['Counter','Monotonically increasing — request count, error count'],
+        ['Gauge','Point-in-time value — heap size, queue depth, active threads'],
+        ['Timer','Duration + count — HTTP latency, method execution time'],
+        ['DistributionSummary','Value distribution — payload sizes, cache hit rates'],
+        ['LongTaskTimer','In-progress long tasks — batch jobs, background processes'],
+        ['FunctionCounter','Wraps external monotonic source'],
+      ]},
+      {title:'Spring Boot Integration', code:`# application.yml\nmanagement:\n  endpoints:\n    web.exposure.include:\n      - prometheus, health, info\n  metrics:\n    distribution:\n      percentiles-histogram:\n        http.server.requests: true\n    tags:\n      application: \${spring.application.name}\n\n// Code\n@Autowired MeterRegistry reg;\nCounter.builder("orders.created")\n  .tag("region","eu-west")\n  .register(reg).increment();`},
+      {title:'Auto-Collected Metrics', list:[
+        'JVM: heap/non-heap, GC pause duration, GC count, threads',
+        'Tomcat/Netty: active connections, request duration, errors',
+        'JDBC / HikariCP: connection pool active/idle/pending',
+        'Spring MVC: http.server.requests by method/uri/status',
+        'Cache: cache.gets, cache.puts, cache.evictions (Caffeine, Redis)',
+        'Kafka producer/consumer: lag, send rate, poll duration',
+      ]},
+    ],
+    tags:[['Spring Boot','#3cb371'],['JVM','#3cb371'],['PromQL-ready','#3cb371'],['Multi-registry','#3cb371']],
+  },
+  otel_collector: {
+    icon:'⚙️', category:'OPENTELEMETRY', color:'#425cc7',
+    title:'OTel Collector',
+    sub:'Vendor-agnostic telemetry proxy: receive, process, and export all three signals',
+    sections:[
+      {title:'Pipeline Architecture', items:[
+        ['Receivers','OTLP, Jaeger, Zipkin, Prometheus, Kafka, Filelog, HostMetrics'],
+        ['Processors','batch, memory_limiter, attributes, filter, tail_sampling, k8sattributes'],
+        ['Exporters','otlp, prometheus, loki, kafka, logging, datadog, jaeger'],
+        ['Extensions','health_check, pprof, zpages, oauth2client'],
+        ['Connectors','Route between pipelines (span metrics, service graph)'],
+      ]},
+      {title:'Config Example', code:`receivers:\n  otlp:\n    protocols: {grpc: {}, http: {}}\n  prometheus:\n    config:\n      scrape_configs:\n        - job_name: app\n          static_configs:\n            - targets: [localhost:8080]\n\nprocessors:\n  batch:\n    timeout: 1s\n  memory_limiter:\n    limit_mib: 1500\n  k8sattributes: {}\n\nexporters:\n  otlp:\n    endpoint: tempo:4317\n    tls: {insecure: true}\n  prometheusremotewrite:\n    endpoint: http://mimir:9009/api/v1/push\n  loki:\n    endpoint: http://loki:3100/loki/api/v1/push\n\nservice:\n  pipelines:\n    traces:\n      receivers: [otlp]\n      processors: [memory_limiter,batch]\n      exporters: [otlp]\n    metrics:\n      receivers: [otlp,prometheus]\n      processors: [batch]\n      exporters: [prometheusremotewrite]`},
+    ],
+    tags:[['OTLP','#425cc7'],['Multi-pipeline','#425cc7'],['Vendor-neutral','#425cc7']],
+  },
+  otel_traces: {
+    icon:'🔷', category:'OPENTELEMETRY', color:'#425cc7',
+    title:'OTel Tracing',
+    sub:'Distributed tracing: spans, context propagation, W3C TraceContext',
+    sections:[
+      {title:'Concepts', items:[
+        ['Trace','Complete request journey — a tree of spans'],
+        ['Span','Single unit of work: name, TraceID, SpanID, ParentSpanID, timestamps, attributes'],
+        ['Context Propagation','W3C traceparent header passed between services'],
+        ['Sampling','AlwaysOn, AlwaysOff, TraceIdRatio, ParentBased, Tail Sampling'],
+        ['Baggage','Key-value pairs propagated alongside trace context'],
+      ]},
+      {title:'Java Auto-Instrumentation', code:`# Run with Java agent\njava -javaagent:opentelemetry-javaagent.jar \\\n  -Dotel.service.name=order-service \\\n  -Dotel.exporter.otlp.endpoint=\n    http://otel-collector:4317 \\\n  -Dotel.logs.exporter=otlp \\\n  -jar app.jar\n\n# Manual span\nSpan span = tracer\n  .spanBuilder("processOrder")\n  .startSpan();\ntry(Scope s = span.makeCurrent()) {\n  // work\n} finally { span.end(); }`},
+      {title:'Context Propagation Headers', list:[
+        'W3C traceparent: 00-traceId(32hex)-spanId(16hex)-flags',
+        'W3C tracestate: vendor-specific key=value list',
+        'B3 (legacy Zipkin): X-B3-TraceId, X-B3-SpanId, X-B3-Sampled',
+        'OTel Baggage: key=value pairs (not for high cardinality)',
+      ]},
+    ],
+    tags:[['W3C TraceContext','#425cc7'],['Auto-Instrument','#425cc7'],['Sampling','#425cc7']],
+  },
+  tempo: {
+    icon:'🌀', category:'GRAFANA LGTM', color:'#7b61ff',
+    title:'Grafana Tempo',
+    sub:'Cost-efficient, high-scale distributed tracing backend — no index, object store only',
+    sections:[
+      {title:'Architecture Components', items:[
+        ['Distributor','Receives spans (OTLP/Jaeger/Zipkin), hashes by TraceID, routes to ingesters'],
+        ['Ingester','WAL → 15min flush to object store as blocks'],
+        ['Querier','On-demand fetch from object store by TraceID'],
+        ['Query Frontend','Request sharding, caching, rate limiting'],
+        ['Compactor','Merges small blocks, applies retention, builds bloom filters'],
+        ['Cache','Memcached/Redis for bloom filters and chunk caches'],
+      ]},
+      {title:'TraceQL Example', code:`# Find slow traces for a service\n{ resource.service.name = "order-svc"\n  && duration > 2s }\n\n# Error traces with specific attribute\n{ span.http.status_code >= 500\n  && span.db.system = "postgresql" }\n\n# Aggregation\n{ resource.service.name = "api" }\n| select(duration)\n| avg(duration) by(resource.service.name)`},
+      {title:'Why Tempo over Jaeger', list:[
+        'No Cassandra/ES dependency — pure object storage',
+        '10-100x cheaper than Jaeger at scale',
+        'Grafana-native: log → trace correlation built-in',
+        'TraceQL: more powerful than Jaeger UI queries',
+        'Microservices architecture: independently scalable components',
+        'Bloom filters for span attribute search (search with tags)',
+      ]},
+    ],
+    tags:[['TraceQL','#7b61ff'],['Object Store','#7b61ff'],['No Index','#7b61ff'],['LGTM','#7b61ff']],
+  },
+  grafana_main: {
+    icon:'📈', category:'GRAFANA LGTM', color:'#f46800',
+    title:'Grafana',
+    sub:'Universal observability visualization platform — dashboards, alerting, correlations',
+    sections:[
+      {title:'Key Capabilities', items:[
+        ['DataSources','Prometheus, Loki, Tempo, Mimir, Elasticsearch, Influx, Postgres, Jaeger, Zipkin'],
+        ['Dashboards','Panels: graph, stat, table, heatmap, traces, logs, geomap, canvas'],
+        ['Alerting','Multi-dimensional alerts with contact points and notification policies'],
+        ['Explore','Ad-hoc query UI with split view (logs + metrics + traces)'],
+        ['Correlations','Link fields between data sources (TraceID → Tempo, log → metric)'],
+        ['Plugins','300+ datasource, panel, and app plugins'],
+        ['Provisioning','JSON/YAML dashboards-as-code, datasource provisioning'],
+      ]},
+      {title:'Dashboard-as-Code', code:`# grafana-dashboard.yaml\napiVersion: 1\nresources:\n  - name: app-overview\n    type: dashboard\n    disableDeletion: true\n    options:\n      path: /etc/dashboards\n        /app-overview.json\n\n# Import via ConfigMap in k8s\n# labeled: grafana_dashboard: "1"`},
+      {title:'Unified Correlation Setup', list:[
+        'Loki derived field: TraceID → Tempo datasource URL',
+        'Prometheus exemplars: enable in Prometheus config',
+        'Grafana: enable Exemplars in Prometheus datasource',
+        'Service graph panel: traces → service dependency map',
+        'Annotations: mark deployments/incidents on metric graphs',
+      ]},
+    ],
+    tags:[['Dashboards','#f46800'],['Alerting','#f46800'],['Correlation','#f46800'],['Plugins','#f46800']],
+  },
+  alertmanager: {
+    icon:'🚨', category:'PROMETHEUS', color:'#e6522c',
+    title:'Alertmanager',
+    sub:'Handles alerts from Prometheus: deduplication, grouping, routing, silencing',
+    sections:[
+      {title:'Core Concepts', items:[
+        ['Routes','Tree of match conditions → receiver mapping'],
+        ['Receivers','PagerDuty, Slack, OpsGenie, email, webhook, SNS'],
+        ['Group By','Batch related alerts: [alertname, cluster, namespace]'],
+        ['Inhibitions','Suppress child alerts when parent fires (node down → all pods)'],
+        ['Silences','Time-based mute (maintenance windows)'],
+        ['HA','3-node cluster with gossip protocol mesh'],
+      ]},
+      {title:'Config Example', code:`route:\n  group_by: [alertname, env]\n  group_wait: 30s\n  group_interval: 5m\n  repeat_interval: 4h\n  receiver: slack-general\n  routes:\n    - match: {severity: critical}\n      receiver: pagerduty\n    - match: {team: db}\n      receiver: db-slack\n\nreceivers:\n  - name: pagerduty\n    pagerduty_configs:\n      - service_key: <key>\n  - name: slack-general\n    slack_configs:\n      - api_url: <webhook>\n        channel: '#alerts'`},
+    ],
+    tags:[['Routing','#e6522c'],['Dedup','#e6522c'],['Silence','#e6522c'],['HA','#e6522c']],
+  },
+  node_exporter: {
+    icon:'🖥️', category:'PROMETHEUS', color:'#e6522c',
+    title:'Node Exporter',
+    sub:'Exposes host-level hardware and OS metrics in Prometheus format',
+    sections:[
+      {title:'Metrics Exposed', items:[
+        ['CPU','node_cpu_seconds_total{mode="idle|user|system|iowait"}'],
+        ['Memory','node_memory_MemTotal/MemFree/MemAvailable_bytes'],
+        ['Disk I/O','node_disk_read/write_bytes_total, io_time_seconds_total'],
+        ['Filesystem','node_filesystem_size/free/avail_bytes'],
+        ['Network','node_network_receive/transmit_bytes_total, errors_total'],
+        ['Load','node_load1/5/15 (1/5/15 minute load average)'],
+      ]},
+      {title:'k8s DaemonSet Deployment', code:`# kube-prometheus-stack deploys this automatically\n# Manual:\nkubectl apply -f - <<EOF\napiVersion: apps/v1\nkind: DaemonSet\nmetadata: {name: node-exporter}\nspec:\n  template:\n    spec:\n      hostPID: true\n      hostIPC: true\n      hostNetwork: true\n      containers:\n        - name: node-exporter\n          image: prom/node-exporter:latest\n          ports: [{containerPort: 9100}]\n          volumeMounts:\n            - name: proc\n              mountPath: /host/proc\nEOF`},
+    ],
+    tags:[['DaemonSet','#e6522c'],['Host Metrics','#e6522c'],['9100','#e6522c']],
+  },
+  jaeger: {
+    icon:'🔭', category:'TRACING', color:'#7b61ff',
+    title:'Jaeger',
+    sub:'End-to-end distributed tracing system — CNCF graduated (Uber origin)',
+    sections:[
+      {title:'Architecture', items:[
+        ['Agent','UDP sidecar receiving spans from app, batches to Collector'],
+        ['Collector','Validates, transforms, saves traces to storage'],
+        ['Storage','Cassandra, Elasticsearch, Badger (in-mem), Kafka'],
+        ['Query','REST/gRPC API + React UI for trace visualization'],
+        ['Ingester','Consumes from Kafka topic (scalable ingest)'],
+        ['OTEL Migration','jaeger-collector now accepts OTLP directly'],
+      ]},
+      {title:'Trace Visualization Features', list:[
+        'Gantt chart: span timeline with parent-child nesting',
+        'Critical path highlighting: find bottleneck spans',
+        'Service dependency graph (DAG)',
+        'Compare two traces side-by-side',
+        'Find traces by service, operation, tag, duration, error',
+        'Deep linking: shareable URL for specific trace',
+      ]},
+    ],
+    tags:[['CNCF','#7b61ff'],['Cassandra','#7b61ff'],['UI','#7b61ff'],['OTLP','#7b61ff']],
+  },
+  elk_stack: {
+    icon:'🔍', category:'STACK OVERVIEW', color:'#f5a623',
+    title:'ELK Stack',
+    sub:'The classic centralized logging platform — industry standard for log analytics',
+    sections:[
+      {title:'Components', items:[
+        ['E','Elasticsearch — search engine and storage'],
+        ['L','Logstash — data pipeline: ingest, transform, route'],
+        ['K','Kibana — visualization and exploration UI'],
+        ['Beats','Lightweight shippers (Filebeat, Metricbeat, Packetbeat, APM)'],
+      ]},
+      {title:'When to Choose ELK', list:[
+        'Need full-text search across logs (compliance, audit)',
+        'Complex ETL transformations in Logstash',
+        'Elastic APM for deep application performance',
+        'Existing Elasticsearch investment in organization',
+        'Enterprise features: role-based access, encrypted fields',
+        'Log-based metrics via Elastic Metrics Aggregation',
+      ]},
+      {title:'Challenges', list:[
+        'High operational cost: Elasticsearch heap (50% RAM rule)',
+        'Logstash can be bottleneck — scale with Kafka in front',
+        'Index management complexity: ILM, rollover aliases',
+        'Mapping explosions with high-cardinality log fields',
+        'SSPL license limits some cloud provider managed offerings',
+      ]},
+    ],
+    tags:[['Logs','#f5a623'],['Full-text','#f5a623'],['Enterprise','#f5a623']],
+  },
+  efk_stack: {
+    icon:'🌊', category:'STACK OVERVIEW', color:'#e8823a',
+    title:'EFK Stack',
+    sub:'Kubernetes-native logging: lightweight, DaemonSet-native, lower footprint',
+    sections:[
+      {title:'Components', items:[
+        ['E','Elasticsearch — same as ELK'],
+        ['F','Fluentd — Ruby-based aggregator with rich plugin ecosystem'],
+        ['K','Kibana — same as ELK'],
+        ['Fluent Bit','Lightweight C forwarder replacing Fluentd at node level'],
+      ]},
+      {title:'EFK vs ELK', list:[
+        'Fluent Bit: ~650KB binary, <1MB RAM — vs Logstash 300MB+',
+        'Fluentd: 500+ plugins, strong k8s metadata enrichment',
+        'No JVM dependency: better for edge and IoT',
+        'Native Kubernetes metadata: pod name, namespace, labels, annotations',
+        'Easier to deploy as DaemonSet on every k8s node',
+        'Less CPU overhead per log line than Logstash (JRuby)',
+      ]},
+      {title:'Modern Alternative: EFK → Loki', list:[
+        'Replace Elasticsearch with Loki for 10x cost reduction',
+        'Keep Fluent Bit as collector — has native Loki output plugin',
+        'Replace Kibana with Grafana — unified metrics + logs + traces',
+        'Result: EFK-style collection, LGTM-style storage and visualization',
+      ]},
+    ],
+    tags:[['K8s Native','#e8823a'],['Low Memory','#e8823a'],['CNCF','#e8823a']],
+  },
+  grafana_stack: {
+    icon:'📈', category:'STACK OVERVIEW', color:'#f46800',
+    title:'Grafana LGTM Stack',
+    sub:'Complete open-source observability: Loki + Grafana + Tempo + Mimir',
+    sections:[
+      {title:'LGTM Components', items:[
+        ['L','Loki — label-indexed log aggregation (like Prometheus for logs)'],
+        ['G','Grafana — unified visualization for all signals'],
+        ['T','Tempo — object-store-based distributed tracing'],
+        ['M','Mimir — horizontally scalable Prometheus-compatible TSDB'],
+      ]},
+      {title:'Grafana Alloy (New Agent)', list:[
+        'Replaces Grafana Agent and OpenTelemetry Collector',
+        'Unified: collects logs, metrics, traces, profiles in one binary',
+        'River config language (now Alloy syntax)',
+        'Programmable: define pipelines as code with components',
+        'Native OTel Collector compatibility',
+      ]},
+      {title:'Stack Strengths', list:[
+        'Single pane of glass: jump from log → trace → metric',
+        'Object storage: 90% cheaper than Elasticsearch at scale',
+        'Native correlation: TraceID in Loki → Tempo via Derived Fields',
+        'Exemplars: Prometheus metric spike → exact trace in Tempo',
+        'Grafana OnCall: built-in on-call scheduling and escalation',
+        'SLO tracking with Grafana SLO plugin',
+      ]},
+    ],
+    tags:[['Full Stack','#f46800'],['Object Store','#f46800'],['Correlation','#f46800'],['Open Source','#f46800']],
+  },
+  otel_full: {
+    icon:'🔷', category:'FRAMEWORK', color:'#425cc7',
+    title:'OpenTelemetry (OTel)',
+    sub:'CNCF standard for telemetry instrumentation — vendor-neutral, multi-language',
+    sections:[
+      {title:'What OTel Provides', items:[
+        ['Specification','Standard APIs, SDKs, and data formats for traces, metrics, logs'],
+        ['SDK','Per-language implementation (Java, Go, Python, Node, .NET, Rust...)'],
+        ['Auto-Instrumentation','Java Agent, Node.js, Python — zero code changes'],
+        ['OTLP Protocol','OpenTelemetry Protocol — single wire format for all signals'],
+        ['Collector','Vendor-agnostic pipeline: receive → process → export'],
+        ['Semantic Conventions','Standardized attribute names: http.method, db.system, etc.'],
+      ]},
+      {title:'OTel vs Legacy', list:[
+        'Replaces Jaeger client, Zipkin client, StatsD, proprietary agents',
+        'One SDK to rule them all — switch backend without code change',
+        'Context propagation standardized: W3C TraceContext (no more B3 confusion)',
+        'Baggage API for propagating custom key-values across services',
+        'Profiles signal being added (continuous profiling — eBPF)',
+        'OTLP over gRPC/HTTP — more efficient than JSON Zipkin',
+      ]},
+      {title:'Supported Backends', list:[
+        'Traces: Jaeger, Zipkin, Tempo, AWS X-Ray, GCP Cloud Trace, Datadog',
+        'Metrics: Prometheus, Mimir, InfluxDB, Datadog, Dynatrace, Splunk',
+        'Logs: Loki, Elasticsearch, Splunk, AWS CloudWatch, GCP Cloud Logging',
+        'Commercial: Datadog, New Relic, Honeycomb, Lightstep, Dynatrace — all accept OTLP',
+      ]},
+    ],
+    tags:[['CNCF','#425cc7'],['Multi-Language','#425cc7'],['Vendor Neutral','#425cc7'],['OTLP','#425cc7']],
+  },
+  propagation: {
+    icon:'🔗', category:'DISTRIBUTED TRACING', color:'#425cc7',
+    title:'Context Propagation',
+    sub:'How trace context crosses service boundaries — headers and baggage',
+    sections:[
+      {title:'Headers', items:[
+        ['W3C traceparent','00-{traceId:32hex}-{spanId:16hex}-{flags:2hex}'],
+        ['W3C tracestate','Vendor extensions: rojo=00f067aa0ba902b7'],
+        ['B3 Single','b3: {traceId}-{spanId}-{sampled}'],
+        ['B3 Multi','X-B3-TraceId + X-B3-SpanId + X-B3-Sampled'],
+        ['Baggage','baggage: userId=alice,serverNode=cia43,env=prod'],
+      ]},
+      {title:'Log Injection (MDC)', code:`// Add TraceID to every log line\n// Logback (Spring Boot)\n// logback-spring.xml\n<pattern>\n  %d{HH:mm:ss} [%thread]\n  traceId=%mdc{traceId}\n  spanId=%mdc{spanId}\n  %-5level %logger: %msg%n\n</pattern>\n\n// OTel Java Agent injects\n// traceId/spanId into MDC\n// automatically`},
+      {title:'Best Practices', list:[
+        'Always use W3C traceparent for new services — industry standard',
+        'OTel Java/Node auto-injection: zero code for HTTP, gRPC, DB, messaging',
+        'Inject TraceID into log MDC for log-trace correlation in Grafana',
+        'Pass baggage only for low-cardinality correlation (user tier, region)',
+        'Configure tail-sampling in OTel Collector — sample 100% errors, 1% success',
+      ]},
+    ],
+    tags:[['W3C','#425cc7'],['B3','#425cc7'],['Baggage','#425cc7'],['MDC','#425cc7']],
+  },
+  zipkin: {
+    icon:'⚡', category:'TRACING', color:'#7b61ff',
+    title:'Zipkin',
+    sub:'Lightweight distributed tracing system — Twitter origin, simple setup',
+    sections:[
+      {title:'Overview', items:[
+        ['Storage','In-memory (dev), MySQL, Cassandra, Elasticsearch'],
+        ['Instrumentation','Brave (Java), zipkin-js, go-zipkin, ruby-zipkin'],
+        ['Protocol','HTTP/JSON or gRPC (Thrift binary)'],
+        ['UI','Simple trace search and waterfall view'],
+        ['Modern Use','Now send to Zipkin listener in OTel Collector, export to Tempo'],
+      ]},
+      {title:'When to Use', list:[
+        'Simple setup: docker run openzipkin/zipkin (dev environment)',
+        'Legacy systems already using Brave/B3 propagation',
+        'Migration path: Zipkin receiver in OTel Collector → Tempo backend',
+        'For production: prefer Tempo + Grafana for richer query (TraceQL)',
+      ]},
+    ],
+    tags:[['B3','#7b61ff'],['Simple','#7b61ff'],['Legacy','#7b61ff']],
+  },
+  filebeat: {
+    icon:'📂', category:'ELK STACK', color:'#f5a623',
+    title:'Filebeat',
+    sub:'Lightweight Elastic log shipper — part of the Beats family',
+    sections:[
+      {title:'Capabilities', items:[
+        ['Inputs','log files, container logs, stdin, AWS S3, GCS, Azure EventHub'],
+        ['Modules','Pre-built configs: nginx, apache, mysql, kafka, iptables'],
+        ['Processors','add_kubernetes_metadata, add_host_metadata, decode_json_fields'],
+        ['Output','Elasticsearch, Logstash, Kafka, Redis, console'],
+        ['Autodiscover','Kubernetes pod autodiscovery with hints from annotations'],
+      ]},
+      {title:'vs Fluent Bit', list:[
+        'Filebeat: Elastic-native, better ES integration, Go binary',
+        'Fluent Bit: vendor-neutral, more output targets (Loki, Kafka, S3)',
+        'Both: DaemonSet deployment, automatic k8s metadata enrichment',
+        'Recommendation: Fluent Bit for LGTM/neutral stacks, Filebeat for ELK-only',
+      ]},
+    ],
+    tags:[['Beats','#f5a623'],['Go binary','#f5a623'],['Autodiscover','#f5a623']],
+  },
+  app_logs: {
+    icon:'📝', category:'APPLICATION', color:'#f5a623',
+    title:'Structured Logging',
+    sub:'Applications should emit structured JSON logs for efficient parsing and querying',
+    sections:[
+      {title:'Best Practices', items:[
+        ['Format','JSON per line — avoid unstructured text at scale'],
+        ['Level','Include: ERROR, WARN, INFO, DEBUG (avoid DEBUG in prod)'],
+        ['TraceID','Inject from OTel MDC into every log line for correlation'],
+        ['Context','Request ID, user ID, tenant ID, service version'],
+        ['Libraries','Logback (Java), Zap (Go), structlog (Python), pino (Node)'],
+      ]},
+      {title:'Example JSON Log', code:`{\n  "timestamp":"2024-01-15T10:23:45Z",\n  "level":"ERROR",\n  "logger":"OrderService",\n  "message":"Payment failed",\n  "traceId":"4bf92f3577b34da6\n    a3ce929d0e0e4736",\n  "spanId":"00f067aa0ba902b7",\n  "userId":"user-42",\n  "orderId":"ord-9981",\n  "error":"timeout after 5000ms",\n  "service":"order-service",\n  "version":"2.1.4"\n}`},
+    ],
+    tags:[['JSON','#f5a623'],['TraceID','#f5a623'],['Structured','#f5a623']],
+  },
+  otel_metrics: {
+    icon:'📊', category:'OPENTELEMETRY', color:'#425cc7',
+    title:'OTel Metrics',
+    sub:'OpenTelemetry Metrics API/SDK — vendor-neutral metric instrumentation',
+    sections:[
+      {title:'Instrument Types', items:[
+        ['Counter','Monotonic: request count, bytes sent (only ever increases)'],
+        ['UpDownCounter','Bidirectional: queue depth, active connections'],
+        ['Histogram','Value distribution: latency buckets (replaces Micrometer Timer)'],
+        ['Gauge','Observable current value: CPU usage, memory (async callback)'],
+        ['ObservableCounter','Async counter: pulled on demand (system metrics)'],
+      ]},
+      {title:'Java SDK Example', code:`Meter meter = GlobalOpenTelemetry\n  .getMeter("order-service");\n\nLongCounter requests = meter\n  .counterBuilder("orders.created")\n  .setDescription("Orders placed")\n  .setUnit("{orders}")\n  .build();\n\nrequests.add(1, Attributes.of(\n  AttributeKey.stringKey("region"),\n  "eu-west-1"\n));\n\nDoubleHistogram latency = meter\n  .histogramBuilder("order.duration")\n  .setUnit("ms").build();`},
+    ],
+    tags:[['OTLP','#425cc7'],['Multi-backend','#425cc7'],['Semantic Conventions','#425cc7']],
+  },
+  pagerduty: {
+    icon:'📟', category:'ALERTING', color:'#e6522c',
+    title:'Alert Routing & On-Call',
+    sub:'Alertmanager integrates with on-call platforms for incident response',
+    sections:[
+      {title:'Receivers', items:[
+        ['PagerDuty','High-severity: immediate page to on-call engineer'],
+        ['OpsGenie','Escalation policies, rotation schedules'],
+        ['Slack','Team channels: warning/info level alerts'],
+        ['Email','Digest for non-urgent notifications'],
+        ['Webhook','Custom integrations (JIRA tickets, Runbook links)'],
+        ['SNS/SQS','AWS-native notification pipelines'],
+      ]},
+      {title:'Alert Best Practices', list:[
+        'Route by severity: critical→PagerDuty, warning→Slack, info→email',
+        'group_by to batch flapping alerts: [alertname, namespace]',
+        'inhibit_rules: suppress pod alerts when node is down',
+        'Runbook URL in alert annotations (runbook_url label)',
+        'Silence maintenance windows in Alertmanager UI',
+        'Dead man\'s switch: Watchdog alert always firing → if absent, page',
+      ]},
+    ],
+    tags:[['On-Call','#e6522c'],['Routing','#e6522c'],['Incident','#e6522c']],
+  },
+};
+
+function showDetail(id) {
+  const d = DETAILS[id];
+  if (!d) return;
+  const panel = document.getElementById('detailPanel');
+  document.getElementById('dpIcon').textContent = d.icon;
+  document.getElementById('dpCategory').textContent = d.category;
+  document.getElementById('dpCategory').style.color = d.color;
+  document.getElementById('dpTitle').textContent = d.title;
+  document.getElementById('dpTitle').style.color = d.color;
+  document.getElementById('dpSub').textContent = d.sub;
+  panel.style.setProperty('--dp-color', d.color);
+
+  let html = '';
+  for (const sec of d.sections) {
+    html += `<div class="dp-section">
+      <div class="dp-section-title">${sec.title}</div>`;
+    if (sec.items) {
+      for (const [k,v] of sec.items) {
+        html += `<div class="dp-kv"><span class="dp-key">${k}</span><span class="dp-val">${v}</span></div>`;
+      }
+    }
+    if (sec.list) {
+      html += '<ul class="dp-list">';
+      for (const item of sec.list) html += `<li>${item}</li>`;
+      html += '</ul>';
+    }
+    if (sec.code) {
+      html += `<div class="dp-code">${sec.code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+    }
+    html += '</div>';
+  }
+  if (d.tags) {
+    html += '<div class="dp-section"><div class="dp-section-title">TAGS</div><div class="dp-tags">';
+    for (const [t,c] of d.tags) {
+      html += `<span class="dp-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${t}</span>`;
+    }
+    html += '</div></div>';
+  }
+  document.getElementById('dpBody').innerHTML = html;
+  panel.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  const names=['hld','stacks','dataflow','compare'];
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    b.classList.toggle('active', names[i]===name);
+  });
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDetail(); });
+</script>
+</body>
+</html>

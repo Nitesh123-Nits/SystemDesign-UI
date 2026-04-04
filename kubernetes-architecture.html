@@ -1,0 +1,1979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubernetes Architecture — Interactive HLD</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #060810;
+    --surface: #0d1117;
+    --surface2: #161b27;
+    --surface3: #1e2533;
+    --border: #2a3347;
+    --border-bright: #3d5080;
+    --text: #e2e8f0;
+    --text-dim: #7889a8;
+    --text-muted: #4a5568;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-purple: #8b5cf6;
+    --accent-orange: #f59e0b;
+    --accent-pink: #ec4899;
+    --accent-red: #ef4444;
+    --accent-teal: #14b8a6;
+    --glow-blue: rgba(59,130,246,0.3);
+    --glow-cyan: rgba(6,182,212,0.25);
+    --glow-green: rgba(16,185,129,0.25);
+    --glow-purple: rgba(139,92,246,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6,8,16,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 18px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .header-badge {
+    font-size: 10px; padding: 3px 10px;
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    border-radius: 20px; letter-spacing: 2px;
+  }
+  .header-nav { display: flex; gap: 8px; }
+  .nav-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; padding: 6px 14px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 6px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover, .nav-btn.active {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(59,130,246,0.08);
+  }
+  .nav-btn.active { background: rgba(59,130,246,0.15); }
+
+  /* ── MAIN ── */
+  .main { padding: 0; }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── HLD DIAGRAM CANVAS ── */
+  .hld-canvas {
+    padding: 32px;
+    min-height: calc(100vh - 60px);
+    position: relative;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(59,130,246,0.06) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .diagram-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800;
+    text-align: center; margin-bottom: 6px;
+    background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 50%, var(--accent-purple) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .diagram-subtitle {
+    text-align: center; font-size: 11px;
+    color: var(--text-muted); letter-spacing: 3px;
+    margin-bottom: 32px;
+  }
+
+  /* ── CLUSTER WRAPPER ── */
+  .k8s-cluster {
+    position: relative;
+    border: 2px solid var(--accent-blue);
+    border-radius: 20px;
+    padding: 24px;
+    background: rgba(59,130,246,0.03);
+    box-shadow: 0 0 60px rgba(59,130,246,0.08), inset 0 0 40px rgba(59,130,246,0.03);
+    max-width: 1400px; margin: 0 auto;
+  }
+  .k8s-cluster::before {
+    content: '⎈  KUBERNETES CLUSTER';
+    position: absolute; top: -13px; left: 24px;
+    background: var(--bg);
+    padding: 2px 14px;
+    font-size: 11px; font-weight: 600; letter-spacing: 3px;
+    color: var(--accent-blue);
+  }
+
+  /* ── ZONE LABELS ── */
+  .zone {
+    position: relative;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .zone-label {
+    position: absolute; top: -11px; left: 16px;
+    font-size: 10px; font-weight: 600; letter-spacing: 2px;
+    padding: 2px 10px; border-radius: 10px;
+  }
+
+  /* Control Plane */
+  .zone-cp {
+    border: 1.5px dashed rgba(139,92,246,0.5);
+    background: rgba(139,92,246,0.03);
+  }
+  .zone-cp .zone-label { background: var(--bg); color: var(--accent-purple); border: 1px solid rgba(139,92,246,0.4); }
+
+  /* Worker Nodes */
+  .zone-workers {
+    border: 1.5px dashed rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.02);
+  }
+  .zone-workers .zone-label { background: var(--bg); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.4); }
+
+  /* Storage */
+  .zone-storage {
+    border: 1.5px dashed rgba(245,158,11,0.4);
+    background: rgba(245,158,11,0.02);
+  }
+  .zone-storage .zone-label { background: var(--bg); color: var(--accent-orange); border: 1px solid rgba(245,158,11,0.4); }
+
+  /* Networking */
+  .zone-network {
+    border: 1.5px dashed rgba(6,182,212,0.4);
+    background: rgba(6,182,212,0.02);
+  }
+  .zone-network .zone-label { background: var(--bg); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.4); }
+
+  /* ── FLEX LAYOUTS ── */
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1; min-width: 160px; }
+
+  /* ── COMPONENT CARD ── */
+  .comp {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .comp::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.02) 100%);
+    pointer-events: none;
+  }
+  .comp:hover {
+    transform: translateY(-2px);
+    border-color: var(--comp-color, var(--accent-blue));
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px var(--comp-color, var(--accent-blue)), 0 0 20px var(--comp-glow, var(--glow-blue));
+  }
+  .comp.selected {
+    border-color: var(--comp-color, var(--accent-blue));
+    background: var(--surface2);
+    box-shadow: 0 0 0 2px var(--comp-color, var(--accent-blue)), 0 0 30px var(--comp-glow, var(--glow-blue));
+  }
+  .comp-icon { font-size: 20px; margin-bottom: 6px; }
+  .comp-name {
+    font-size: 11px; font-weight: 600;
+    color: var(--comp-color, var(--text));
+    margin-bottom: 3px;
+  }
+  .comp-desc { font-size: 9px; color: var(--text-muted); line-height: 1.5; }
+  .comp-tag {
+    display: inline-block; font-size: 8px;
+    padding: 2px 7px; border-radius: 8px; margin-top: 6px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dim); letter-spacing: 1px;
+  }
+
+  /* ── POD ── */
+  .pod-group {
+    background: var(--surface);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 12px;
+    padding: 12px;
+    flex: 1; min-width: 200px;
+  }
+  .pod-group-title {
+    font-size: 9px; color: var(--accent-green);
+    letter-spacing: 2px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pod {
+    background: var(--surface2);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 8px; padding: 10px;
+    margin-bottom: 8px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pod:hover { border-color: var(--accent-green); background: var(--surface3); }
+  .pod-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .pod-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+  .pod-name { font-size: 10px; font-weight: 600; color: var(--accent-green); }
+  .containers-row { display: flex; gap: 6px; }
+  .container-box {
+    flex: 1; background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px;
+    font-size: 8px;
+    transition: all 0.2s;
+  }
+  .container-box:hover { border-color: var(--accent-cyan); }
+  .container-box.sidecar {
+    border-color: rgba(245,158,11,0.4);
+    background: rgba(245,158,11,0.04);
+  }
+  .container-box.sidecar:hover { border-color: var(--accent-orange); }
+  .container-name { font-size: 9px; font-weight: 600; margin-bottom: 2px; }
+  .container-type { font-size: 8px; color: var(--text-muted); }
+  .sidecar-badge {
+    display: inline-block; font-size: 7px; padding: 1px 5px;
+    background: rgba(245,158,11,0.2); color: var(--accent-orange);
+    border-radius: 4px; margin-top: 3px; letter-spacing: 1px;
+  }
+
+  /* ── SERVICE MESH ── */
+  .mesh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .mesh-comp {
+    background: var(--surface2);
+    border: 1px solid rgba(236,72,153,0.3);
+    border-radius: 8px; padding: 11px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .mesh-comp:hover { border-color: var(--accent-pink); box-shadow: 0 0 16px rgba(236,72,153,0.2); }
+  .mesh-comp-icon { font-size: 16px; margin-bottom: 5px; }
+  .mesh-comp-name { font-size: 10px; font-weight: 600; color: var(--accent-pink); margin-bottom: 2px; }
+  .mesh-comp-desc { font-size: 8px; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── STORAGE GRID ── */
+  .storage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+  .pv-item {
+    background: var(--surface2);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 8px; padding: 11px; cursor: pointer; transition: all 0.2s;
+  }
+  .pv-item:hover { border-color: var(--accent-orange); box-shadow: 0 0 16px rgba(245,158,11,0.2); }
+  .pv-bar { height: 4px; border-radius: 2px; margin: 8px 0; background: var(--border); overflow: hidden; }
+  .pv-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-red)); transition: width 0.4s ease; }
+  .pv-name { font-size: 10px; font-weight: 600; color: var(--accent-orange); margin-bottom: 3px; }
+  .pv-meta { font-size: 8px; color: var(--text-muted); }
+
+  /* ── NETWORK SERVICES ── */
+  .svc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 10px; }
+  .svc-item {
+    background: var(--surface2);
+    border: 1px solid rgba(6,182,212,0.3);
+    border-radius: 8px; padding: 11px; cursor: pointer; transition: all 0.2s;
+  }
+  .svc-item:hover { border-color: var(--accent-cyan); box-shadow: 0 0 16px rgba(6,182,212,0.2); }
+  .svc-name { font-size: 10px; font-weight: 600; color: var(--accent-cyan); margin-bottom: 2px; }
+  .svc-type { font-size: 8px; color: var(--text-muted); margin-bottom: 4px; }
+  .svc-port { font-size: 8px; color: var(--accent-teal); }
+
+  /* ── INFO PANEL ── */
+  .info-panel {
+    position: fixed; right: 0; top: 60px;
+    width: 340px; height: calc(100vh - 60px);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 24px 20px;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto; z-index: 50;
+  }
+  .info-panel.open { transform: translateX(0); }
+  .info-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 28px; height: 28px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; color: var(--text-dim);
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .info-close:hover { border-color: var(--accent-red); color: var(--accent-red); }
+  .info-badge {
+    display: inline-block; font-size: 9px; letter-spacing: 2px;
+    padding: 4px 10px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .info-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px; font-weight: 700; margin-bottom: 8px;
+  }
+  .info-subtitle { font-size: 11px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+  .info-section { margin-bottom: 18px; }
+  .info-section-title { font-size: 9px; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 10px; }
+  .info-prop { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+  .info-prop-key { font-size: 10px; color: var(--text-muted); min-width: 100px; }
+  .info-prop-val { font-size: 10px; color: var(--text); text-align: right; word-break: break-word; }
+  .info-tag { display: inline-block; font-size: 9px; padding: 3px 8px; border-radius: 4px; margin: 2px; }
+
+  /* ── FLOW ARROWS (SVG overlay) ── */
+  .flow-svg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; overflow: visible;
+  }
+  .flow-path {
+    fill: none; stroke-width: 1.5;
+    stroke-dasharray: 6,4;
+    animation: dash-flow 2s linear infinite;
+  }
+  @keyframes dash-flow { to { stroke-dashoffset: -20; } }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    margin-top: 16px; padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+    max-width: 1400px; margin: 16px auto 0;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--text-dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── TOOLTIP ── */
+  .tooltip {
+    position: fixed; z-index: 200;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 10px; color: var(--text);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.15s; max-width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-title { font-weight: 600; margin-bottom: 4px; color: var(--accent-cyan); }
+  .tooltip-body { color: var(--text-dim); line-height: 1.5; }
+
+  /* ── DETAIL VIEW ── */
+  .detail-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; padding: 24px 32px;
+  }
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+    transition: all 0.2s; cursor: pointer;
+  }
+  .detail-card:hover { border-color: var(--card-accent, var(--accent-blue)); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+  .detail-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .detail-icon { font-size: 28px; }
+  .detail-card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .detail-card-sub { font-size: 10px; color: var(--text-muted); }
+  .detail-props { margin-top: 12px; }
+  .dprop { display: flex; gap: 8px; margin-bottom: 7px; align-items: flex-start; }
+  .dprop-key { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; min-width: 90px; }
+  .dprop-val { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+  .detail-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .dtag { font-size: 9px; padding: 3px 9px; border-radius: 20px; letter-spacing: 1px; }
+
+  /* ── ARCHITECTURE OVERVIEW ── */
+  .arch-overview {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; padding: 24px 32px;
+  }
+  @media (max-width: 900px) { .arch-overview { grid-template-columns: 1fr; } }
+  .arch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+  }
+  .arch-card-title {
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    margin-bottom: 14px; color: var(--accent-blue);
+  }
+  .arch-list { list-style: none; }
+  .arch-list li {
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .arch-list li:last-child { border-bottom: none; }
+  .arch-list li::before { content: '▸'; color: var(--accent-cyan); flex-shrink: 0; margin-top: 1px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-bright); }
+
+  /* pulse animation */
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+    100% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  }
+  .pulse { animation: pulse-ring 2s ease-out infinite; }
+
+  .section-spacer { height: 12px; }
+
+  /* connections legend line */
+  .conn-line { display: inline-block; width: 24px; height: 2px; border-top: 2px dashed; vertical-align: middle; margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="header-logo">⎈ K8s Architecture</div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="switchView('hld')">HLD Diagram</button>
+    <button class="nav-btn" onclick="switchView('components')">Components</button>
+    <button class="nav-btn" onclick="switchView('mesh')">Service Mesh</button>
+    <button class="nav-btn" onclick="switchView('storage')">Storage</button>
+    <button class="nav-btn" onclick="switchView('overview')">Overview</button>
+  </nav>
+  <div class="header-badge">v1.29</div>
+</header>
+
+<!-- ── TOOLTIP ── -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tt-title"></div>
+  <div class="tooltip-body" id="tt-body"></div>
+</div>
+
+<!-- ── INFO PANEL ── -->
+<div class="info-panel" id="infoPanel">
+  <button class="info-close" onclick="closePanel()">✕</button>
+  <div id="panelContent"></div>
+</div>
+
+<main class="main">
+
+<!-- ════════════════════════════════════
+     VIEW: HLD DIAGRAM
+════════════════════════════════════ -->
+<div class="view active" id="view-hld">
+<div class="hld-canvas">
+  <div class="diagram-title">Kubernetes High-Level Architecture</div>
+  <div class="diagram-subtitle">CONTROL PLANE · DATA PLANE · SERVICE MESH · STORAGE · NETWORKING</div>
+
+  <div class="k8s-cluster" id="clusterBox">
+
+    <!-- ── CONTROL PLANE ── -->
+    <div class="zone zone-cp">
+      <span class="zone-label">CONTROL PLANE</span>
+      <div class="row" style="margin-top:8px;">
+        <div class="comp col" style="--comp-color:#8b5cf6;--comp-glow:rgba(139,92,246,0.3);" onclick="showPanel('apiserver')">
+          <div class="comp-icon">🔌</div>
+          <div class="comp-name">API Server</div>
+          <div class="comp-desc">Central hub. All k8s components communicate via REST API</div>
+          <span class="comp-tag">kube-apiserver</span>
+        </div>
+        <div class="comp col" style="--comp-color:#8b5cf6;--comp-glow:rgba(139,92,246,0.3);" onclick="showPanel('etcd')">
+          <div class="comp-icon">🗄️</div>
+          <div class="comp-name">etcd</div>
+          <div class="comp-desc">Distributed key-value store. Cluster state & config</div>
+          <span class="comp-tag">raft consensus</span>
+        </div>
+        <div class="comp col" style="--comp-color:#8b5cf6;--comp-glow:rgba(139,92,246,0.3);" onclick="showPanel('scheduler')">
+          <div class="comp-icon">📅</div>
+          <div class="comp-name">Scheduler</div>
+          <div class="comp-desc">Assigns Pods to Nodes based on constraints & resources</div>
+          <span class="comp-tag">kube-scheduler</span>
+        </div>
+        <div class="comp col" style="--comp-color:#8b5cf6;--comp-glow:rgba(139,92,246,0.3);" onclick="showPanel('controllermanager')">
+          <div class="comp-icon">⚙️</div>
+          <div class="comp-name">Controller Manager</div>
+          <div class="comp-desc">Node, Replication, Endpoints, SA controllers</div>
+          <span class="comp-tag">kube-controller-manager</span>
+        </div>
+        <div class="comp col" style="--comp-color:#8b5cf6;--comp-glow:rgba(139,92,246,0.3);" onclick="showPanel('ccm')">
+          <div class="comp-icon">☁️</div>
+          <div class="comp-name">Cloud Controller</div>
+          <div class="comp-desc">Cloud-provider specific logic (LB, routes, volumes)</div>
+          <span class="comp-tag">cloud-controller-manager</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-spacer"></div>
+
+    <!-- ── WORKER NODES ── -->
+    <div class="zone zone-workers">
+      <span class="zone-label">WORKER NODES</span>
+      <div class="row" style="margin-top:10px;">
+
+        <!-- NODE AGENTS -->
+        <div style="flex:0 0 auto; min-width:140px;">
+          <div class="comp" style="--comp-color:#10b981;--comp-glow:rgba(16,185,129,0.3);margin-bottom:8px;" onclick="showPanel('kubelet')">
+            <div class="comp-icon">🤖</div>
+            <div class="comp-name">Kubelet</div>
+            <div class="comp-desc">Node agent, manages Pod lifecycle</div>
+            <span class="comp-tag">node-agent</span>
+          </div>
+          <div class="comp" style="--comp-color:#10b981;--comp-glow:rgba(16,185,129,0.3);margin-bottom:8px;" onclick="showPanel('kubeproxy')">
+            <div class="comp-icon">🔀</div>
+            <div class="comp-name">Kube-proxy</div>
+            <div class="comp-desc">Network proxy, iptables/IPVS rules</div>
+            <span class="comp-tag">iptables / IPVS</span>
+          </div>
+          <div class="comp" style="--comp-color:#10b981;--comp-glow:rgba(16,185,129,0.3);" onclick="showPanel('runtime')">
+            <div class="comp-icon">📦</div>
+            <div class="comp-name">Container Runtime</div>
+            <div class="comp-desc">containerd / CRI-O / Docker</div>
+            <span class="comp-tag">CRI</span>
+          </div>
+        </div>
+
+        <!-- PODS WITH SIDECARS -->
+        <div class="pod-group">
+          <div class="pod-group-title">
+            <span class="pod-dot pulse"></span>
+            WORKLOAD PODS (with Service Mesh Sidecar)
+          </div>
+
+          <!-- Pod 1 -->
+          <div class="pod" onclick="showPanel('pod_app')">
+            <div class="pod-header">
+              <span class="pod-dot"></span>
+              <span class="pod-name">app-pod-7d8f9b (Deployment)</span>
+            </div>
+            <div class="containers-row">
+              <div class="container-box" onclick="stopProp(event);showPanel('container_app')">
+                <div class="container-name" style="color:#10b981">app-container</div>
+                <div class="container-type">Main workload</div>
+                <div style="font-size:8px;color:#7889a8;margin-top:3px;">Port: 8080</div>
+              </div>
+              <div class="container-box sidecar" onclick="stopProp(event);showPanel('envoy_proxy')">
+                <div class="container-name" style="color:#f59e0b">envoy-proxy</div>
+                <div class="container-type">Sidecar</div>
+                <div class="sidecar-badge">SIDECAR</div>
+              </div>
+              <div class="container-box sidecar" onclick="stopProp(event);showPanel('istio_agent')">
+                <div class="container-name" style="color:#f59e0b">istio-agent</div>
+                <div class="container-type">Init/Sidecar</div>
+                <div class="sidecar-badge">MESH</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pod 2 -->
+          <div class="pod" onclick="showPanel('pod_db')">
+            <div class="pod-header">
+              <span class="pod-dot" style="background:#3b82f6;box-shadow:0 0 6px #3b82f6"></span>
+              <span class="pod-name" style="color:#3b82f6">db-pod-4c2a1d (StatefulSet)</span>
+            </div>
+            <div class="containers-row">
+              <div class="container-box" onclick="stopProp(event);showPanel('container_db')">
+                <div class="container-name" style="color:#3b82f6">postgres</div>
+                <div class="container-type">Stateful DB</div>
+                <div style="font-size:8px;color:#7889a8;margin-top:3px;">Port: 5432</div>
+              </div>
+              <div class="container-box sidecar" onclick="stopProp(event);showPanel('envoy_proxy')">
+                <div class="container-name" style="color:#f59e0b">envoy-proxy</div>
+                <div class="container-type">Sidecar</div>
+                <div class="sidecar-badge">SIDECAR</div>
+              </div>
+              <div class="container-box" onclick="stopProp(event);showPanel('metrics_sidecar')">
+                <div class="container-name" style="color:#06b6d4">metrics-exp</div>
+                <div class="container-type">Metrics</div>
+                <div class="sidecar-badge" style="background:rgba(6,182,212,0.2);color:#06b6d4;">OBS</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- WORKLOAD CONTROLLERS -->
+        <div style="flex:0 0 auto; min-width:140px;">
+          <div class="comp" style="--comp-color:#3b82f6;--comp-glow:rgba(59,130,246,0.3);margin-bottom:8px;" onclick="showPanel('deployment')">
+            <div class="comp-icon">🚀</div>
+            <div class="comp-name">Deployment</div>
+            <div class="comp-desc">Stateless workloads, rolling updates</div>
+            <span class="comp-tag">ReplicaSet</span>
+          </div>
+          <div class="comp" style="--comp-color:#3b82f6;--comp-glow:rgba(59,130,246,0.3);margin-bottom:8px;" onclick="showPanel('statefulset')">
+            <div class="comp-icon">💾</div>
+            <div class="comp-name">StatefulSet</div>
+            <div class="comp-desc">Ordered, stable pod identity, persistent storage</div>
+            <span class="comp-tag">stable network ID</span>
+          </div>
+          <div class="comp" style="--comp-color:#3b82f6;--comp-glow:rgba(59,130,246,0.3);margin-bottom:8px;" onclick="showPanel('daemonset')">
+            <div class="comp-icon">📡</div>
+            <div class="comp-name">DaemonSet</div>
+            <div class="comp-desc">One Pod per node (logging, monitoring)</div>
+            <span class="comp-tag">node-level</span>
+          </div>
+          <div class="comp" style="--comp-color:#3b82f6;--comp-glow:rgba(59,130,246,0.3);" onclick="showPanel('job')">
+            <div class="comp-icon">⏰</div>
+            <div class="comp-name">Job / CronJob</div>
+            <div class="comp-desc">Batch workloads, scheduled tasks</div>
+            <span class="comp-tag">batch</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-spacer"></div>
+
+    <!-- ── NETWORKING ── -->
+    <div class="zone zone-network">
+      <span class="zone-label">NETWORKING & SERVICES</span>
+      <div class="row" style="margin-top:10px;">
+        <div class="comp col" style="--comp-color:#06b6d4;--comp-glow:rgba(6,182,212,0.3);" onclick="showPanel('svc_clusterip')">
+          <div class="comp-icon">🔵</div>
+          <div class="comp-name">ClusterIP Service</div>
+          <div class="comp-desc">Internal cluster-only virtual IP</div>
+          <span class="comp-tag">:10.0.0.x</span>
+        </div>
+        <div class="comp col" style="--comp-color:#06b6d4;--comp-glow:rgba(6,182,212,0.3);" onclick="showPanel('svc_nodeport')">
+          <div class="comp-icon">🟡</div>
+          <div class="comp-name">NodePort Service</div>
+          <div class="comp-desc">Exposes on each node's IP at static port</div>
+          <span class="comp-tag">30000-32767</span>
+        </div>
+        <div class="comp col" style="--comp-color:#06b6d4;--comp-glow:rgba(6,182,212,0.3);" onclick="showPanel('svc_lb')">
+          <div class="comp-icon">⚖️</div>
+          <div class="comp-name">LoadBalancer Service</div>
+          <div class="comp-desc">Cloud provider external LB, external IP</div>
+          <span class="comp-tag">external</span>
+        </div>
+        <div class="comp col" style="--comp-color:#06b6d4;--comp-glow:rgba(6,182,212,0.3);" onclick="showPanel('ingress')">
+          <div class="comp-icon">🌐</div>
+          <div class="comp-name">Ingress / Gateway API</div>
+          <div class="comp-desc">L7 HTTP routing, TLS termination</div>
+          <span class="comp-tag">nginx / traefik</span>
+        </div>
+        <div class="comp col" style="--comp-color:#06b6d4;--comp-glow:rgba(6,182,212,0.3);" onclick="showPanel('networkpolicy')">
+          <div class="comp-icon">🛡️</div>
+          <div class="comp-name">NetworkPolicy</div>
+          <div class="comp-desc">L3/L4 firewall rules for pod traffic</div>
+          <span class="comp-tag">CNI enforced</span>
+        </div>
+        <div class="comp col" style="--comp-color:#14b8a6;--comp-glow:rgba(20,184,166,0.3);" onclick="showPanel('coredns')">
+          <div class="comp-icon">🔍</div>
+          <div class="comp-name">CoreDNS</div>
+          <div class="comp-desc">Cluster DNS, service discovery</div>
+          <span class="comp-tag">svc.cluster.local</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-spacer"></div>
+
+    <!-- ── STORAGE ── -->
+    <div class="zone zone-storage">
+      <span class="zone-label">STORAGE LAYER</span>
+      <div class="row" style="margin-top:10px;">
+        <div class="comp col" style="--comp-color:#f59e0b;--comp-glow:rgba(245,158,11,0.3);" onclick="showPanel('pv')">
+          <div class="comp-icon">💽</div>
+          <div class="comp-name">PersistentVolume (PV)</div>
+          <div class="comp-desc">Cluster-level storage resource</div>
+          <span class="comp-tag">PV</span>
+        </div>
+        <div class="comp col" style="--comp-color:#f59e0b;--comp-glow:rgba(245,158,11,0.3);" onclick="showPanel('pvc')">
+          <div class="comp-icon">📋</div>
+          <div class="comp-name">PVC</div>
+          <div class="comp-desc">User request for storage, binds to PV</div>
+          <span class="comp-tag">claim</span>
+        </div>
+        <div class="comp col" style="--comp-color:#f59e0b;--comp-glow:rgba(245,158,11,0.3);" onclick="showPanel('storageclass')">
+          <div class="comp-icon">🏷️</div>
+          <div class="comp-name">StorageClass</div>
+          <div class="comp-desc">Dynamic provisioning policy</div>
+          <span class="comp-tag">dynamic</span>
+        </div>
+        <div class="comp col" style="--comp-color:#f59e0b;--comp-glow:rgba(245,158,11,0.3);" onclick="showPanel('nfs')">
+          <div class="comp-icon">🗂️</div>
+          <div class="comp-name">NFS Server</div>
+          <div class="comp-desc">Network File System, shared ReadWriteMany</div>
+          <span class="comp-tag">RWX</span>
+        </div>
+        <div class="comp col" style="--comp-color:#f59e0b;--comp-glow:rgba(245,158,11,0.3);" onclick="showPanel('csi')">
+          <div class="comp-icon">🔌</div>
+          <div class="comp-name">CSI Driver</div>
+          <div class="comp-desc">Container Storage Interface. AWS EBS, GCE PD, Azure Disk</div>
+          <span class="comp-tag">CSI spec</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ef4444;--comp-glow:rgba(239,68,68,0.3);" onclick="showPanel('configmap')">
+          <div class="comp-icon">📜</div>
+          <div class="comp-name">ConfigMap / Secret</div>
+          <div class="comp-desc">Config data & sensitive data mounted as volumes</div>
+          <span class="comp-tag">etcd-backed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-spacer"></div>
+
+    <!-- ── SERVICE MESH ── -->
+    <div class="zone" style="border:1.5px dashed rgba(236,72,153,0.4);background:rgba(236,72,153,0.02);">
+      <span class="zone-label" style="background:var(--bg);color:var(--accent-pink);border:1px solid rgba(236,72,153,0.4);">SERVICE MESH (ISTIO)</span>
+      <div class="row" style="margin-top:10px;">
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('istiod')">
+          <div class="comp-icon">🕸️</div>
+          <div class="comp-name">Istiod (Control Plane)</div>
+          <div class="comp-desc">Pilot + Citadel + Galley unified daemon</div>
+          <span class="comp-tag">mTLS · xDS</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('envoy_proxy')">
+          <div class="comp-icon">🔄</div>
+          <div class="comp-name">Envoy Sidecar</div>
+          <div class="comp-desc">Data plane proxy injected into every pod</div>
+          <span class="comp-tag">L4/L7 proxy</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('virtualservice')">
+          <div class="comp-icon">🗺️</div>
+          <div class="comp-name">VirtualService</div>
+          <div class="comp-desc">Traffic routing rules (canary, A/B, retry)</div>
+          <span class="comp-tag">CRD</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('destinationrule')">
+          <div class="comp-icon">📍</div>
+          <div class="comp-name">DestinationRule</div>
+          <div class="comp-desc">Load balancing, circuit breaker, mTLS policy</div>
+          <span class="comp-tag">CRD</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('peerauthentication')">
+          <div class="comp-icon">🔐</div>
+          <div class="comp-name">PeerAuthentication</div>
+          <div class="comp-desc">mTLS mode: STRICT / PERMISSIVE / DISABLED</div>
+          <span class="comp-tag">mTLS</span>
+        </div>
+        <div class="comp col" style="--comp-color:#ec4899;--comp-glow:rgba(236,72,153,0.3);" onclick="showPanel('gateway_mesh')">
+          <div class="comp-icon">🚪</div>
+          <div class="comp-name">Istio Gateway</div>
+          <div class="comp-desc">Ingress/Egress gateway for mesh</div>
+          <span class="comp-tag">gateway</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-spacer"></div>
+
+    <!-- ── OBSERVABILITY ── -->
+    <div class="zone" style="border:1.5px dashed rgba(20,184,166,0.4);background:rgba(20,184,166,0.02);">
+      <span class="zone-label" style="background:var(--bg);color:#14b8a6;border:1px solid rgba(20,184,166,0.4);">OBSERVABILITY STACK</span>
+      <div class="row" style="margin-top:10px;">
+        <div class="comp col" style="--comp-color:#14b8a6;" onclick="showPanel('prometheus')">
+          <div class="comp-icon">📊</div><div class="comp-name">Prometheus</div>
+          <div class="comp-desc">Metrics scraping & alerting</div><span class="comp-tag">pull model</span>
+        </div>
+        <div class="comp col" style="--comp-color:#14b8a6;" onclick="showPanel('grafana')">
+          <div class="comp-icon">📈</div><div class="comp-name">Grafana</div>
+          <div class="comp-desc">Dashboards & visualization</div><span class="comp-tag">UI</span>
+        </div>
+        <div class="comp col" style="--comp-color:#14b8a6;" onclick="showPanel('jaeger')">
+          <div class="comp-icon">🔭</div><div class="comp-name">Jaeger / Zipkin</div>
+          <div class="comp-desc">Distributed tracing</div><span class="comp-tag">OTLP</span>
+        </div>
+        <div class="comp col" style="--comp-color:#14b8a6;" onclick="showPanel('fluentd')">
+          <div class="comp-icon">📝</div><div class="comp-name">Fluentd / Loki</div>
+          <div class="comp-desc">Log aggregation & shipping</div><span class="comp-tag">DaemonSet</span>
+        </div>
+        <div class="comp col" style="--comp-color:#14b8a6;" onclick="showPanel('kiali')">
+          <div class="comp-icon">🕸️</div><div class="comp-name">Kiali</div>
+          <div class="comp-desc">Service mesh observability UI</div><span class="comp-tag">istio</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end k8s-cluster -->
+
+  <!-- ── LEGEND ── -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Control Plane</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Worker Nodes / Pods</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Storage (PV/PVC/NFS)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Networking</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>Service Mesh (Istio)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#14b8a6"></div>Observability</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;border-radius:50%"></div>Sidecar Container</div>
+    <div class="legend-item">
+      <span class="conn-line" style="border-color:#3b82f6"></span>API Communication
+    </div>
+    <div class="legend-item">
+      <span class="conn-line" style="border-color:#ec4899"></span>Mesh mTLS
+    </div>
+  </div>
+
+</div><!-- end hld-canvas -->
+</div><!-- end view-hld -->
+
+
+<!-- ════════════════════════════════════
+     VIEW: COMPONENTS
+════════════════════════════════════ -->
+<div class="view" id="view-components">
+<div class="detail-grid">
+
+  <div class="detail-card" style="--card-accent:#8b5cf6" onclick="showPanel('apiserver')">
+    <div class="detail-card-header">
+      <div class="detail-icon">🔌</div>
+      <div><div class="detail-card-title" style="color:#8b5cf6">API Server</div><div class="detail-card-sub">kube-apiserver</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">ROLE</span><span class="dprop-val">REST gateway for all cluster operations</span></div>
+      <div class="dprop"><span class="dprop-key">PORT</span><span class="dprop-val">6443 (HTTPS)</span></div>
+      <div class="dprop"><span class="dprop-key">AUTH</span><span class="dprop-val">Certificates, tokens, OIDC, webhook</span></div>
+      <div class="dprop"><span class="dprop-key">ADMISSION</span><span class="dprop-val">MutatingWebhook, ValidatingWebhook</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">RBAC</span>
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">ABAC</span>
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">Watch API</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#8b5cf6" onclick="showPanel('etcd')">
+    <div class="detail-card-header">
+      <div class="detail-icon">🗄️</div>
+      <div><div class="detail-card-title" style="color:#8b5cf6">etcd</div><div class="detail-card-sub">distributed key-value store</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">CONSENSUS</span><span class="dprop-val">Raft algorithm</span></div>
+      <div class="dprop"><span class="dprop-key">PORT</span><span class="dprop-val">2379 (client), 2380 (peer)</span></div>
+      <div class="dprop"><span class="dprop-key">DATA</span><span class="dprop-val">All k8s object state</span></div>
+      <div class="dprop"><span class="dprop-key">HA</span><span class="dprop-val">Odd number: 3, 5, 7 nodes</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">MVCC</span>
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">Watch</span>
+      <span class="dtag" style="background:rgba(139,92,246,0.15);color:#8b5cf6">Snapshot</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#10b981" onclick="showPanel('kubelet')">
+    <div class="detail-card-header">
+      <div class="detail-icon">🤖</div>
+      <div><div class="detail-card-title" style="color:#10b981">Kubelet</div><div class="detail-card-sub">node agent</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">ROLE</span><span class="dprop-val">Manages pod lifecycle on each node</span></div>
+      <div class="dprop"><span class="dprop-key">PORT</span><span class="dprop-val">10250 (HTTPS)</span></div>
+      <div class="dprop"><span class="dprop-key">REPORTS</span><span class="dprop-val">Node status, pod status to API server</span></div>
+      <div class="dprop"><span class="dprop-key">PROBES</span><span class="dprop-val">Liveness, Readiness, Startup</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(16,185,129,0.15);color:#10b981">CRI</span>
+      <span class="dtag" style="background:rgba(16,185,129,0.15);color:#10b981">CNI</span>
+      <span class="dtag" style="background:rgba(16,185,129,0.15);color:#10b981">CSI</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#3b82f6" onclick="showPanel('deployment')">
+    <div class="detail-card-header">
+      <div class="detail-icon">🚀</div>
+      <div><div class="detail-card-title" style="color:#3b82f6">Deployment</div><div class="detail-card-sub">workload controller</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">MANAGES</span><span class="dprop-val">ReplicaSets → Pods</span></div>
+      <div class="dprop"><span class="dprop-key">STRATEGY</span><span class="dprop-val">RollingUpdate, Recreate</span></div>
+      <div class="dprop"><span class="dprop-key">ROLLBACK</span><span class="dprop-val">kubectl rollout undo</span></div>
+      <div class="dprop"><span class="dprop-key">HPA</span><span class="dprop-val">HorizontalPodAutoscaler support</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(59,130,246,0.15);color:#3b82f6">Stateless</span>
+      <span class="dtag" style="background:rgba(59,130,246,0.15);color:#3b82f6">Scalable</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#3b82f6" onclick="showPanel('statefulset')">
+    <div class="detail-card-header">
+      <div class="detail-icon">💾</div>
+      <div><div class="detail-card-title" style="color:#3b82f6">StatefulSet</div><div class="detail-card-sub">ordered pod management</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">USE CASE</span><span class="dprop-val">Databases, Kafka, Zookeeper</span></div>
+      <div class="dprop"><span class="dprop-key">IDENTITY</span><span class="dprop-val">Stable pod-0, pod-1, pod-2...</span></div>
+      <div class="dprop"><span class="dprop-key">STORAGE</span><span class="dprop-val">VolumeClaimTemplates per pod</span></div>
+      <div class="dprop"><span class="dprop-key">ORDER</span><span class="dprop-val">Sequential create/terminate</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(59,130,246,0.15);color:#3b82f6">Stateful</span>
+      <span class="dtag" style="background:rgba(59,130,246,0.15);color:#3b82f6">Headless Svc</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#f59e0b" onclick="showPanel('hpa')">
+    <div class="detail-card-header">
+      <div class="detail-icon">📏</div>
+      <div><div class="detail-card-title" style="color:#f59e0b">HPA / VPA / KEDA</div><div class="detail-card-sub">autoscaling</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">HPA</span><span class="dprop-val">CPU/Memory metric-based scaling</span></div>
+      <div class="dprop"><span class="dprop-key">VPA</span><span class="dprop-val">Vertical resource adjustment</span></div>
+      <div class="dprop"><span class="dprop-key">KEDA</span><span class="dprop-val">Event-driven (queue, topic, cron)</span></div>
+      <div class="dprop"><span class="dprop-key">CA</span><span class="dprop-val">Cluster Autoscaler adds nodes</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(245,158,11,0.15);color:#f59e0b">Autoscale</span>
+      <span class="dtag" style="background:rgba(245,158,11,0.15);color:#f59e0b">Metrics API</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#ef4444" onclick="showPanel('rbac')">
+    <div class="detail-card-header">
+      <div class="detail-icon">🔒</div>
+      <div><div class="detail-card-title" style="color:#ef4444">RBAC & Security</div><div class="detail-card-sub">access control</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">OBJECTS</span><span class="dprop-val">Role, ClusterRole, Binding</span></div>
+      <div class="dprop"><span class="dprop-key">SUBJECTS</span><span class="dprop-val">User, Group, ServiceAccount</span></div>
+      <div class="dprop"><span class="dprop-key">PSS</span><span class="dprop-val">Pod Security Standards (baseline)</span></div>
+      <div class="dprop"><span class="dprop-key">OPA</span><span class="dprop-val">Gatekeeper policy engine</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(239,68,68,0.15);color:#ef4444">Zero Trust</span>
+      <span class="dtag" style="background:rgba(239,68,68,0.15);color:#ef4444">ServiceAccount</span>
+    </div>
+  </div>
+
+  <div class="detail-card" style="--card-accent:#14b8a6" onclick="showPanel('namespace')">
+    <div class="detail-card-header">
+      <div class="detail-icon">📁</div>
+      <div><div class="detail-card-title" style="color:#14b8a6">Namespaces</div><div class="detail-card-sub">logical isolation</div></div>
+    </div>
+    <div class="detail-props">
+      <div class="dprop"><span class="dprop-key">DEFAULT</span><span class="dprop-val">default, kube-system, kube-public</span></div>
+      <div class="dprop"><span class="dprop-key">QUOTA</span><span class="dprop-val">ResourceQuota, LimitRange</span></div>
+      <div class="dprop"><span class="dprop-key">DNS</span><span class="dprop-val">svc.namespace.svc.cluster.local</span></div>
+      <div class="dprop"><span class="dprop-key">SCOPE</span><span class="dprop-val">Namespaced vs Cluster-scoped</span></div>
+    </div>
+    <div class="detail-tags">
+      <span class="dtag" style="background:rgba(20,184,166,0.15);color:#14b8a6">Multi-tenant</span>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════
+     VIEW: SERVICE MESH
+════════════════════════════════════ -->
+<div class="view" id="view-mesh">
+<div style="padding:32px;">
+  <div class="diagram-title">Service Mesh Architecture</div>
+  <div class="diagram-subtitle">ISTIO · ENVOY · SIDECAR PATTERN · mTLS · TRAFFIC MANAGEMENT</div>
+
+  <!-- Sidecar Pattern Diagram -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;max-width:1000px;margin-left:auto;margin-right:auto;">
+    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent-pink);margin-bottom:16px;">🔄 Sidecar Proxy Pattern</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:stretch;">
+
+      <!-- Pod A -->
+      <div style="flex:1;min-width:200px;border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;">
+        <div style="font-size:10px;color:var(--accent-green);letter-spacing:2px;margin-bottom:10px;">POD A</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:var(--surface2);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🖥️</div>
+            <div style="font-size:10px;font-weight:600;color:#10b981">App</div>
+            <div style="font-size:8px;color:var(--text-muted)">:8080</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--text-muted);font-size:12px;">⟷</div>
+          <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🔄</div>
+            <div style="font-size:10px;font-weight:600;color:#f59e0b">Envoy</div>
+            <div style="font-size:8px;color:var(--text-muted)">Sidecar</div>
+          </div>
+        </div>
+        <div style="font-size:8px;color:var(--text-muted);margin-top:8px;text-align:center;">iptables intercepts all traffic</div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="display:flex;align-items:center;flex-direction:column;gap:4px;">
+        <div style="font-size:8px;color:var(--accent-pink)">mTLS</div>
+        <div style="font-size:20px;color:var(--accent-pink)">⟷</div>
+        <div style="font-size:8px;color:var(--text-muted)">encrypted</div>
+      </div>
+
+      <!-- Pod B -->
+      <div style="flex:1;min-width:200px;border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:14px;">
+        <div style="font-size:10px;color:var(--accent-blue);letter-spacing:2px;margin-bottom:10px;">POD B</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🔄</div>
+            <div style="font-size:10px;font-weight:600;color:#f59e0b">Envoy</div>
+            <div style="font-size:8px;color:var(--text-muted)">Sidecar</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--text-muted);font-size:12px;">⟷</div>
+          <div style="flex:1;background:var(--surface2);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🖥️</div>
+            <div style="font-size:10px;font-weight:600;color:#3b82f6">App</div>
+            <div style="font-size:8px;color:var(--text-muted)">:8080</div>
+          </div>
+        </div>
+        <div style="font-size:8px;color:var(--text-muted);margin-top:8px;text-align:center;">iptables intercepts all traffic</div>
+      </div>
+
+      <!-- Istiod -->
+      <div style="display:flex;align-items:center;flex-direction:column;gap:4px;">
+        <div style="font-size:8px;color:var(--text-muted)">xDS API</div>
+        <div style="font-size:20px;color:var(--accent-purple)">↑</div>
+        <div style="font-size:8px;color:var(--text-muted)">config</div>
+      </div>
+
+      <div style="flex:0 0 auto;min-width:140px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.4);border-radius:12px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:24px;margin-bottom:6px;">🕸️</div>
+        <div style="font-size:11px;font-weight:700;color:#8b5cf6;margin-bottom:4px;">Istiod</div>
+        <div style="font-size:8px;color:var(--text-muted)">Pilot (discovery)<br>Citadel (certs)<br>Galley (config)</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="mesh-grid" style="max-width:1000px;margin:0 auto 20px;">
+
+    <div class="mesh-comp" onclick="showPanel('virtualservice')">
+      <div class="mesh-comp-icon">🗺️</div>
+      <div class="mesh-comp-name">VirtualService</div>
+      <div class="mesh-comp-desc">Traffic routing: canary deployments (10/90 split), header-based routing, fault injection, retries, timeouts</div>
+    </div>
+
+    <div class="mesh-comp" onclick="showPanel('destinationrule')">
+      <div class="mesh-comp-icon">📍</div>
+      <div class="mesh-comp-name">DestinationRule</div>
+      <div class="mesh-comp-desc">Load balancing (ROUND_ROBIN, RANDOM, LEAST_CONN), circuit breaker (outlier detection), TLS settings</div>
+    </div>
+
+    <div class="mesh-comp" onclick="showPanel('peerauthentication')">
+      <div class="mesh-comp-icon">🔐</div>
+      <div class="mesh-comp-name">PeerAuthentication</div>
+      <div class="mesh-comp-desc">Enforces mTLS mode per namespace or workload. STRICT enforces encrypted pod-to-pod communication</div>
+    </div>
+
+    <div class="mesh-comp" onclick="showPanel('authorizationpolicy')">
+      <div class="mesh-comp-icon">🛡️</div>
+      <div class="mesh-comp-name">AuthorizationPolicy</div>
+      <div class="mesh-comp-desc">Service-to-service RBAC. Allow/deny based on source, namespace, JWT, headers</div>
+    </div>
+
+    <div class="mesh-comp" onclick="showPanel('gateway_mesh')">
+      <div class="mesh-comp-icon">🚪</div>
+      <div class="mesh-comp-name">Istio Gateway</div>
+      <div class="mesh-comp-desc">Manages L4-L6 ingress/egress. Pairs with VirtualService for complete traffic control</div>
+    </div>
+
+    <div class="mesh-comp" onclick="showPanel('serviceentry')">
+      <div class="mesh-comp-icon">🌍</div>
+      <div class="mesh-comp-name">ServiceEntry</div>
+      <div class="mesh-comp-desc">Register external services (outside mesh) into service registry. Enables mTLS to external endpoints</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     VIEW: STORAGE
+════════════════════════════════════ -->
+<div class="view" id="view-storage">
+<div style="padding:32px;">
+  <div class="diagram-title">Storage Architecture</div>
+  <div class="diagram-subtitle">PV · PVC · STORAGECLASS · NFS · CSI · CONFIGMAP · SECRET</div>
+
+  <!-- PV Lifecycle -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px;max-width:900px;margin-left:auto;margin-right:auto;">
+    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent-orange);margin-bottom:16px;">📋 PV Lifecycle Flow</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:12px;font-weight:600;color:#f59e0b">StorageClass</div>
+        <div style="font-size:9px;color:var(--text-muted)">defines provisioner</div>
+      </div>
+      <div style="color:var(--text-muted)">→</div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:12px;font-weight:600;color:#f59e0b">PVC Created</div>
+        <div style="font-size:9px;color:var(--text-muted)">user request</div>
+      </div>
+      <div style="color:var(--text-muted)">→</div>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.4);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:12px;font-weight:600;color:#10b981">PV Provisioned</div>
+        <div style="font-size:9px;color:var(--text-muted)">dynamic or static</div>
+      </div>
+      <div style="color:var(--text-muted)">→</div>
+      <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:12px;font-weight:600;color:#3b82f6">PVC Bound</div>
+        <div style="font-size:9px;color:var(--text-muted)">1:1 binding</div>
+      </div>
+      <div style="color:var(--text-muted)">→</div>
+      <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.4);border-radius:8px;padding:10px 14px;text-align:center;">
+        <div style="font-size:12px;font-weight:600;color:#8b5cf6">Pod Uses PVC</div>
+        <div style="font-size:9px;color:var(--text-muted)">mounted volume</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="storage-grid" style="max-width:1000px;margin:0 auto;">
+
+    <div class="pv-item" onclick="showPanel('pv')">
+      <div class="pv-name">💽 PersistentVolume (PV)</div>
+      <div class="pv-meta">Capacity: 100Gi | RWO | Retain</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:65%"></div></div>
+      <div class="pv-meta" style="color:var(--accent-green)">Status: Bound</div>
+      <div class="pv-meta" style="margin-top:6px">Access: ReadWriteOnce<br>Reclaim: Retain/Delete/Recycle</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('pvc')">
+      <div class="pv-name">📋 PersistentVolumeClaim (PVC)</div>
+      <div class="pv-meta">Request: 50Gi | StorageClass: fast-ssd</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:50%;background:linear-gradient(90deg,#3b82f6,#8b5cf6)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-blue)">Phase: Bound</div>
+      <div class="pv-meta" style="margin-top:6px">Namespace-scoped<br>volumeMode: Filesystem / Block</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('storageclass')">
+      <div class="pv-name">🏷️ StorageClass</div>
+      <div class="pv-meta">Provisioner: ebs.csi.aws.com</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:90%;background:linear-gradient(90deg,#10b981,#06b6d4)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-green)">WaitForFirstConsumer</div>
+      <div class="pv-meta" style="margin-top:6px">reclaimPolicy: Delete<br>allowVolumeExpansion: true</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('nfs')">
+      <div class="pv-name">🗂️ NFS Server</div>
+      <div class="pv-meta">Server: 10.0.1.5 | Path: /exports</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:45%;background:linear-gradient(90deg,#f59e0b,#ec4899)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-orange)">Access: ReadWriteMany (RWX)</div>
+      <div class="pv-meta" style="margin-top:6px">Shared across all pods<br>nfs-subdir-external-provisioner</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('csi')">
+      <div class="pv-name">🔌 CSI Driver</div>
+      <div class="pv-meta">AWS EBS / GCE PD / Azure Disk</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:80%;background:linear-gradient(90deg,#8b5cf6,#ec4899)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-purple)">Sidecar Controllers</div>
+      <div class="pv-meta" style="margin-top:6px">node-driver-registrar<br>external-provisioner / attacher</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('configmap')">
+      <div class="pv-name">📜 ConfigMap</div>
+      <div class="pv-meta">Non-sensitive config data</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:30%;background:linear-gradient(90deg,#ef4444,#f59e0b)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-red)">Mounted as env / volume</div>
+      <div class="pv-meta" style="margin-top:6px">Max size: 1MiB (etcd)<br>Immutable: true (perf)</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('secret')">
+      <div class="pv-name">🔑 Secret</div>
+      <div class="pv-meta">Base64 encoded (not encrypted!)</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:40%;background:linear-gradient(90deg,#ef4444,#8b5cf6)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-red)">Encryption at rest: KMS</div>
+      <div class="pv-meta" style="margin-top:6px">Type: Opaque / TLS / Docker<br>ExternalSecrets / Vault integration</div>
+    </div>
+
+    <div class="pv-item" onclick="showPanel('emptydir')">
+      <div class="pv-name">💨 EmptyDir / HostPath</div>
+      <div class="pv-meta">Ephemeral pod-level storage</div>
+      <div class="pv-bar"><div class="pv-fill" style="width:20%;background:linear-gradient(90deg,#06b6d4,#10b981)"></div></div>
+      <div class="pv-meta" style="color:var(--accent-cyan)">Lifecycle: Pod lifetime</div>
+      <div class="pv-meta" style="margin-top:6px">emptyDir.medium: Memory<br>sizeLimit for tmpfs</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     VIEW: OVERVIEW
+════════════════════════════════════ -->
+<div class="view" id="view-overview">
+<div class="arch-overview">
+
+  <div class="arch-card">
+    <div class="arch-card-title">⎈ Core Concepts</div>
+    <ul class="arch-list">
+      <li>Control Plane manages cluster state via etcd. API Server is the single entry point</li>
+      <li>Worker Nodes run the actual workloads. Kubelet is the local agent on each node</li>
+      <li>Pods are the smallest deployable unit. Co-located containers share network namespace</li>
+      <li>Controllers continuously reconcile desired state vs actual state</li>
+      <li>Labels & Selectors connect Services → Pods. Annotations store metadata</li>
+      <li>Namespaces provide logical isolation with ResourceQuota enforcement</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-card-title" style="color:#ec4899">🕸️ Service Mesh Benefits</div>
+    <ul class="arch-list">
+      <li>Zero-config mTLS: automatic mutual TLS between all services</li>
+      <li>Traffic management: canary, A/B testing, blue/green via VirtualService</li>
+      <li>Circuit breaking: automatic outlier detection via DestinationRule</li>
+      <li>Observability: L7 metrics, traces, logs without app changes</li>
+      <li>Sidecar pattern: Envoy proxy injected automatically via MutatingWebhook</li>
+      <li>Service identity: SPIFFE/SPIRE certificates for workload identity</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-card-title" style="color:#f59e0b">💽 Storage Best Practices</div>
+    <ul class="arch-list">
+      <li>Use StorageClass with WaitForFirstConsumer for zone-aware provisioning</li>
+      <li>NFS for ReadWriteMany (RWX) — shared across pods and nodes</li>
+      <li>EBS/GCE PD for ReadWriteOnce (RWO) — single node high performance</li>
+      <li>StatefulSet with VolumeClaimTemplates for per-pod persistent volumes</li>
+      <li>Encrypt Secrets at rest using KMS — base64 is NOT encryption</li>
+      <li>Use External Secrets Operator to sync from Vault/AWS Secrets Manager</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-card-title" style="color:#06b6d4">🌐 Networking Flow</div>
+    <ul class="arch-list">
+      <li>Each Pod gets unique IP via CNI plugin (Calico, Flannel, Cilium)</li>
+      <li>Services get stable ClusterIP via kube-proxy iptables/IPVS rules</li>
+      <li>Ingress controller routes L7 HTTP(S) traffic to Services</li>
+      <li>NetworkPolicy enforces microsegmentation at L3/L4 layer</li>
+      <li>CoreDNS resolves: my-svc.my-ns.svc.cluster.local</li>
+      <li>Cilium eBPF replaces kube-proxy for high-performance networking</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-card-title" style="color:#10b981">📋 Workload Patterns</div>
+    <ul class="arch-list">
+      <li>Deployment: stateless apps with rolling updates and rollback</li>
+      <li>StatefulSet: databases, message queues with stable network identity</li>
+      <li>DaemonSet: one pod per node for logging, monitoring, CNI agents</li>
+      <li>Job/CronJob: batch processing, scheduled tasks, data migrations</li>
+      <li>HPA scales replicas on CPU/memory; KEDA on custom event sources</li>
+      <li>Init containers run sequentially before main containers start</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-card-title" style="color:#8b5cf6">🔒 Security Layers</div>
+    <ul class="arch-list">
+      <li>RBAC: Role/ClusterRole + Binding controls API access</li>
+      <li>PodSecurity: Restricted/Baseline/Privileged admission standards</li>
+      <li>NetworkPolicy: default-deny ingress/egress with explicit allows</li>
+      <li>OPA Gatekeeper: policy as code with ConstraintTemplates</li>
+      <li>Service mesh mTLS: encrypted east-west traffic with identity</li>
+      <li>Secrets rotation: External Secrets Operator + Vault dynamic secrets</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════
+     INFO PANEL DATA & LOGIC
+═══════════════════════════════════ -->
+<script>
+const PANELS = {
+  apiserver: {
+    badge: 'CONTROL PLANE', color: '#8b5cf6',
+    icon: '🔌', title: 'API Server',
+    sub: 'The central nervous system of Kubernetes. Every read/write operation passes through it.',
+    props: [
+      ['Port', '6443 (HTTPS)'],
+      ['Protocol', 'REST / gRPC / WebSocket'],
+      ['Auth Methods', 'Client Certs, Bearer Tokens, OIDC, Webhook'],
+      ['Authorization', 'RBAC, ABAC, Node, Webhook'],
+      ['Admission', 'MutatingWebhookConfiguration, ValidatingWebhookConfiguration'],
+      ['Aggregation', 'API Aggregation Layer (custom API servers)'],
+      ['HA', 'Multiple replicas behind load balancer'],
+    ],
+    tags: [['RBAC','#8b5cf6'],['Aggregation Layer','#8b5cf6'],['Watch/List','#8b5cf6'],['OpenAPI v3','#8b5cf6']],
+  },
+  etcd: {
+    badge: 'CONTROL PLANE', color: '#8b5cf6',
+    icon: '🗄️', title: 'etcd',
+    sub: 'Consistent, highly-available key-value store for all cluster data. The source of truth.',
+    props: [
+      ['Algorithm', 'Raft consensus'],
+      ['Client Port', '2379'],
+      ['Peer Port', '2380'],
+      ['HA Setup', 'Odd number: 3, 5, or 7 members'],
+      ['Backup', 'etcdctl snapshot save'],
+      ['Encryption', 'EncryptionConfiguration for secrets'],
+      ['Performance', 'SSD recommended, ≤10ms fsync'],
+    ],
+    tags: [['MVCC','#8b5cf6'],['Watch API','#8b5cf6'],['Defrag','#8b5cf6'],['TLS','#8b5cf6']],
+  },
+  scheduler: {
+    badge: 'CONTROL PLANE', color: '#8b5cf6',
+    icon: '📅', title: 'kube-scheduler',
+    sub: 'Watches for unscheduled pods and assigns them to nodes using scoring/filtering.',
+    props: [
+      ['Algorithm', 'Filter → Score → Bind'],
+      ['Plugins', 'NodeAffinity, PodAffinity, Taints/Tolerations'],
+      ['Resources', 'requests.cpu/memory for fit'],
+      ['Custom', 'Scheduler Framework extensions'],
+      ['Multiple', 'Multiple schedulers supported'],
+    ],
+    tags: [['NodeAffinity','#8b5cf6'],['Topology','#8b5cf6'],['PriorityClass','#8b5cf6']],
+  },
+  controllermanager: {
+    badge: 'CONTROL PLANE', color: '#8b5cf6',
+    icon: '⚙️', title: 'Controller Manager',
+    sub: 'Runs all built-in controllers in a single process. Reconciles actual vs desired state.',
+    props: [
+      ['Controllers', 'Node, ReplicaSet, Endpoint, Namespace, Job'],
+      ['Pattern', 'Informer → Work Queue → Reconcile loop'],
+      ['Leader Election', 'Active/standby via lease lock'],
+      ['Custom', 'Operator pattern via controller-runtime'],
+    ],
+    tags: [['Reconcile Loop','#8b5cf6'],['Operator','#8b5cf6'],['CRD','#8b5cf6']],
+  },
+  ccm: {
+    badge: 'CONTROL PLANE', color: '#8b5cf6',
+    icon: '☁️', title: 'Cloud Controller Manager',
+    sub: 'Integrates Kubernetes with cloud provider APIs for nodes, routes, and load balancers.',
+    props: [
+      ['Controllers', 'Node, Route, Service (LB)'],
+      ['Providers', 'AWS, GCP, Azure, OpenStack'],
+      ['LoadBalancer', 'Provisions cloud LBs for Services'],
+      ['Node Labels', 'region, zone, instance-type'],
+    ],
+    tags: [['AWS ELB','#8b5cf6'],['GCP LB','#8b5cf6'],['Azure LB','#8b5cf6']],
+  },
+  kubelet: {
+    badge: 'WORKER NODE', color: '#10b981',
+    icon: '🤖', title: 'Kubelet',
+    sub: 'Primary node agent. Ensures containers in PodSpecs are running and healthy.',
+    props: [
+      ['Port', '10250 (API), 10255 (read-only)'],
+      ['Config', 'PodSpec via API server or static pod'],
+      ['Interfaces', 'CRI (container), CNI (network), CSI (storage)'],
+      ['Probes', 'Liveness, Readiness, Startup'],
+      ['Eviction', 'Evicts pods under memory/disk pressure'],
+    ],
+    tags: [['CRI','#10b981'],['CNI','#10b981'],['CSI','#10b981'],['cgroups','#10b981']],
+  },
+  kubeproxy: {
+    badge: 'WORKER NODE', color: '#10b981',
+    icon: '🔀', title: 'kube-proxy',
+    sub: 'Implements virtual IP for Services using iptables or IPVS on each node.',
+    props: [
+      ['Modes', 'iptables (default), IPVS, nftables (1.29+)'],
+      ['IPVS', 'Better performance, more LB algorithms'],
+      ['Watches', 'Service & Endpoints objects'],
+      ['Alternative', 'Cilium eBPF can replace kube-proxy'],
+    ],
+    tags: [['iptables','#10b981'],['IPVS','#10b981'],['eBPF','#10b981']],
+  },
+  runtime: {
+    badge: 'WORKER NODE', color: '#10b981',
+    icon: '📦', title: 'Container Runtime',
+    sub: 'Pulls images, creates and runs containers. Implements the CRI interface.',
+    props: [
+      ['Default', 'containerd (since k8s 1.24)'],
+      ['Alternatives', 'CRI-O, Kata Containers'],
+      ['OCI', 'Open Container Initiative standard'],
+      ['Snapshotter', 'overlayfs for layer management'],
+      ['Deprecated', 'dockershim removed in 1.24'],
+    ],
+    tags: [['containerd','#10b981'],['CRI-O','#10b981'],['OCI','#10b981']],
+  },
+  deployment: {
+    badge: 'WORKLOAD', color: '#3b82f6',
+    icon: '🚀', title: 'Deployment',
+    sub: 'Declarative updates for Pods and ReplicaSets. Ideal for stateless workloads.',
+    props: [
+      ['Hierarchy', 'Deployment → ReplicaSet → Pods'],
+      ['Strategy', 'RollingUpdate (maxSurge, maxUnavailable)'],
+      ['Rollback', 'kubectl rollout undo deployment/name'],
+      ['Pause/Resume', 'Multi-step update control'],
+      ['HPA', 'Scales replicas automatically'],
+    ],
+    tags: [['Stateless','#3b82f6'],['RollingUpdate','#3b82f6'],['Recreate','#3b82f6']],
+  },
+  statefulset: {
+    badge: 'WORKLOAD', color: '#3b82f6',
+    icon: '💾', title: 'StatefulSet',
+    sub: 'Manages stateful applications requiring stable network IDs and persistent storage.',
+    props: [
+      ['Pod Names', 'web-0, web-1, web-2 (stable)'],
+      ['DNS', 'web-0.web-svc.ns.svc.cluster.local'],
+      ['Storage', 'VolumeClaimTemplates per pod'],
+      ['Update', 'RollingUpdate reverse order'],
+      ['Headless Svc', 'Required for stable DNS'],
+      ['Partition', 'Staged rolling updates'],
+    ],
+    tags: [['Stable ID','#3b82f6'],['PVC','#3b82f6'],['Headless','#3b82f6']],
+  },
+  daemonset: {
+    badge: 'WORKLOAD', color: '#3b82f6',
+    icon: '📡', title: 'DaemonSet',
+    sub: 'Ensures a copy of a Pod runs on all (or selected) nodes.',
+    props: [
+      ['Use Case', 'Logging (Fluentd), Monitoring (Prometheus Node Exporter), CNI'],
+      ['Scheduling', 'NodeAffinity, Tolerations for subset'],
+      ['Updates', 'RollingUpdate with maxUnavailable'],
+      ['System', 'kube-proxy, CNI agents run as DaemonSet'],
+    ],
+    tags: [['Node-level','#3b82f6'],['System','#3b82f6'],['Logging','#3b82f6']],
+  },
+  job: {
+    badge: 'WORKLOAD', color: '#3b82f6',
+    icon: '⏰', title: 'Job / CronJob',
+    sub: 'Run-to-completion workloads and scheduled tasks.',
+    props: [
+      ['Job', 'completions, parallelism, backoffLimit'],
+      ['CronJob', 'Standard cron syntax schedule'],
+      ['TTL', 'ttlSecondsAfterFinished cleanup'],
+      ['Suspend', 'Pause CronJob execution'],
+      ['History', 'successfulJobsHistoryLimit'],
+    ],
+    tags: [['Batch','#3b82f6'],['Cron','#3b82f6'],['Parallel','#3b82f6']],
+  },
+  pod_app: {
+    badge: 'POD', color: '#10b981',
+    icon: '🟢', title: 'Application Pod',
+    sub: 'Smallest deployable unit. Contains app container + Envoy sidecar + Istio agent.',
+    props: [
+      ['Containers', '3: app, envoy-proxy, istio-agent'],
+      ['Network NS', 'Shared — all containers same IP'],
+      ['IPC', 'Shared — localhost communication'],
+      ['Init Containers', 'istio-init sets iptables rules'],
+      ['Volumes', 'Shared EmptyDir for certs'],
+      ['Resources', 'requests/limits per container'],
+    ],
+    tags: [['Sidecar','#f59e0b'],['mTLS','#ec4899'],['Mesh','#ec4899']],
+  },
+  envoy_proxy: {
+    badge: 'SIDECAR', color: '#f59e0b',
+    icon: '🔄', title: 'Envoy Proxy Sidecar',
+    sub: 'Data plane proxy. Intercepts all inbound/outbound traffic via iptables REDIRECT rules.',
+    props: [
+      ['Injection', 'MutatingWebhookConfiguration auto-inject'],
+      ['Intercept', 'iptables PREROUTING/OUTPUT chains'],
+      ['Protocols', 'HTTP/1.1, HTTP/2, gRPC, TCP, WebSocket'],
+      ['xDS APIs', 'LDS, RDS, CDS, EDS from Istiod'],
+      ['mTLS', 'Terminates and initiates mutual TLS'],
+      ['Telemetry', 'Metrics, traces, access logs'],
+      ['Ports', '15001 (outbound), 15006 (inbound), 15090 (metrics)'],
+    ],
+    tags: [['xDS','#f59e0b'],['mTLS','#f59e0b'],['L7','#f59e0b'],['Circuit Breaker','#f59e0b']],
+  },
+  istiod: {
+    badge: 'SERVICE MESH', color: '#ec4899',
+    icon: '🕸️', title: 'Istiod',
+    sub: 'Unified Istio control plane: service discovery, cert management, and config processing.',
+    props: [
+      ['Pilot', 'Service discovery, traffic mgmt config → xDS'],
+      ['Citadel', 'CA: issues SPIFFE SVIDs (X.509 certs)'],
+      ['Galley', 'Config validation and distribution'],
+      ['Port', '15010 (xDS gRPC), 443 (webhook)'],
+      ['Cert Rotation', 'Automatic 24h cert rotation'],
+      ['SPIFFE', 'spiffe://cluster.local/ns/ns/sa/sa'],
+    ],
+    tags: [['Pilot','#ec4899'],['Citadel','#ec4899'],['SPIFFE','#ec4899'],['xDS','#ec4899']],
+  },
+  virtualservice: {
+    badge: 'ISTIO CRD', color: '#ec4899',
+    icon: '🗺️', title: 'VirtualService',
+    sub: 'Defines routing rules for traffic addressed to a service within the mesh.',
+    props: [
+      ['Canary', 'weight: 10 (v2) / 90 (v1) split'],
+      ['Header routing', 'Route on custom HTTP headers'],
+      ['Fault injection', 'delay, abort for chaos testing'],
+      ['Retry', 'attempts, perTryTimeout, retryOn'],
+      ['Timeout', 'Request-level timeout override'],
+      ['Mirror', 'Shadow traffic to test services'],
+    ],
+    tags: [['Canary','#ec4899'],['A/B','#ec4899'],['Fault Injection','#ec4899'],['Mirror','#ec4899']],
+  },
+  destinationrule: {
+    badge: 'ISTIO CRD', color: '#ec4899',
+    icon: '📍', title: 'DestinationRule',
+    sub: 'Policies applied to traffic after VirtualService routing — LB, circuit breaker, TLS.',
+    props: [
+      ['Load Balancing', 'ROUND_ROBIN, RANDOM, LEAST_CONN, PASSTHROUGH'],
+      ['Subsets', 'version: v1, version: v2 pod groups'],
+      ['Circuit Breaker', 'consecutiveErrors, interval, baseEjectionTime'],
+      ['Connection Pool', 'http1MaxPendingRequests, maxRetries'],
+      ['TLS Mode', 'DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL'],
+    ],
+    tags: [['Circuit Breaker','#ec4899'],['mTLS','#ec4899'],['Subsets','#ec4899']],
+  },
+  peerauthentication: {
+    badge: 'ISTIO CRD', color: '#ec4899',
+    icon: '🔐', title: 'PeerAuthentication',
+    sub: 'Configures mTLS mode for workload-to-workload communication.',
+    props: [
+      ['STRICT', 'Only encrypted mTLS accepted — mutual TLS required'],
+      ['PERMISSIVE', 'Both plain and mTLS accepted (migration mode)'],
+      ['DISABLED', 'No mTLS — plain text only'],
+      ['Scope', 'Mesh-wide, namespace, or workload selector'],
+      ['Port-level', 'Different modes per port'],
+    ],
+    tags: [['STRICT','#ec4899'],['PERMISSIVE','#ec4899'],['Zero Trust','#ec4899']],
+  },
+  authorizationpolicy: {
+    badge: 'ISTIO CRD', color: '#ec4899',
+    icon: '🛡️', title: 'AuthorizationPolicy',
+    sub: 'Fine-grained access control for service-to-service traffic inside the mesh.',
+    props: [
+      ['Action', 'ALLOW, DENY, AUDIT, CUSTOM'],
+      ['Source', 'principals (SPIFFE), namespaces, ipBlocks'],
+      ['Operation', 'paths, methods, hosts, ports'],
+      ['Conditions', 'request.headers, source.ip, JWT claims'],
+      ['Default', 'No policy = allow all (within mesh)'],
+    ],
+    tags: [['SPIFFE','#ec4899'],['JWT','#ec4899'],['Zero Trust','#ec4899']],
+  },
+  gateway_mesh: {
+    badge: 'ISTIO', color: '#ec4899',
+    icon: '🚪', title: 'Istio Gateway',
+    sub: 'Controls ingress and egress load balancers at the mesh boundary.',
+    props: [
+      ['Type', 'Ingress Gateway, Egress Gateway'],
+      ['Protocol', 'HTTP, HTTPS, gRPC, TCP, TLS passthrough'],
+      ['TLS', 'SIMPLE, MUTUAL, PASSTHROUGH modes'],
+      ['Pairs with', 'VirtualService for routing rules'],
+      ['Deployment', 'istio-ingressgateway pod (Envoy)'],
+    ],
+    tags: [['Ingress','#ec4899'],['Egress','#ec4899'],['TLS','#ec4899']],
+  },
+  serviceentry: {
+    badge: 'ISTIO CRD', color: '#ec4899',
+    icon: '🌍', title: 'ServiceEntry',
+    sub: 'Adds external services (outside mesh) to the Istio service registry.',
+    props: [
+      ['Use Case', 'External DBs, SaaS APIs, legacy services'],
+      ['Resolution', 'DNS, STATIC, NONE'],
+      ['Location', 'MESH_EXTERNAL, MESH_INTERNAL'],
+      ['Enables', 'mTLS to external, traffic policies, observability'],
+    ],
+    tags: [['External','#ec4899'],['Registry','#ec4899'],['Egress','#ec4899']],
+  },
+  pv: {
+    badge: 'STORAGE', color: '#f59e0b',
+    icon: '💽', title: 'PersistentVolume (PV)',
+    sub: 'Cluster-level storage resource provisioned by admin or dynamically by StorageClass.',
+    props: [
+      ['Access Modes', 'RWO (ReadWriteOnce), ROX (ReadOnlyMany), RWX (ReadWriteMany), RWOP'],
+      ['Reclaim Policy', 'Retain (default), Delete, Recycle (deprecated)'],
+      ['Status', 'Available → Bound → Released → Failed'],
+      ['Capacity', 'storage: 100Gi'],
+      ['Volume Mode', 'Filesystem (default) or Block'],
+      ['Node Affinity', 'For local volumes'],
+    ],
+    tags: [['RWO','#f59e0b'],['RWX','#f59e0b'],['Static','#f59e0b'],['Dynamic','#f59e0b']],
+  },
+  pvc: {
+    badge: 'STORAGE', color: '#f59e0b',
+    icon: '📋', title: 'PersistentVolumeClaim (PVC)',
+    sub: 'Namespace-scoped request for storage by a user. Binds 1:1 with a PV.',
+    props: [
+      ['Binding', '1:1 with PV (matching size/mode)'],
+      ['StorageClass', 'Triggers dynamic provisioning'],
+      ['Selector', 'matchLabels to select specific PVs'],
+      ['Resize', 'allowVolumeExpansion in StorageClass'],
+      ['Status', 'Pending → Bound → Lost'],
+    ],
+    tags: [['Namespace','#f59e0b'],['Binding','#f59e0b'],['Dynamic','#f59e0b']],
+  },
+  storageclass: {
+    badge: 'STORAGE', color: '#f59e0b',
+    icon: '🏷️', title: 'StorageClass',
+    sub: 'Defines how storage is dynamically provisioned with specific parameters.',
+    props: [
+      ['Provisioner', 'ebs.csi.aws.com, pd.csi.storage.gke.io'],
+      ['volumeBindingMode', 'WaitForFirstConsumer (topology-aware)'],
+      ['reclaimPolicy', 'Delete or Retain'],
+      ['Parameters', 'type, fsType, encrypted, kmsKeyId'],
+      ['allowVolumeExpansion', 'true — online resize'],
+      ['Default class', 'storageclass.kubernetes.io/is-default-class'],
+    ],
+    tags: [['Dynamic','#f59e0b'],['Topology','#f59e0b'],['AWS EBS','#f59e0b'],['GCE PD','#f59e0b']],
+  },
+  nfs: {
+    badge: 'STORAGE', color: '#f59e0b',
+    icon: '🗂️', title: 'NFS (Network File System)',
+    sub: 'Shared filesystem mounted across multiple pods simultaneously (ReadWriteMany).',
+    props: [
+      ['Access Mode', 'ReadWriteMany (RWX) — multiple pods read/write'],
+      ['Provisioner', 'nfs-subdir-external-provisioner'],
+      ['Server', 'Dedicated NFS server (10.0.1.5:/exports)'],
+      ['Mount Options', 'nfsvers=4.1, hard, timeo=600'],
+      ['Use Cases', 'Shared config, media, ML datasets, logs'],
+      ['HA', 'NFS HA with Corosync/Pacemaker or EFS'],
+    ],
+    tags: [['RWX','#f59e0b'],['Shared','#f59e0b'],['AWS EFS','#f59e0b']],
+  },
+  csi: {
+    badge: 'STORAGE', color: '#f59e0b',
+    icon: '🔌', title: 'CSI Driver',
+    sub: 'Container Storage Interface — standardized plugin model for storage providers.',
+    props: [
+      ['Spec', 'CSI v1.x specification'],
+      ['Sidecars', 'external-provisioner, external-attacher, node-driver-registrar'],
+      ['AWS', 'aws-ebs-csi-driver (gp3, io1, sc1)'],
+      ['GCP', 'gce-pd-csi-driver (pd-ssd, pd-balanced)'],
+      ['Azure', 'azuredisk-csi, azurefile-csi'],
+      ['Snapshots', 'VolumeSnapshot API for backups'],
+    ],
+    tags: [['OCI','#f59e0b'],['Snapshots','#f59e0b'],['Topology','#f59e0b']],
+  },
+  configmap: {
+    badge: 'CONFIG', color: '#ef4444',
+    icon: '📜', title: 'ConfigMap',
+    sub: 'Non-confidential key-value configuration injected as env vars or mounted as files.',
+    props: [
+      ['Max Size', '1 MiB (etcd limit)'],
+      ['Usage', 'envFrom, env[].valueFrom, volume mount'],
+      ['Immutable', 'immutable: true for performance'],
+      ['Hot Reload', 'Volume mounts update ~60s (kubelet sync)'],
+      ['Env vars', 'Not hot-reloaded, pod restart required'],
+    ],
+    tags: [['Env','#ef4444'],['Volume','#ef4444'],['Immutable','#ef4444']],
+  },
+  secret: {
+    badge: 'CONFIG', color: '#ef4444',
+    icon: '🔑', title: 'Secret',
+    sub: 'Base64-encoded sensitive data. Encrypt at rest via KMS or use External Secrets.',
+    props: [
+      ['Types', 'Opaque, kubernetes.io/tls, kubernetes.io/dockerconfigjson'],
+      ['Encoding', 'Base64 — NOT encrypted by default'],
+      ['Encryption', 'EncryptionConfiguration with AES-CBC/GCM or KMS'],
+      ['External', 'External Secrets Operator, Vault Agent, SOPS'],
+      ['RBAC', 'Limit get/list/watch on secrets strictly'],
+    ],
+    tags: [['KMS','#ef4444'],['Vault','#ef4444'],['SOPS','#ef4444'],['External','#ef4444']],
+  },
+  emptydir: {
+    badge: 'STORAGE', color: '#06b6d4',
+    icon: '💨', title: 'EmptyDir / HostPath',
+    sub: 'Ephemeral pod-local storage. EmptyDir lives with pod; HostPath uses node filesystem.',
+    props: [
+      ['EmptyDir', 'Shared between containers in same pod'],
+      ['medium: ""', 'Node disk storage'],
+      ['medium: Memory', 'tmpfs RAM-backed, faster'],
+      ['sizeLimit', 'Prevents unlimited disk usage'],
+      ['HostPath', 'Mounts node path — security risk'],
+      ['Use Cases', 'Scratch space, cache, shared logs'],
+    ],
+    tags: [['Ephemeral','#06b6d4'],['tmpfs','#06b6d4'],['Scratch','#06b6d4']],
+  },
+  svc_clusterip: {
+    badge: 'NETWORKING', color: '#06b6d4',
+    icon: '🔵', title: 'ClusterIP Service',
+    sub: 'Default Service type. Exposes service on internal cluster IP only.',
+    props: [
+      ['IP Range', '10.96.0.0/12 (default)'],
+      ['DNS', 'my-svc.my-ns.svc.cluster.local'],
+      ['Implementation', 'iptables rules on each node'],
+      ['Session Affinity', 'ClientIP (sticky sessions)'],
+      ['Headless', 'clusterIP: None → DNS returns pod IPs'],
+    ],
+    tags: [['Internal','#06b6d4'],['DNS','#06b6d4'],['Headless','#06b6d4']],
+  },
+  svc_nodeport: {
+    badge: 'NETWORKING', color: '#06b6d4',
+    icon: '🟡', title: 'NodePort Service',
+    sub: 'Exposes a static port on every node\'s IP. Traffic forwards to ClusterIP.',
+    props: [
+      ['Port Range', '30000-32767'],
+      ['External Access', 'nodeIP:nodePort'],
+      ['Includes', 'ClusterIP automatically created'],
+      ['Use Case', 'Dev/test, on-prem without cloud LB'],
+      ['externalTrafficPolicy', 'Local preserves source IP'],
+    ],
+    tags: [['External','#06b6d4'],['Port','#06b6d4'],['On-Prem','#06b6d4']],
+  },
+  svc_lb: {
+    badge: 'NETWORKING', color: '#06b6d4',
+    icon: '⚖️', title: 'LoadBalancer Service',
+    sub: 'Provisions cloud provider external load balancer. Supersedes NodePort.',
+    props: [
+      ['Provisioning', 'Cloud Controller Manager creates LB'],
+      ['External IP', 'Assigned by cloud provider'],
+      ['AWS', 'Classic ELB or NLB (service.beta.kubernetes.io/aws-load-balancer-type)'],
+      ['Internal LB', 'Annotation: aws-load-balancer-internal: "true"'],
+      ['MetalLB', 'On-prem LB via BGP/L2 announcement'],
+    ],
+    tags: [['AWS NLB','#06b6d4'],['MetalLB','#06b6d4'],['External','#06b6d4']],
+  },
+  ingress: {
+    badge: 'NETWORKING', color: '#06b6d4',
+    icon: '🌐', title: 'Ingress / Gateway API',
+    sub: 'L7 HTTP/HTTPS routing rules. Maps hostnames/paths to backend Services.',
+    props: [
+      ['Controllers', 'nginx-ingress, Traefik, HAProxy, Contour'],
+      ['TLS', 'secretName with cert for HTTPS termination'],
+      ['Annotations', 'nginx.ingress.kubernetes.io/* for tuning'],
+      ['Gateway API', 'HTTPRoute, TCPRoute — GA in 1.28'],
+      ['Cert-Manager', 'Automatic TLS via ACME/Let\'s Encrypt'],
+    ],
+    tags: [['NGINX','#06b6d4'],['TLS','#06b6d4'],['Gateway API','#06b6d4'],['L7','#06b6d4']],
+  },
+  networkpolicy: {
+    badge: 'NETWORKING', color: '#06b6d4',
+    icon: '🛡️', title: 'NetworkPolicy',
+    sub: 'Namespace-scoped firewall rules controlling pod-to-pod L3/L4 traffic.',
+    props: [
+      ['Default', 'No policy = allow all (flat network)'],
+      ['Best Practice', 'Default-deny all, then explicit allow'],
+      ['Selectors', 'podSelector, namespaceSelector, ipBlock'],
+      ['Direction', 'Ingress, Egress, or both'],
+      ['Enforcement', 'CNI plugin must support (Calico, Cilium, Weave)'],
+    ],
+    tags: [['Calico','#06b6d4'],['Cilium','#06b6d4'],['Default-Deny','#06b6d4']],
+  },
+  coredns: {
+    badge: 'NETWORKING', color: '#14b8a6',
+    icon: '🔍', title: 'CoreDNS',
+    sub: 'Flexible extensible DNS server for Kubernetes cluster service discovery.',
+    props: [
+      ['FQDN', 'svc.namespace.svc.cluster.local'],
+      ['Headless', 'Returns pod IPs directly'],
+      ['ExternalName', 'CNAME to external DNS'],
+      ['Plugins', 'health, ready, kubernetes, prometheus, forward'],
+      ['ConfigMap', 'coredns in kube-system'],
+    ],
+    tags: [['DNS','#14b8a6'],['Service Discovery','#14b8a6'],['CoreFile','#14b8a6']],
+  },
+  prometheus: {
+    badge: 'OBSERVABILITY', color: '#14b8a6',
+    icon: '📊', title: 'Prometheus',
+    sub: 'Pull-based metrics system. Scrapes /metrics endpoints, stores in TSDB.',
+    props: [
+      ['Model', 'Pull (scrape) every 15-30s'],
+      ['Storage', 'Local TSDB or remote write (Thanos, Cortex)'],
+      ['Service Monitor', 'CRD to configure scrape targets'],
+      ['Alerting', 'AlertmanagerConfig, PrometheusRule'],
+      ['kube-state-metrics', 'Exposes k8s object metrics'],
+    ],
+    tags: [['PromQL','#14b8a6'],['TSDB','#14b8a6'],['Thanos','#14b8a6'],['AlertManager','#14b8a6']],
+  },
+  grafana: {
+    badge: 'OBSERVABILITY', color: '#14b8a6',
+    icon: '📈', title: 'Grafana',
+    sub: 'Visualization platform for metrics, logs, and traces.',
+    props: [
+      ['Dashboards', 'kube-prometheus-stack includes prebuilt'],
+      ['DataSources', 'Prometheus, Loki, Jaeger, Tempo'],
+      ['Alerting', 'Grafana-native alerting with routing'],
+      ['Explore', 'Ad-hoc PromQL and LogQL queries'],
+    ],
+    tags: [['PromQL','#14b8a6'],['Loki','#14b8a6'],['Tempo','#14b8a6']],
+  },
+  hpa: {
+    badge: 'AUTOSCALING', color: '#f59e0b',
+    icon: '📏', title: 'HPA / VPA / KEDA',
+    sub: 'Horizontal, Vertical, and Event-Driven autoscaling for workloads.',
+    props: [
+      ['HPA v2', 'CPU, Memory, custom metrics via metrics-server'],
+      ['VPA', 'Recommends/sets container resource requests'],
+      ['KEDA', 'ScaledObject triggers: Kafka, SQS, Cron, Prometheus'],
+      ['Cluster Autoscaler', 'Adds/removes nodes based on pending pods'],
+      ['Karpenter', 'AWS-native fast node provisioning'],
+    ],
+    tags: [['HPA','#f59e0b'],['KEDA','#f59e0b'],['Karpenter','#f59e0b']],
+  },
+  rbac: {
+    badge: 'SECURITY', color: '#ef4444',
+    icon: '🔒', title: 'RBAC',
+    sub: 'Role-Based Access Control. Controls who can do what on which resources.',
+    props: [
+      ['Objects', 'Role (ns), ClusterRole (cluster), RoleBinding, ClusterRoleBinding'],
+      ['Subjects', 'User, Group, ServiceAccount'],
+      ['Verbs', 'get, list, watch, create, update, patch, delete'],
+      ['Default SAs', 'default SA in each namespace'],
+      ['Least Privilege', 'Grant minimum required permissions'],
+      ['Audit Logs', 'API server audit log for compliance'],
+    ],
+    tags: [['Least Privilege','#ef4444'],['ServiceAccount','#ef4444'],['Audit','#ef4444']],
+  },
+  namespace: {
+    badge: 'ORGANIZATION', color: '#14b8a6',
+    icon: '📁', title: 'Namespaces',
+    sub: 'Virtual clusters within a cluster. Scope for names, policies, and quotas.',
+    props: [
+      ['System', 'default, kube-system, kube-public, kube-node-lease'],
+      ['ResourceQuota', 'Limits CPU, memory, pod count per NS'],
+      ['LimitRange', 'Default requests/limits for containers'],
+      ['RBAC Scope', 'Role/RoleBinding are namespace-scoped'],
+      ['DNS', 'svc.namespace.svc.cluster.local'],
+    ],
+    tags: [['Multi-tenant','#14b8a6'],['ResourceQuota','#14b8a6'],['LimitRange','#14b8a6']],
+  },
+  jaeger: {
+    badge: 'OBSERVABILITY', color: '#14b8a6',
+    icon: '🔭', title: 'Jaeger / Zipkin',
+    sub: 'Distributed tracing for request flows across microservices.',
+    props: [
+      ['Protocol', 'OpenTelemetry (OTLP), Jaeger, Zipkin'],
+      ['Propagation', 'W3C TraceContext, B3 headers'],
+      ['Auto-instrument', 'Envoy sidecar adds trace headers'],
+      ['Storage', 'Cassandra, Elasticsearch, in-memory'],
+      ['Sampling', 'Tail-based and head-based sampling'],
+    ],
+    tags: [['OTLP','#14b8a6'],['TraceContext','#14b8a6'],['Envoy','#14b8a6']],
+  },
+  fluentd: {
+    badge: 'OBSERVABILITY', color: '#14b8a6',
+    icon: '📝', title: 'Fluentd / Loki',
+    sub: 'Log collection, aggregation and forwarding from pods and nodes.',
+    props: [
+      ['Deployment', 'DaemonSet on each node'],
+      ['Sources', 'Container logs from /var/log/containers'],
+      ['Loki', 'Grafana Loki: log aggregation with LogQL'],
+      ['Promtail', 'Loki agent DaemonSet for log shipping'],
+      ['Forwarding', 'Elasticsearch, S3, Loki, Splunk'],
+    ],
+    tags: [['DaemonSet','#14b8a6'],['LogQL','#14b8a6'],['Elasticsearch','#14b8a6']],
+  },
+  kiali: {
+    badge: 'OBSERVABILITY', color: '#14b8a6',
+    icon: '🕸️', title: 'Kiali',
+    sub: 'Observability console for Istio service mesh — topology, health, traffic.',
+    props: [
+      ['Topology', 'Real-time service mesh graph'],
+      ['Health', 'Service, workload, app health'],
+      ['Traffic', 'Request rates, error rates, latency'],
+      ['Config', 'View and validate Istio configs'],
+      ['Integration', 'Prometheus, Jaeger, Grafana'],
+    ],
+    tags: [['Istio','#14b8a6'],['Graph','#14b8a6'],['mTLS','#14b8a6']],
+  },
+  istio_agent: {
+    badge: 'SIDECAR', color: '#f59e0b',
+    icon: '🔧', title: 'Istio Agent (pilot-agent)',
+    sub: 'Bootstraps Envoy, manages certificates, and handles SDS (Secret Discovery Service).',
+    props: [
+      ['Role', 'Manages Envoy bootstrap config and certs'],
+      ['SDS', 'Secret Discovery Service — provides TLS certs to Envoy'],
+      ['Health', 'Envoy readiness/liveness probe endpoint'],
+      ['xDS Proxy', 'Proxies xDS connection from Envoy to Istiod'],
+      ['Port', '15020 (healthz, metrics)'],
+    ],
+    tags: [['SDS','#f59e0b'],['Certs','#f59e0b'],['Bootstrap','#f59e0b']],
+  },
+  metrics_sidecar: {
+    badge: 'SIDECAR', color: '#06b6d4',
+    icon: '📊', title: 'Metrics Exporter (Sidecar)',
+    sub: 'Exposes application metrics in Prometheus format from a dedicated sidecar container.',
+    props: [
+      ['Pattern', 'Adapter sidecar for apps without native /metrics'],
+      ['Exporter', 'JMX exporter, Postgres exporter, etc.'],
+      ['Port', 'Standard :9090 /metrics endpoint'],
+      ['ServiceMonitor', 'Scraped by Prometheus operator'],
+      ['Annotations', 'prometheus.io/scrape: "true"'],
+    ],
+    tags: [['Prometheus','#06b6d4'],['Exporter','#06b6d4'],['Adapter','#06b6d4']],
+  },
+  container_app: {
+    badge: 'CONTAINER', color: '#10b981',
+    icon: '🖥️', title: 'App Container',
+    sub: 'Main workload container. Business logic served on port 8080.',
+    props: [
+      ['Image', 'app:v2.1.0 (OCI image)'],
+      ['Resources', 'requests: 100m CPU, 128Mi; limits: 500m, 512Mi'],
+      ['Probes', 'readinessProbe: /healthz, livenessProbe: /livez'],
+      ['Env', 'ConfigMap + Secret injection'],
+      ['Security', 'runAsNonRoot: true, readOnlyRootFilesystem'],
+    ],
+    tags: [['OCI','#10b981'],['Health Probe','#10b981'],['SecurityContext','#10b981']],
+  },
+  container_db: {
+    badge: 'CONTAINER', color: '#3b82f6',
+    icon: '🗃️', title: 'PostgreSQL Container',
+    sub: 'Stateful database container with persistent volume mount.',
+    props: [
+      ['Image', 'postgres:16-alpine'],
+      ['Port', '5432 (TCP)'],
+      ['Volume', 'PVC mounted at /var/lib/postgresql/data'],
+      ['Resources', 'requests: 500m CPU, 1Gi; limits: 2, 4Gi'],
+      ['Init', 'initdb scripts via ConfigMap'],
+      ['Backup', 'pg_dump CronJob or Velero snapshot'],
+    ],
+    tags: [['StatefulSet','#3b82f6'],['PVC','#3b82f6'],['Backup','#3b82f6']],
+  },
+  pod_db: {
+    badge: 'POD', color: '#3b82f6',
+    icon: '🔷', title: 'Database Pod (StatefulSet)',
+    sub: 'Stateful pod with stable identity (db-pod-0) and dedicated PVC.',
+    props: [
+      ['Controller', 'StatefulSet: postgres-sts'],
+      ['Identity', 'db-pod-0 (stable ordinal name)'],
+      ['DNS', 'db-pod-0.postgres-svc.default.svc.cluster.local'],
+      ['PVC', 'data-db-pod-0 bound to PV (gp3, 50Gi)'],
+      ['Containers', 'postgres + envoy-proxy + metrics-exporter'],
+    ],
+    tags: [['Stable ID','#3b82f6'],['Headless DNS','#3b82f6'],['PVC','#3b82f6']],
+  },
+};
+
+function showPanel(id) {
+  const d = PANELS[id];
+  if (!d) return;
+  const panel = document.getElementById('infoPanel');
+  const content = document.getElementById('panelContent');
+  const tagsHTML = (d.tags||[]).map(([t,c])=>`<span class="info-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${t}</span>`).join('');
+  const propsHTML = (d.props||[]).map(([k,v])=>`<div class="info-prop"><span class="info-prop-key">${k}</span><span class="info-prop-val">${v}</span></div>`).join('');
+  content.innerHTML = `
+    <div class="info-badge" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}44">${d.badge}</div>
+    <div class="info-title" style="color:${d.color}">${d.icon} ${d.title}</div>
+    <div class="info-subtitle">${d.sub}</div>
+    <div class="info-section">
+      <div class="info-section-title">PROPERTIES</div>
+      ${propsHTML}
+    </div>
+    ${tagsHTML ? `<div class="info-section"><div class="info-section-title">FEATURES</div><div>${tagsHTML}</div></div>` : ''}
+  `;
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('infoPanel').classList.remove('open');
+}
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['hld','components','mesh','storage','overview'][i]===name);
+  });
+}
+
+function stopProp(e) { e.stopPropagation(); }
+
+// Tooltip
+const tt = document.getElementById('tooltip');
+const ttTitle = document.getElementById('tt-title');
+const ttBody = document.getElementById('tt-body');
+const TIPS = {
+  'API Server':'REST gateway for all k8s operations',
+  'Kubelet':'Node agent managing pod lifecycle',
+  'Envoy Sidecar':'Data plane proxy with mTLS',
+  'PersistentVolume':'Cluster storage resource',
+  'NFS Server':'Network File System — ReadWriteMany',
+};
+
+document.addEventListener('mousemove', e=>{
+  if(tt.classList.contains('visible')){
+    tt.style.left = (e.clientX+14)+'px';
+    tt.style.top = (e.clientY+14)+'px';
+  }
+});
+
+// Keyboard close
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePanel(); });
+</script>
+</body>
+</html>
