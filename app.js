@@ -631,9 +631,10 @@ function renderConcepts(filterText, filterCat) {
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
       const det = card.querySelector('.concept-detail');
       if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
     });
@@ -656,9 +657,10 @@ function renderSpecialGrid(gridId, list) {
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
       const det = card.querySelector('.concept-detail');
       if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
     });
