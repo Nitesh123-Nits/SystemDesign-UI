@@ -613,12 +613,13 @@ function renderConcepts(filterText, filterCat) {
     const card = document.createElement('div');
     card.className = 'concept-card';
     card.style.setProperty('--card-accent', c.color);
+    const resolvedLinks = c.links || (typeof CONCEPT_LINKS !== 'undefined' ? CONCEPT_LINKS[c.id] : null);
     card.innerHTML = `
       <div class="concept-icon">${c.icon}</div>
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || c.links) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${c.links ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${c.links.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
     card.addEventListener('click', () => {
       const det = card.querySelector('.concept-detail');
@@ -637,12 +638,13 @@ function renderSpecialGrid(gridId, list) {
     const card = document.createElement('div');
     card.className = 'concept-card';
     card.style.setProperty('--card-accent', c.color);
+    const resolvedLinks = c.links || (typeof CONCEPT_LINKS !== 'undefined' ? CONCEPT_LINKS[c.id] : null);
     card.innerHTML = `
       <div class="concept-icon">${c.icon}</div>
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || c.links) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${c.links ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${c.links.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;" onclick="event.stopPropagation()">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
     card.addEventListener('click', () => {
       const det = card.querySelector('.concept-detail');

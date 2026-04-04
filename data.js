@@ -2109,3 +2109,48 @@ const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c
 
 const DISTRIBUTED_CONCEPTS = CONCEPTS.filter(c => DIST_SYS_IDS.includes(c.id));
 const MICROSERVICES_CONCEPTS = CONCEPTS.filter(c => MICROSEC_IDS.includes(c.id));
+
+const CONCEPT_LINKS = {
+  // --- Microservices & Architecture ---
+  "c15": [{ label: "Martin Fowler: Microservices", url: "https://martinfowler.com/articles/microservices.html" }],
+  "c20": [{ label: "Rate Limiting Strategies", url: "https://stripe.com/blog/rate-limiters" }],
+  "c21": [{ label: "Nginx: What is an API Gateway?", url: "https://www.nginx.com/learn/api-gateway/" }],
+  "c22": [{ label: "Service Discovery in Microservices", url: "https://microservices.io/patterns/client-side-discovery.html" }],
+  "c30": [{ label: "Event Sourcing Pattern", url: "https://microservices.io/patterns/data/event-sourcing.html" }],
+  "c31": [{ label: "CQRS Pattern", url: "https://microservices.io/patterns/data/cqrs.html" }],
+  "c40": [{ label: "Saga Pattern", url: "https://microservices.io/patterns/data/saga.html" }],
+  "c41": [{ label: "What is a Service Mesh?", url: "https://www.redhat.com/en/topics/microservices/what-is-a-service-mesh" }],
+  "c48": [{ label: "Sidecar Pattern", url: "https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar" }],
+  "c49": [{ label: "Martin Fowler: Circuit Breaker", url: "https://martinfowler.com/bliki/CircuitBreaker.html" }],
+  "c50": [{ label: "Martin Fowler: Strangler Fig", url: "https://martinfowler.com/bliki/StranglerFigApplication.html" }],
+  "c51": [{ label: "BFF Pattern", url: "https://samnewman.io/patterns/architectural/bff/" }],
+  "c55": [{ label: "Domain-Driven Design", url: "https://martinfowler.com/bliki/DomainDrivenDesign.html" }],
+  "c56": [{ label: "Transactional Outbox", url: "https://microservices.io/patterns/data/transactional-outbox.html" }],
+  "c57": [{ label: "Bulkhead Pattern", url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead" }],
+
+  // --- Distributed Systems ---
+  "c13": [{ label: "IBM: CAP Theorem Explained", url: "https://www.ibm.com/topics/cap-theorem" }],
+  "c14": [{ label: "Understanding PACELC Theorem", url: "https://en.wikipedia.org/wiki/PACELC_theorem" }],
+  "c33": [{ label: "Two-Phase Commit Protocol", url: "https://en.wikipedia.org/wiki/Two-phase_commit_protocol" }],
+  "c34": [{ label: "The Secret Lives of Data (Raft)", url: "http://thesecretlivesofdata.com/raft/" }],
+  "c35": [{ label: "Why Vector Clocks are hard", url: "https://riak.com/posts/technical/why-vector-clocks-are-hard/" }],
+  "c44": [{ label: "Consistent Hashing Algorithm", url: "https://www.toptal.com/big-data/consistent-hashing" }],
+  "c45": [{ label: "Gossip Protocol Guide", url: "https://managementfromscratch.wordpress.com/2016/04/01/introduction-to-gossip-protocol/" }],
+  "c46": [{ label: "Google Spanner & TrueTime", url: "https://cloud.google.com/spanner/docs/true-time-external-consistency" }],
+  "c47": [{ label: "Distributed Locks with Redis", url: "https://redis.io/docs/manual/patterns/distributed-locks/" }],
+  "c52": [{ label: "OpenTelemetry: Distributed Tracing", url: "https://opentelemetry.io/docs/concepts/observability-primer/#distributed-traces" }],
+  "c53": [{ label: "Split-Brain in Distributed Systems", url: "https://hazelcast.com/glossary/split-brain/" }],
+  "c54": [{ label: "AWS: Leader Election", url: "https://aws.amazon.com/builders-library/leader-election-in-distributed-systems/" }],
+  "c58": [{ label: "Principles of Chaos Engineering", url: "https://principlesofchaos.org/" }],
+  "c59": [{ label: "Interactive Intro to CRDTs", url: "https://jakelazaroff.com/words/an-interactive-intro-to-crdts/" }],
+
+  // --- General Data & Scaling ---
+  "c10": [{ label: "System Design: Load Balancing", url: "https://www.nginx.com/resources/glossary/load-balancing/" }],
+  "c1": [{ label: "Horizontal vs Vertical Scaling", url: "https://www.cloudzero.com/blog/horizontal-vs-vertical-scaling" }],
+  "c2": [{ label: "CDN Architecture", url: "https://www.cloudflare.com/learning/cdn/what-is-a-cdn/" }],
+  "c3": [{ label: "Database Sharding", url: "https://www.digitalocean.com/community/tutorials/understanding-database-sharding" }],
+  "c5": [{ label: "Redis Caching Strategies", url: "https://redis.com/redis-enterprise/data-structures/caching/" }],
+  "c11": [{ label: "Message Queues vs Pub/Sub", url: "https://aws.amazon.com/message-queue/" }],
+  "c12": [{ label: "WebSockets API", url: "https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API" }]
+};
+
