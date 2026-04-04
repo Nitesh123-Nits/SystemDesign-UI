@@ -1724,6 +1724,138 @@ const CONCEPTS = [
     • <strong>Prepare:</strong> Coordinator asks all nodes if they are ready to commit. Nodes lock resources.<br>
     • <strong>Commit/Rollback:</strong> If all say YES, coordinator tells everyone to commit. Otherwise, everyone rolls back.<br><br>
     <strong>Cons:</strong> A blocking protocol. If the coordinator fails, resources remain locked (SPOF). Not suitable for high-scale/latency systems.`
+  },
+  {
+    id: "c34", icon: "🗳️", title: "Raft Consensus",
+    color: "#8b5cf6",
+    desc: "A consensus algorithm designed as an alternative to Paxos, focusing on understandability and clear leader election.",
+    tags: ["Consensus", "Distributed Systems", "Fault Tolerance"],
+    detail: `<strong>How it works:</strong> Nodes are either Follower, Candidate, or Leader. The Leader handles all client requests and replicates logs to followers. If a leader fails, a new election is triggered.<br><br>
+    <strong>Key Components:</strong> Leader Election, Log Replication, and Safety guarantees.<br><br>
+    <strong>Used in:</strong> etcd (Kubernetes), CockroachDB, TiDB.`
+  },
+  {
+    id: "c35", icon: "⏰", title: "Vector Clocks",
+    color: "#f43f5e",
+    desc: "A mechanism for generating a partial ordering of events and detecting causality violations in distributed systems.",
+    tags: ["Distributed Systems", "Conflict Resolution", "Causality"],
+    detail: `<strong>The Problem:</strong> In a system without a global clock, determining the order of events (e.g., in Amazon Dynamo or Riak) is hard.<br><br>
+    <strong>How it works:</strong> Each node maintains a list of counters for all other nodes. When a node updates data, it increments its own counter and timestamps the data.<br><br>
+    <strong>Benefit:</strong> Allows the system to detect if two updates happened concurrently (Conflict) or if one followed the other.`
+  },
+  {
+    id: "c36", icon: "🧠", title: "Bloom Filters",
+    color: "#10b981",
+    desc: "A space-efficient probabilistic data structure used to test whether an element is a member of a set.",
+    tags: ["Probabilistic", "Data Intensive", "Optimization"],
+    detail: `<strong>Guarantee:</strong> It never returns a false negative (if it says 'No', the item is definitely not there). It might return a false positive.<br><br>
+    <strong>Use Cases:</strong> Reducing expensive disk lookups in databases (Cassandra, Bigtable) or checking if a URL is malicious/already crawled.<br><br>
+    <strong>Trade-off:</strong> Highly space-efficient but doesn't store the actual items or allow deletion.`
+  },
+  {
+    id: "c37", icon: "🪵", title: "LSM-Trees",
+    color: "#f59e0b",
+    desc: "Log-Structured Merge-Trees: A data structure optimized for high-throughput write workloads.",
+    tags: ["Storage Engines", "Writes", "Databases"],
+    detail: `<strong>Mechanism:</strong> Writes are strictly appended to an in-memory 'MemTable'. When full, it's flushed to disk as an immutable sorted 'SSTable'. Background 'Compaction' merges these files.<br><br>
+    <strong>Pros:</strong> Sequential writes (extremely fast), high write throughput.<br><br>
+    <strong>Used in:</strong> Cassandra, RocksDB, LevelDB, InfluxDB.`
+  },
+  {
+    id: "c38", icon: "🚀", title: "gRPC",
+    color: "#2563eb",
+    desc: "Modern high-performance RPC framework using Protocol Buffers (Protobuf) and HTTP/2.",
+    tags: ["Protocols", "Communication", "Microservices"],
+    detail: `<strong>Features:</strong> Binary serialization (faster than JSON), Bi-directional streaming, multiplexing (over one connection), and strictly typed contracts (.proto files).<br><br>
+    <strong>Compare with REST:</strong> REST is text-based (JSON) and resource-oriented. gRPC is binary-based and action-oriented.`
+  },
+  {
+    id: "c39", icon: "🚈", title: "QUIC (HTTP/3)",
+    color: "#ec4899",
+    desc: "A modern transport layer protocol built over UDP, reducing latency and solving Head-of-Line blocking.",
+    tags: ["Protocols", "Networking", "Performance"],
+    detail: `<strong>Key Features:</strong> Faster connection setup (0-RTT), improved congestion control, and connection migration (keeping streams alive when switching between Wi-Fi/Mobile).<br><br>
+    <strong>Why it matters:</strong> Unlike TCP, a dropped packet in QUIC only stalls its own stream, not the entire connection (No HOL blocking).`
+  },
+  {
+    id: "c40", icon: "🧵", title: "Saga Pattern",
+    color: "#8b5cf6",
+    desc: "A failure management pattern that coordinates multiple local transactions to maintain data consistency in microservices.",
+    tags: ["Distributed Transactions", "Microservices", "Reliability"],
+    detail: `<strong>Types:</strong><br>
+    • <strong>Orchestration:</strong> A central controller tells services when to execute transactions.<br>
+    • <strong>Choreography:</strong> Services exchange events and decide their next action locally.<br><br>
+    <strong>Compensating Transaction:</strong> If a step fails, the system triggers 'undo' actions for previously successful steps.`
+  },
+  {
+    id: "c41", icon: "🛡️", title: "Service Mesh",
+    color: "#6366f1",
+    desc: "A dedicated infrastructure layer for handling service-to-service communication, often using a Sidecar proxy.",
+    tags: ["Infrastructure", "Observability", "Microservices"],
+    detail: `<strong>Capabilities:</strong> Service discovery, load balancing, encryption (mTLS), observability (tracing), and resiliency (retries, circuit breakers).<br><br>
+    <strong>Architecture:</strong> Data Plane (Proxies like Envoy) + Control Plane (Istio, Linkerd).`
+  },
+  {
+    id: "c42", icon: "🌳", title: "Merkle Trees",
+    color: "#14b8a6",
+    desc: "A hash tree used to efficiently verify the integrity and consistency of large data structures.",
+    tags: ["Cryptography", "Data Integrity", "P2P"],
+    detail: `<strong>How it works:</strong> Every leaf node is a hash of a data block. Non-leaf nodes are hashes of their children. The root hash represents the entire dataset.<br><br>
+    <strong>Uses:</strong> Blockchain (Bitcoin/Ethereum), Git, P2P file sharing (BitTorrent), NoSQL anti-entropy (Dynamo DB/Cassandra).`
+  },
+  {
+    id: "c43", icon: "💾", title: "Write-Ahead Log (WAL)",
+    color: "#d946ef",
+    desc: "A family of techniques for providing atomicity and durability by logging operations before they are applied to the main database.",
+    tags: ["Persistence", "Durability", "Databases"],
+    detail: `<strong>The Benefit:</strong> In case of a crash, the database can replay the log to restore state (Redo) or undo uncommitted changes. Ensures the WAL is persisted to disk first.<br><br>
+    <strong>Standard in:</strong> PostgreSQL, MySQL (Redo log), MongoDB, Cassandra.`
+  },
+  {
+    id: "c44", icon: "💍", title: "Consistent Hashing",
+    color: "#0ea5e9",
+    desc: "A distributed hashing scheme that minimizes reorganization when nodes are added or removed.",
+    tags: ["Distributed Systems", "Sharding", "Load Balancing"],
+    detail: `<strong>The Problem:</strong> Traditional hashing (mod N) causes ~99% of keys to move if N changes. Consistent hashing only moves K/N keys.<br><br>
+    <strong>Virtual Nodes:</strong> To prevent 'hot spots', each physical node is mapped to multiple points on the hash ring. This ensures a more uniform data distribution.<br><br>
+    <strong>Used in:</strong> Amazon Dynamo, Apache Cassandra, Akamai CDN.`
+  },
+  {
+    id: "c45", icon: "🗣️", title: "Gossip Protocols",
+    color: "#f43f5e",
+    desc: "A peer-to-peer communication protocol for distributing information across a large network without a central coordinator.",
+    tags: ["Distributed Systems", "Communication", "P2P"],
+    detail: `<strong>Mechanism:</strong> Nodes periodically pick a random peer and share state ('infection-style'). Information spreads exponentially fast (O(log N) time).<br><br>
+    <strong>Anti-Entropy:</strong> Comparing state with peers to reconcile differences. Often used for cluster membership and failure detection (SWIM protocol).<br><br>
+    <strong>Used in:</strong> Cassandra (Node discovery), Consul.`
+  },
+  {
+    id: "c46", icon: "🕰️", title: "Clock Synchronization",
+    color: "#8b5cf6",
+    desc: "Determining the order of events in a system without a perfectly synchronized global clock.",
+    tags: ["Distributed Systems", "Consistency", "Ordering"],
+    detail: `<strong>Strategies:</strong><br>
+    • <strong>Physical Clocks (NTP):</strong> Synchronizing to accurate time sources (often has skew/drift).<br>
+    • <strong>Logical Clocks (Lamport):</strong> Assigning monotonically increasing numbers based on event causality (A before B).<br>
+    • <strong>Hybrid/TrueTime:</strong> Using GPS/Atomic clocks with an 'uncertainty interval' (e.g., Google Spanner).`
+  },
+  {
+    id: "c47", icon: "🔐", title: "Distributed Locking",
+    color: "#fb923c",
+    desc: "A mechanism to ensure mutual exclusion across multiple processes running on different machines.",
+    tags: ["Concurrency", "Distributed Systems", "Synchronization"],
+    detail: `<strong>Approaches:</strong><br>
+    • <strong>Redis (Redlock):</strong> Using multiple Redis nodes to achieve a majority lock state.<br>
+    • <strong>etcd/Zookeeper:</strong> Using ephemeral nodes and 'watches' to manage lock ownership and failover.<br><br>
+    <strong>Risk:</strong> Always account for 'fencing tokens' to prevent stale holders from accessing resources after their lease expires.`
+  },
+  {
+    id: "c48", icon: "🛸", title: "Sidecar Pattern",
+    color: "#06b6d4",
+    desc: "Deploying a helper component alongside the main application container to handle cross-cutting concerns.",
+    tags: ["Architecture", "Microservices", "Infrastructure"],
+    detail: `<strong>Responsibilities:</strong> Logging, monitoring, security (mTLS), and network resilience (retries, circuit breaking).<br><br>
+    <strong>Benefit:</strong> Decouples infrastructure logic from business code. The application doesn't need to know the Service Mesh exists.`
   }
 ];
 
@@ -1807,6 +1939,46 @@ const UNIVERSAL_TRADEOFFS = [
     pro: "Centralized is easy to manage, update, and secure. Decentralized has no single point of failure and respects privacy.",
     con: "Centralized is a bottleneck and SPOF. Decentralized is hard to coordinate and eventually consistent.",
     analogy: "A corporate office (Centralized) vs. a neighborhood watch (Decentralized)."
+  },
+  {
+    title: "B-Tree vs LSM-Tree",
+    icon: "🏗️",
+    desc: "Choosing between read-optimized and write-optimized disk storage engines.",
+    pro: "B-Trees (MySQL, Postgres) offer fast, predictable reads and efficient range queries. LSM-Trees (Cassandra, RocksDB) offer extreme write throughput.",
+    con: "B-Trees can suffer from write amplification and fragmentation. LSM-Trees have 'read amplification' and need heavy background compaction.",
+    analogy: "An organized library with a central index (B-Tree) vs. a stack of sorted daily journals (LSM-Tree)."
+  },
+  {
+    title: "Orchestration vs Choreography",
+    icon: "🎻",
+    desc: "Design patterns for coordinating long-running business processes (Sagas).",
+    pro: "Orchestration is easier to manage and monitor. Choreography is highly scalable and services are loosely coupled.",
+    con: "Orchestration creates a central bottleneck/coupling point. Choreography is much harder to debug and track globally.",
+    analogy: "A conductor leading an orchestra (Orchestration) vs. a flash mob (Choreography)."
+  },
+  {
+    title: "Serverless vs Containers (K8s)",
+    icon: "☁️",
+    desc: "Trade-offs between abstracting the infrastructure vs. having full control over it.",
+    pro: "Serverless (Lambda) scales to zero and has zero management. Containers (K8s) provide environment consistency and avoid vendor lock-in.",
+    con: "Serverless has 'cold start' latency and rigid resource limits. K8s is notoriously complex to set up and manage.",
+    analogy: "Taking a taxi (Serverless) vs. leasing and driving your own car (Containers)."
+  },
+  {
+     title: "PACELC Theorem",
+     icon: "⚖️",
+     desc: "The extension to CAP that describes trade-offs during normal operation (no partition).",
+     pro: "Describes the choice between Latency and Consistency when the system is healthy (normal operation).",
+     con: "More complex to reason about than CAP. Forces decisions even during 'good' times.",
+     analogy: "Choosing between a fast drive vs a safe drive even on a clear day."
+  },
+  {
+     title: "Database Sharding vs Partitioning",
+     icon: "🍰",
+     desc: "Choices for splitting data to achieve scale or performance.",
+     pro: "Partitioning (Vertical/Horizontal) improves query speed on one node. Sharding spreads data across many nodes for infinite scale.",
+     con: "Sharding adds massive complexity (cross-shard joins, rebalancing). Partitioning of one node has a ceiling.",
+     analogy: "Sorting files into drawers (Partitioning) vs. buying more filing cabinets (Sharding)."
   }
 ];
 
@@ -1820,5 +1992,6 @@ const TOPICS = [
   { id: "storage", label: "☁️ Storage", questions: [8] },
   { id: "maps", label: "🗺️ Maps & Ride", questions: [3,13] },
   { id: "finance", label: "💳 Finance", questions: [12] },
+  { id: "dist-sys", label: "🌐 Distributed Systems", questions: [8,5,11,12,14,2] },
   { id: "misc", label: "🔧 Utilities", questions: [10,14] }
 ];
