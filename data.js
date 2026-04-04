@@ -1907,6 +1907,63 @@ const CONCEPTS = [
     tags: ["Distributed Systems", "Coordination", "Consensus"],
     detail: `<strong>Why it's needed:</strong> To prevent multiple nodes from conflicting when performing state-changing tasks (e.g., assigning partitions in Kafka, updating the WAL).<br><br>
     <strong>Who does it:</strong> Usually handled via consensus algorithms (Raft, Paxos) or coordinated by tools like Zookeeper/etcd.`
+  },
+  {
+    id: "c55", icon: "🏢", title: "Domain-Driven Design (DDD)",
+    color: "#6366f1",
+    desc: "An approach to software development for complex needs by connecting the implementation to an evolving model.",
+    tags: ["Architecture", "Microservices", "Design"],
+    detail: `<strong>Core Concepts:</strong> Bounded Contexts, Ubiquitous Language, Entities, Value Objects, and Aggregates.<br><br>
+    <strong>Why it matters:</strong> It helps identify the natural boundaries of microservices, preventing tightly coupled 'distributed monoliths'.`,
+    links: [
+      { label: "Martin Fowler: Bounded Context", url: "https://martinfowler.com/bliki/BoundedContext.html" }
+    ]
+  },
+  {
+    id: "c56", icon: "📤", title: "Transactional Outbox Pattern",
+    color: "#f59e0b",
+    desc: "A reliable mechanism for safely updating a database and sending messages/events to a broker in a single transaction.",
+    tags: ["Microservices", "Events", "Consistency"],
+    detail: `<strong>The Problem:</strong> Updating a DB and sending a Kafka event isn't atomic. If the DB commits but Kafka fails, the system is inconsistent.<br><br>
+    <strong>Solution:</strong> Write the event to an 'Outbox' table in the same DB transaction. A separate process (like Debezium CDC) reads the outbox and guarantees at-least-once delivery to the broker.`,
+    links: [
+      { label: "Microservices.io: Outbox Pattern", url: "https://microservices.io/patterns/data/transactional-outbox.html" }
+    ]
+  },
+  {
+    id: "c57", icon: "🚢", title: "Bulkhead Pattern",
+    color: "#0891b2",
+    desc: "A resilience pattern that isolates elements of an application into pools so that if one fails, the others will continue to function.",
+    tags: ["Resilience", "Microservices", "Architecture"],
+    detail: `<strong>Analogy:</strong> Like partitioned sections of a ship's hull. If one fills with water, the ship doesn't sink.<br><br>
+    <strong>Usage:</strong> Assigning separate connection pools or thread pools for different downstream services. If Service A hangs, it only exhausts its own pool, keeping Service B completely reachable.`,
+    links: [
+      { label: "Microsoft: Bulkhead Pattern", url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead" }
+    ]
+  },
+  {
+    id: "c58", icon: "🐒", title: "Chaos Engineering",
+    color: "#ef4444",
+    desc: "The discipline of experimenting on a system in order to build confidence in its capability to withstand turbulent conditions.",
+    tags: ["Reliability", "Distributed Systems", "Testing"],
+    detail: `<strong>How it works:</strong> Intentionally terminating instances, simulating network latency, taking down entire datacenters (e.g., Netflix Chaos Monkey).<br><br>
+    <strong>Goal:</strong> Validate that automated fallback mechanisms works before a real outage happens.`,
+    links: [
+      { label: "Principles of Chaos Engineering", url: "https://principlesofchaos.org/" }
+    ]
+  },
+  {
+    id: "c59", icon: "🧩", title: "CRDTs (Conflict-free Replicated Data Types)",
+    color: "#8b5cf6",
+    desc: "Data structures that can be replicated across multiple computers without need for coordination.",
+    tags: ["Distributed Systems", "Algorithms", "Consistency"],
+    detail: `<strong>Types:</strong><br>
+    • <strong>State-based (CmRDT):</strong> Send the entire state and merge it using mathematical rules.<br>
+    • <strong>Operation-based (CvRDT):</strong> Only transmit operations, assuming causal delivery.<br><br>
+    <strong>Uses:</strong> Collaborative editing (Figma, Google Docs), highly available shopping carts (Riak), distributed counters.`,
+    links: [
+      { label: "An Interactive Intro to CRDTs", url: "https://jakelazaroff.com/words/an-interactive-intro-to-crdts/" }
+    ]
   }
 ];
 
@@ -2047,8 +2104,8 @@ const TOPICS = [
   { id: "misc", label: "🔧 Utilities", questions: [10,14] }
 ];
 
-const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47', 'c52', 'c53', 'c54'];
-const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48', 'c49', 'c50', 'c51'];
+const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47', 'c52', 'c53', 'c54', 'c58', 'c59'];
+const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48', 'c49', 'c50', 'c51', 'c55', 'c56', 'c57'];
 
 const DISTRIBUTED_CONCEPTS = CONCEPTS.filter(c => DIST_SYS_IDS.includes(c.id));
 const MICROSERVICES_CONCEPTS = CONCEPTS.filter(c => MICROSEC_IDS.includes(c.id));
