@@ -988,7 +988,6 @@ function init() {
   });
 
   // Theme
-  document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 
   // Quiz
   document.getElementById('quizCloseBtn')?.addEventListener('click', closeQuiz);
@@ -1028,7 +1027,7 @@ function init() {
       if (e.key === 't') { navigateTo('tradeoffs'); renderUniversalTradeoffs(); }
       gKeyBuffer = '';
     }
-    if (!inInput && e.key === 't') toggleTheme();
+
     if (!inInput && e.shiftKey && e.key === 'R') shuffleQuestion();
   });
 

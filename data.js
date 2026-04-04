@@ -1856,6 +1856,57 @@ const CONCEPTS = [
     tags: ["Architecture", "Microservices", "Infrastructure"],
     detail: `<strong>Responsibilities:</strong> Logging, monitoring, security (mTLS), and network resilience (retries, circuit breaking).<br><br>
     <strong>Benefit:</strong> Decouples infrastructure logic from business code. The application doesn't need to know the Service Mesh exists.`
+  },
+  {
+    id: "c49", icon: "🔌", title: "Circuit Breaker",
+    color: "#ef4444",
+    desc: "A design pattern used to detect failures and encapsulate the logic of preventing a failure from constantly recurring.",
+    tags: ["Microservices", "Resilience", "Fault Tolerance"],
+    detail: `<strong>States:</strong><br>
+    • <strong>Closed:</strong> Everything is fine, traffic passes.<br>
+    • <strong>Open:</strong> Failures exceeded threshold. Traffic is blocked immediately to prevent cascading failures.<br>
+    • <strong>Half-Open:</strong> Tests to see if the downstream service has recovered. If yes, it closes again.`
+  },
+  {
+    id: "c50", icon: "🌳", title: "Strangler Fig Pattern",
+    color: "#10b981",
+    desc: "A pattern used to incrementally migrate a legacy system by gradually replacing specific pieces of functionality with new applications.",
+    tags: ["Microservices", "Migration", "Architecture"],
+    detail: `<strong>How it works:</strong> An API Gateway or proxy intercepts all requests. It routes traffic for migrated features to the new microservices, and routes everything else to the legacy monolith. Over time, the monolith is 'strangled' and decommissioned.`
+  },
+  {
+    id: "c51", icon: "🎭", title: "BFF (Backend for Frontend)",
+    color: "#eab308",
+    desc: "Creating separate backend services specifically tailored to the needs of different client types (e.g., Web, Mobile).",
+    tags: ["Microservices", "API", "Patterns"],
+    detail: `<strong>The Problem:</strong> A single general-purpose API can become a bottleneck and deliver too much/too little data for specific clients.<br><br>
+    <strong>The Solution:</strong> The Mobile app talks to a Mobile BFF. The Web app talks to a Web BFF. Each BFF orchestrates calls to the downstream microservices and formats the data perfectly for its client.`
+  },
+  {
+    id: "c52", icon: "🔎", title: "Distributed Tracing",
+    color: "#a855f7",
+    desc: "A method used to profile and monitor applications, especially those built using a microservices architecture.",
+    tags: ["Distributed Systems", "Observability", "Microservices"],
+    detail: `<strong>Core Concepts:</strong><br>
+    • <strong>Trace:</strong> The entire journey of a request across all services.<br>
+    • <strong>Span:</strong> A single unit of work (e.g., a DB query or an HTTP call) within that trace. Each span has a parent ID and trace ID.<br><br>
+    <strong>Tools:</strong> Jaeger, Zipkin, OpenTelemetry.`
+  },
+  {
+    id: "c53", icon: "🧠", title: "Split-Brain Problem",
+    color: "#f43f5e",
+    desc: "A state in a cluster where nodes lose contact with each other and both form their own independent active sub-clusters.",
+    tags: ["Distributed Systems", "Consistency", "Failures"],
+    detail: `<strong>The Danger:</strong> Without knowing about each other, both partitions might try to write to storage simultaneously, leading to massive data corruption.<br><br>
+    <strong>Prevention:</strong> STONITH (Shoot The Other Node In The Head - fencing the isolated node), Quorums (requiring >50% votes to perform actions), and Leases.`
+  },
+  {
+    id: "c54", icon: "👑", title: "Leader Election",
+    color: "#fbbf24",
+    desc: "The process of designating a single node as the organizer or coordinator in a distributed network.",
+    tags: ["Distributed Systems", "Coordination", "Consensus"],
+    detail: `<strong>Why it's needed:</strong> To prevent multiple nodes from conflicting when performing state-changing tasks (e.g., assigning partitions in Kafka, updating the WAL).<br><br>
+    <strong>Who does it:</strong> Usually handled via consensus algorithms (Raft, Paxos) or coordinated by tools like Zookeeper/etcd.`
   }
 ];
 
@@ -1996,8 +2047,8 @@ const TOPICS = [
   { id: "misc", label: "🔧 Utilities", questions: [10,14] }
 ];
 
-const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47'];
-const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48'];
+const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47', 'c52', 'c53', 'c54'];
+const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48', 'c49', 'c50', 'c51'];
 
 const DISTRIBUTED_CONCEPTS = CONCEPTS.filter(c => DIST_SYS_IDS.includes(c.id));
 const MICROSERVICES_CONCEPTS = CONCEPTS.filter(c => MICROSEC_IDS.includes(c.id));
