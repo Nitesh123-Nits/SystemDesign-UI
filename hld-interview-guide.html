@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLD System Design Interview Master Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1320;
+    --surface2: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: rgba(0,212,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 60px 40px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.04) 0%, transparent 100%);
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 14px;
+    border-radius: 2px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 300;
+    max-width: 600px;
+    margin: 0 auto 36px;
+    line-height: 1.7;
+  }
+
+  /* ── NAVIGATION TABS ── */
+  .nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 24px 40px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,12,20,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab-btn.active { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+
+  /* ── MAIN CONTENT ── */
+  .main { position: relative; z-index: 1; padding: 40px; max-width: 1400px; margin: 0 auto; }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-icon {
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .section-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .section-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  /* ── QUESTION CARDS ── */
+  .questions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .q-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+  }
+
+  .q-card.expanded { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+  .q-card.expanded::before { transform: scaleX(1); }
+
+  .q-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+  .q-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-hard { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .badge-medium { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+  .badge-classic { background: rgba(0,212,255,0.12); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+  .badge-product { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+
+  .q-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.4;
+  }
+
+  .q-companies {
+    margin-top: 10px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+
+  .company-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .q-expand-icon {
+    margin-top: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  /* ── EXPANDED DETAIL ── */
+  .q-detail {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .q-card.expanded .q-detail { display: block; }
+
+  /* ── HLD DIAGRAM ── */
+  .diagram-container {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+
+  .diagram-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* SVG Diagrams */
+  .hld-svg { width: 100%; min-width: 500px; }
+
+  /* Box styles for SVG */
+  .node-client { fill: #1e3a4a; stroke: #00d4ff; stroke-width: 1.5; }
+  .node-lb { fill: #2d1b4e; stroke: #7c3aed; stroke-width: 1.5; }
+  .node-api { fill: #1a2e1a; stroke: #10b981; stroke-width: 1.5; }
+  .node-db { fill: #3a1a1a; stroke: #ff6b35; stroke-width: 1.5; }
+  .node-cache { fill: #2e2a0a; stroke: #eab308; stroke-width: 1.5; }
+  .node-queue { fill: #1a2040; stroke: #60a5fa; stroke-width: 1.5; }
+  .node-storage { fill: #1a3030; stroke: #2dd4bf; stroke-width: 1.5; }
+  .node-cdn { fill: #2a1a30; stroke: #f472b6; stroke-width: 1.5; }
+
+  .node-text { fill: #e2e8f0; font-family: 'Space Mono', monospace; font-size: 11px; }
+  .node-sub { fill: #64748b; font-family: 'DM Sans', sans-serif; font-size: 9px; }
+  .edge { stroke: #334155; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+  .edge-accent { stroke: rgba(0,212,255,0.5); stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; marker-end: url(#arrow-accent); }
+
+  /* ── FRAMEWORK BOX ── */
+  .framework-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) { .framework-grid { grid-template-columns: 1fr; } }
+
+  .fw-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+
+  .fw-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    opacity: 0.3;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .fw-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .fw-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── CONCEPTS LIST ── */
+  .concepts-list {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .concept-pill {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .pill-blue { color: var(--accent); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.06); }
+  .pill-green { color: #10b981; border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+  .pill-orange { color: #ff6b35; border-color: rgba(255,107,53,0.3); background: rgba(255,107,53,0.06); }
+  .pill-purple { color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.06); }
+  .pill-yellow { color: #eab308; border-color: rgba(234,179,8,0.3); background: rgba(234,179,8,0.06); }
+
+  .detail-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    margin-top: 14px;
+  }
+
+  /* ── FRAMEWORK OVERVIEW PAGE ── */
+  .fw-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .fw-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .fw-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 3px;
+  }
+
+  .fw-card:nth-child(1)::after { background: linear-gradient(90deg, var(--accent), transparent); }
+  .fw-card:nth-child(2)::after { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .fw-card:nth-child(3)::after { background: linear-gradient(90deg, #a78bfa, transparent); }
+  .fw-card:nth-child(4)::after { background: linear-gradient(90deg, var(--accent4), transparent); }
+  .fw-card:nth-child(5)::after { background: linear-gradient(90deg, #eab308, transparent); }
+  .fw-card:nth-child(6)::after { background: linear-gradient(90deg, #f472b6, transparent); }
+
+  .fw-card-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .fw-card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .fw-card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+
+  .fw-checklist { list-style: none; }
+  .fw-checklist li {
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 3px 0;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .fw-checklist li::before { content: '→'; color: var(--accent); font-family: 'Space Mono', monospace; flex-shrink: 0; }
+
+  /* ── CONCEPTS PAGE ── */
+  .concepts-section { margin-bottom: 40px; }
+  .concepts-section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s;
+  }
+
+
+  .concept-icon { font-size: 20px; margin-bottom: 8px; }
+  .concept-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .concept-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .concept-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .ct { font-size: 10px; padding: 2px 7px; border-radius: 2px; background: var(--surface2); color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── TRADE-OFFS TABLE ── */
+  .tradeoff-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+  .tradeoff-table th {
+    background: var(--surface2);
+    padding: 8px 12px;
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .tradeoff-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    color: #94a3b8;
+    vertical-align: top;
+  }
+  .tradeoff-table tr:last-child td { border-bottom: none; }
+
+  .pro { color: #10b981; }
+  .con { color: #f87171; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { padding: 20px; }
+    header { padding: 40px 20px 30px; }
+    .nav-tabs { padding: 16px 20px; }
+    .questions-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+
+<header>
+  <div class="tag">System Design Interview Reference</div>
+  <h1>HLD Master Guide</h1>
+  <p class="subtitle">High-Level Design diagrams, frameworks, and core concepts for cracking top-tier engineering interviews at FAANG, product companies, and startups.</p>
+</header>
+
+<nav class="nav-tabs">
+  <button class="tab-btn active" onclick="showSection('framework')">📐 Framework</button>
+  <button class="tab-btn" onclick="showSection('classic')">⚙️ Classic Systems</button>
+  <button class="tab-btn" onclick="showSection('product')">🛍️ Product Systems</button>
+  <button class="tab-btn" onclick="showSection('infra')">🏗️ Infrastructure</button>
+  <button class="tab-btn" onclick="showSection('concepts')">🧠 Core Concepts</button>
+  <button class="tab-btn" onclick="showSection('tradeoffs')">⚖️ Trade-offs</button>
+</nav>
+
+<main class="main">
+
+  <!-- ══════════════════ FRAMEWORK SECTION ══════════════════ -->
+  <div id="framework" class="section active">
+    <div class="section-header">
+      <div class="section-icon">📐</div>
+      <div>
+        <h2>The Universal HLD Framework</h2>
+        <p>A structured approach to answer any system design question in 45–60 minutes</p>
+      </div>
+    </div>
+
+    <div class="fw-overview">
+      <div class="fw-card">
+        <div class="fw-card-num">01</div>
+        <div class="fw-card-title">Clarify Requirements</div>
+        <div class="fw-card-desc">Spend 5–8 min asking clarifying questions. Never jump into design without scope.</div>
+        <ul class="fw-checklist">
+          <li>Who are the users? Scale?</li>
+          <li>Read-heavy or write-heavy?</li>
+          <li>Functional requirements (must-haves)</li>
+          <li>Non-functional: latency, availability, consistency</li>
+          <li>What to NOT design (out of scope)</li>
+        </ul>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-num">02</div>
+        <div class="fw-card-title">Capacity Estimation</div>
+        <div class="fw-card-desc">Back-of-envelope math shows you understand real-world scale and constraints.</div>
+        <ul class="fw-checklist">
+          <li>DAU / MAU → QPS calculation</li>
+          <li>Storage: per-entity × entities/day × retention</li>
+          <li>Bandwidth: read QPS × avg response size</li>
+          <li>Memory: hot data percentage of total</li>
+          <li>Peak vs average load (3–10× multiplier)</li>
+        </ul>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-num">03</div>
+        <div class="fw-card-title">High-Level Design</div>
+        <div class="fw-card-desc">Draw the birds-eye architecture: clients, API layer, services, databases.</div>
+        <ul class="fw-checklist">
+          <li>Client → CDN/LB → API Gateway</li>
+          <li>Core services (what they do, not how)</li>
+          <li>Data stores: which type and why</li>
+          <li>Async flows: queues, workers</li>
+          <li>External integrations (push, email, etc.)</li>
+        </ul>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-num">04</div>
+        <div class="fw-card-title">Deep Dive</div>
+        <div class="fw-card-desc">Let the interviewer guide focus. Go deep on the hardest/most interesting part.</div>
+        <ul class="fw-checklist">
+          <li>Data model & schema design</li>
+          <li>API design (REST/gRPC endpoints)</li>
+          <li>Critical algorithms (ranking, feed gen)</li>
+          <li>Bottlenecks & optimizations</li>
+          <li>Failure modes & recovery</li>
+        </ul>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-num">05</div>
+        <div class="fw-card-title">Scale & Reliability</div>
+        <div class="fw-card-desc">Show you can take the design from MVP to planet-scale with reliability guarantees.</div>
+        <ul class="fw-checklist">
+          <li>Horizontal scaling strategy</li>
+          <li>Caching layers (L1, L2, CDN)</li>
+          <li>Database sharding / replication</li>
+          <li>Rate limiting & throttling</li>
+          <li>99.99% uptime: circuit breakers, retries</li>
+        </ul>
+      </div>
+
+      <div class="fw-card">
+        <div class="fw-card-num">06</div>
+        <div class="fw-card-title">Trade-offs & Summary</div>
+        <div class="fw-card-desc">Close with self-awareness: what you chose and what you sacrificed.</div>
+        <ul class="fw-checklist">
+          <li>CAP theorem position (CP vs AP)</li>
+          <li>SQL vs NoSQL justification</li>
+          <li>Sync vs async trade-offs</li>
+          <li>What you'd improve with more time</li>
+          <li>Monitoring & observability gaps</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Quick reference cheat sheet -->
+    <div style="margin-top:40px">
+      <div class="section-header" style="margin-bottom:20px">
+        <div class="section-icon">🔢</div>
+        <div><h2>Numbers Every Engineer Must Know</h2><p>Latency, throughput, and scale references for estimation</p></div>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px">
+        <div class="fw-step"><div class="fw-label">Latency Reference</div><div class="fw-desc">L1 cache: 1ns · RAM: 100ns · SSD: 0.1ms · HDD: 10ms · Network round-trip: 1–500ms</div></div>
+        <div class="fw-step"><div class="fw-label">Storage Units</div><div class="fw-desc">1 char = 1 byte · Tweet = 280B · Photo = 300KB · Video 1min = 50MB · 1M users/day = ~100GB/day content</div></div>
+        <div class="fw-step"><div class="fw-label">QPS Conversions</div><div class="fw-desc">1M DAU × 10 req/day = ~115 QPS · 100M DAU = 11,500 QPS · 1B DAU = 115K QPS</div></div>
+        <div class="fw-step"><div class="fw-label">Availability SLAs</div><div class="fw-desc">99% = 3.6 days/yr · 99.9% = 8.7 hrs/yr · 99.99% = 52 min/yr · 99.999% = 5 min/yr</div></div>
+        <div class="fw-step"><div class="fw-label">DB Throughput</div><div class="fw-desc">Single SQL DB: ~1K QPS writes, ~5K reads · With replica: 20K reads · Sharded: linear scale</div></div>
+        <div class="fw-step"><div class="fw-label">Cache Ratios</div><div class="fw-desc">20% of data = 80% of traffic (Pareto). Aim for >90% cache hit rate. Redis: ~100K ops/sec</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ CLASSIC SYSTEMS ══════════════════ -->
+  <div id="classic" class="section">
+    <div class="section-header">
+      <div class="section-icon">⚙️</div>
+      <div><h2>Classic System Design Questions</h2><p>The most commonly asked HLD questions across all top-tier companies</p></div>
+    </div>
+
+    <div class="questions-grid">
+
+      <!-- URL Shortener -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a URL Shortener (TinyURL / Bit.ly)</div>
+          <span class="q-badge badge-classic">CLASSIC</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Amazon</span><span class="company-tag">Google</span><span class="company-tag">Meta</span><span class="company-tag">Microsoft</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="diagram-title">// HLD DIAGRAM</div>
+          <div class="diagram-container">
+            <svg class="hld-svg" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker>
+                <marker id="arrow-accent" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="rgba(0,212,255,0.5)"/></marker>
+              </defs>
+              <!-- Client -->
+              <rect x="10" y="95" width="90" height="50" rx="4" class="node-client"/>
+              <text x="55" y="118" text-anchor="middle" class="node-text">Client</text>
+              <text x="55" y="132" text-anchor="middle" class="node-sub">Browser/App</text>
+              <!-- LB -->
+              <rect x="145" y="95" width="90" height="50" rx="4" class="node-lb"/>
+              <text x="190" y="118" text-anchor="middle" class="node-text">Load</text>
+              <text x="190" y="132" text-anchor="middle" class="node-text">Balancer</text>
+              <!-- API Servers -->
+              <rect x="290" y="60" width="100" height="50" rx="4" class="node-api"/>
+              <text x="340" y="83" text-anchor="middle" class="node-text">Write API</text>
+              <text x="340" y="97" text-anchor="middle" class="node-sub">Generate Short URL</text>
+              <rect x="290" y="130" width="100" height="50" rx="4" class="node-api"/>
+              <text x="340" y="153" text-anchor="middle" class="node-text">Read API</text>
+              <text x="340" y="167" text-anchor="middle" class="node-sub">Redirect / Resolve</text>
+              <!-- Cache -->
+              <rect x="450" y="60" width="90" height="50" rx="4" class="node-cache"/>
+              <text x="495" y="83" text-anchor="middle" class="node-text">Redis</text>
+              <text x="495" y="97" text-anchor="middle" class="node-sub">Cache (LRU)</text>
+              <!-- DB -->
+              <rect x="450" y="130" width="90" height="50" rx="4" class="node-db"/>
+              <text x="495" y="153" text-anchor="middle" class="node-text">SQL DB</text>
+              <text x="495" y="167" text-anchor="middle" class="node-sub">shortURL→longURL</text>
+              <!-- Analytics -->
+              <rect x="600" y="95" width="90" height="50" rx="4" class="node-queue"/>
+              <text x="645" y="118" text-anchor="middle" class="node-text">Analytics</text>
+              <text x="645" y="132" text-anchor="middle" class="node-sub">Async Kafka</text>
+              <!-- Edges -->
+              <line x1="100" y1="120" x2="143" y2="120" class="edge"/>
+              <line x1="235" y1="108" x2="288" y2="88" class="edge"/>
+              <line x1="235" y1="132" x2="288" y2="152" class="edge"/>
+              <line x1="390" y1="85" x2="448" y2="85" class="edge"/>
+              <line x1="390" y1="155" x2="448" y2="155" class="edge"/>
+              <line x1="390" y1="90" x2="448" y2="145" class="edge-accent"/>
+              <line x1="540" y1="120" x2="598" y2="120" class="edge-accent"/>
+            </svg>
+          </div>
+          <div class="detail-label">Key Concepts</div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Base62 Encoding</span>
+            <span class="concept-pill pill-green">MD5/SHA256 Hash</span>
+            <span class="concept-pill pill-orange">KGS (Key Gen Service)</span>
+            <span class="concept-pill pill-purple">301 vs 302 Redirect</span>
+            <span class="concept-pill pill-yellow">Bloom Filter</span>
+            <span class="concept-pill pill-blue">DB Sharding</span>
+          </div>
+          <div class="detail-label">Framework Answer Outline</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-num">1</div><div class="fw-label">Requirements</div><div class="fw-desc">100M URLs/day, reads 10× writes, custom aliases optional, analytics optional</div></div>
+            <div class="fw-step"><div class="fw-num">2</div><div class="fw-label">Estimation</div><div class="fw-desc">1000 QPS writes, 10K QPS reads, 36TB/year storage, 500 bytes/URL</div></div>
+            <div class="fw-step"><div class="fw-num">3</div><div class="fw-label">Core Algorithm</div><div class="fw-desc">Base62(counter) or MD5+take 6 chars. Use KGS to pre-generate keys to avoid collision race</div></div>
+            <div class="fw-step"><div class="fw-num">4</div><div class="fw-label">Scale</div><div class="fw-desc">Cache most popular URLs in Redis (20% traffic = 80% requests). Shard DB by shortURL hash</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Twitter/X Feed -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Twitter / Social Media Feed</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Meta</span><span class="company-tag">Twitter/X</span><span class="company-tag">LinkedIn</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="diagram-title">// HLD DIAGRAM — FEED GENERATION</div>
+          <div class="diagram-container">
+            <svg class="hld-svg" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+              <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>
+              <!-- Write Path -->
+              <rect x="10" y="20" width="80" height="40" rx="3" class="node-client"/>
+              <text x="50" y="45" text-anchor="middle" class="node-text" font-size="10">User Post</text>
+              <rect x="140" y="20" width="80" height="40" rx="3" class="node-api"/>
+              <text x="180" y="38" text-anchor="middle" class="node-text">Tweet</text>
+              <text x="180" y="52" text-anchor="middle" class="node-text">Service</text>
+              <rect x="270" y="20" width="90" height="40" rx="3" class="node-queue"/>
+              <text x="315" y="38" text-anchor="middle" class="node-text">Kafka</text>
+              <text x="315" y="52" text-anchor="middle" class="node-sub">Message Queue</text>
+              <rect x="410" y="20" width="90" height="40" rx="3" class="node-api"/>
+              <text x="455" y="38" text-anchor="middle" class="node-text">Fanout</text>
+              <text x="455" y="52" text-anchor="middle" class="node-sub">Worker</text>
+              <rect x="550" y="20" width="100" height="40" rx="3" class="node-cache"/>
+              <text x="600" y="38" text-anchor="middle" class="node-text">Feed Cache</text>
+              <text x="600" y="52" text-anchor="middle" class="node-sub">Redis List</text>
+              <!-- Read Path -->
+              <rect x="10" y="120" width="80" height="40" rx="3" class="node-client"/>
+              <text x="50" y="145" text-anchor="middle" class="node-text" font-size="10">Get Feed</text>
+              <rect x="140" y="120" width="80" height="40" rx="3" class="node-lb"/>
+              <text x="180" y="138" text-anchor="middle" class="node-text">Feed</text>
+              <text x="180" y="152" text-anchor="middle" class="node-text">Service</text>
+              <rect x="270" y="105" width="90" height="40" rx="3" class="node-cache"/>
+              <text x="315" y="123" text-anchor="middle" class="node-text">Redis</text>
+              <text x="315" y="137" text-anchor="middle" class="node-sub">Pre-computed</text>
+              <rect x="270" y="155" width="90" height="40" rx="3" class="node-db"/>
+              <text x="315" y="178" text-anchor="middle" class="node-text">UserDB</text>
+              <text x="315" y="192" text-anchor="middle" class="node-sub">Following list</text>
+              <!-- Storage -->
+              <rect x="410" y="120" width="90" height="40" rx="3" class="node-db"/>
+              <text x="455" y="138" text-anchor="middle" class="node-text">TweetDB</text>
+              <text x="455" y="152" text-anchor="middle" class="node-sub">Cassandra</text>
+              <rect x="550" y="120" width="100" height="40" rx="3" class="node-storage"/>
+              <text x="600" y="138" text-anchor="middle" class="node-text">Media</text>
+              <text x="600" y="152" text-anchor="middle" class="node-sub">S3 + CDN</text>
+              <!-- Edges write -->
+              <line x1="90" y1="40" x2="138" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="220" y1="40" x2="268" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="360" y1="40" x2="408" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="500" y1="40" x2="548" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <!-- Edges read -->
+              <line x1="90" y1="140" x2="138" y2="140" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="220" y1="135" x2="268" y2="125" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="220" y1="145" x2="268" y2="165" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="360" y1="140" x2="408" y2="140" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <line x1="500" y1="140" x2="548" y2="140" stroke="#334155" stroke-width="1.5" marker-end="url(#ar2)"/>
+              <!-- Labels -->
+              <text x="355" y="100" text-anchor="middle" fill="#64748b" font-size="9" font-family="monospace">WRITE PATH ↑</text>
+              <text x="355" y="235" text-anchor="middle" fill="#64748b" font-size="9" font-family="monospace">READ PATH ↑</text>
+              <!-- Celebrity/whale note -->
+              <rect x="140" y="220" width="440" height="40" rx="4" fill="rgba(124,58,237,0.08)" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+              <text x="160" y="237" fill="#a78bfa" font-size="10" font-family="monospace">★ CELEBRITY PROBLEM: Skip fanout for users with 10M+ followers.</text>
+              <text x="160" y="251" fill="#a78bfa" font-size="10" font-family="monospace">  Merge on read: pre-computed feed + live query for celeb tweets.</text>
+            </svg>
+          </div>
+          <div class="detail-label">Key Concepts</div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Fanout-on-Write vs Read</span>
+            <span class="concept-pill pill-orange">Celebrity Problem</span>
+            <span class="concept-pill pill-green">Cassandra (wide col)</span>
+            <span class="concept-pill pill-purple">Redis Sorted Sets</span>
+            <span class="concept-pill pill-yellow">Kafka Pub/Sub</span>
+            <span class="concept-pill pill-blue">CDN for Media</span>
+          </div>
+          <div class="detail-label">Critical Decision: Fanout Strategy</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Fanout-on-Write (Push)</div><div class="fw-desc">Pre-populate followers' feed cache when tweet is posted. Fast reads, expensive writes. Bad for celebrities.</div></div>
+            <div class="fw-step"><div class="fw-label">Fanout-on-Read (Pull)</div><div class="fw-desc">Merge following list + their tweets at read time. Slower reads, cheaper writes. Better for sparse users.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat System -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design WhatsApp / Messaging System</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Meta</span><span class="company-tag">Slack</span><span class="company-tag">Apple</span><span class="company-tag">Snap</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="diagram-title">// HLD DIAGRAM — REAL-TIME MESSAGING</div>
+          <div class="diagram-container">
+            <svg class="hld-svg" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+              <defs><marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>
+              <rect x="10" y="80" width="80" height="40" rx="3" class="node-client"/><text x="50" y="105" text-anchor="middle" class="node-text" font-size="10">Client A</text>
+              <rect x="140" y="60" width="90" height="80" rx="3" class="node-api"/>
+              <text x="185" y="95" text-anchor="middle" class="node-text">Chat</text>
+              <text x="185" y="110" text-anchor="middle" class="node-text">Server</text>
+              <text x="185" y="125" text-anchor="middle" class="node-sub">WebSocket</text>
+              <rect x="290" y="20" width="90" height="40" rx="3" class="node-queue"/>
+              <text x="335" y="38" text-anchor="middle" class="node-text">Msg Queue</text>
+              <text x="335" y="52" text-anchor="middle" class="node-sub">Kafka</text>
+              <rect x="290" y="80" width="90" height="40" rx="3" class="node-cache"/>
+              <text x="335" y="103" text-anchor="middle" class="node-text">Presence</text>
+              <text x="335" y="117" text-anchor="middle" class="node-sub">Redis PubSub</text>
+              <rect x="290" y="140" width="90" height="40" rx="3" class="node-db"/>
+              <text x="335" y="158" text-anchor="middle" class="node-text">Msg Store</text>
+              <text x="335" y="172" text-anchor="middle" class="node-sub">Cassandra</text>
+              <rect x="440" y="60" width="90" height="80" rx="3" class="node-api"/>
+              <text x="485" y="95" text-anchor="middle" class="node-text">Chat</text>
+              <text x="485" y="110" text-anchor="middle" class="node-text">Server</text>
+              <text x="485" y="125" text-anchor="middle" class="node-sub">WebSocket</text>
+              <rect x="590" y="80" width="90" height="40" rx="3" class="node-client"/><text x="635" y="105" text-anchor="middle" class="node-text" font-size="10">Client B</text>
+              <!-- Notification service -->
+              <rect x="440" y="160" width="90" height="30" rx="3" class="node-queue"/><text x="485" y="180" text-anchor="middle" class="node-text" font-size="10">Push Notif</text>
+              <!-- Edges -->
+              <line x1="90" y1="100" x2="138" y2="100" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="none" marker-end="url(#ar3)"/>
+              <line x1="230" y1="80" x2="288" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="230" y1="100" x2="288" y2="100" stroke="#334155" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="230" y1="120" x2="288" y2="155" stroke="#334155" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="380" y1="40" x2="438" y2="80" stroke="#334155" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="380" y1="100" x2="438" y2="100" stroke="#334155" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="530" y1="100" x2="588" y2="100" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#ar3)"/>
+              <line x1="530" y1="130" x2="530" y2="160" stroke="#334155" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#ar3)"/>
+            </svg>
+          </div>
+          <div class="detail-label">Key Concepts</div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">WebSocket (persistent)</span>
+            <span class="concept-pill pill-green">Message ID ordering</span>
+            <span class="concept-pill pill-orange">E2E Encryption</span>
+            <span class="concept-pill pill-purple">Delivery receipts (ACK)</span>
+            <span class="concept-pill pill-yellow">Offline msg queue</span>
+          </div>
+          <div class="detail-label">Delivery States</div>
+          <div class="fw-step"><div class="fw-desc">Sent → Delivered → Read. Each state requires server ACK. Store undelivered msgs until recipient comes online. Use sequence IDs per conversation for ordering.</div></div>
+        </div>
+      </div>
+
+      <!-- Rate Limiter -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Rate Limiter</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Stripe</span><span class="company-tag">Cloudflare</span><span class="company-tag">Amazon</span><span class="company-tag">Uber</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Algorithms Comparison</div>
+          <table class="tradeoff-table">
+            <tr><th>Algorithm</th><th>Pros</th><th>Cons</th><th>Best For</th></tr>
+            <tr><td>Token Bucket</td><td class="pro">Bursts allowed, memory efficient</td><td class="con">Race condition in distributed</td><td>APIs with burst tolerance</td></tr>
+            <tr><td>Leaky Bucket</td><td class="pro">Smooth output rate</td><td class="con">Queue may fill up</td><td>Payment gateways</td></tr>
+            <tr><td>Fixed Window</td><td class="pro">Simple to implement</td><td class="con">Edge burst at window boundary</td><td>Simple use cases</td></tr>
+            <tr><td>Sliding Window Log</td><td class="pro">Very accurate</td><td class="con">High memory (stores timestamps)</td><td>Strict rate requirements</td></tr>
+            <tr><td>Sliding Window Counter</td><td class="pro">Low memory, near accurate</td><td class="con">Slight approximation</td><td>General purpose ✓</td></tr>
+          </table>
+          <div class="detail-label">Key Concepts</div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Redis INCR + TTL</span>
+            <span class="concept-pill pill-orange">Lua scripts (atomicity)</span>
+            <span class="concept-pill pill-green">Middleware pattern</span>
+            <span class="concept-pill pill-purple">429 Too Many Requests</span>
+            <span class="concept-pill pill-yellow">X-RateLimit headers</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Autocomplete -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Search Autocomplete / Typeahead</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Google</span><span class="company-tag">Amazon</span><span class="company-tag">LinkedIn</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Core Design: Trie + Cache</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Data Structure</div><div class="fw-desc">Trie (prefix tree) stores query strings. Each node holds top-N suggestions by frequency. Updated async via Kafka consumer.</div></div>
+            <div class="fw-step"><div class="fw-label">Serving</div><div class="fw-desc">Cache hot prefixes in Redis. CDN for browser-level caching. Debounce 100ms on client to reduce API calls.</div></div>
+            <div class="fw-step"><div class="fw-label">Data Pipeline</div><div class="fw-desc">Log all queries → Kafka → Spark aggregation (hourly) → rebuild trie. Filter offensive terms at write time.</div></div>
+            <div class="fw-step"><div class="fw-label">Personalization</div><div class="fw-desc">Merge global Trie with user's personal search history. Weight recency × frequency for ranking.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Trie Data Structure</span>
+            <span class="concept-pill pill-green">Prefix Hashing</span>
+            <span class="concept-pill pill-orange">Spark Batch Aggregation</span>
+            <span class="concept-pill pill-purple">CDN Edge Cache</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distributed Key-Value Store -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Distributed Key-Value Store</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Amazon</span><span class="company-tag">Google</span><span class="company-tag">Uber</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Architecture Pillars</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Consistent Hashing</div><div class="fw-desc">Virtual nodes on a ring. Key → hash → clockwise nearest node. Minimize reshuffling on node add/remove.</div></div>
+            <div class="fw-step"><div class="fw-label">Replication</div><div class="fw-desc">N=3 replicas clockwise on ring. Quorum: W+R > N for strong consistency (e.g., W=2, R=2, N=3)</div></div>
+            <div class="fw-step"><div class="fw-label">Conflict Resolution</div><div class="fw-desc">Vector clocks to track causality. Last-write-wins (LWW) for simplicity. Merkle trees for anti-entropy sync.</div></div>
+            <div class="fw-step"><div class="fw-label">Failure Handling</div><div class="fw-desc">Gossip protocol for membership. Hinted handoff for temporary failures. Read repair for stale replicas.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Consistent Hashing</span>
+            <span class="concept-pill pill-orange">Quorum (W+R>N)</span>
+            <span class="concept-pill pill-green">Vector Clocks</span>
+            <span class="concept-pill pill-purple">Gossip Protocol</span>
+            <span class="concept-pill pill-yellow">Merkle Trees</span>
+            <span class="concept-pill pill-blue">Hinted Handoff</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end questions-grid -->
+  </div>
+
+  <!-- ══════════════════ PRODUCT SYSTEMS ══════════════════ -->
+  <div id="product" class="section">
+    <div class="section-header">
+      <div class="section-icon">🛍️</div>
+      <div><h2>Product-Based Company Questions</h2><p>Real-world system designs asked at product-focused companies like Airbnb, Uber, Netflix, Spotify</p></div>
+    </div>
+
+    <div class="questions-grid">
+
+      <!-- Ride Sharing -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Uber / Ride-Sharing Platform</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Uber</span><span class="company-tag">Lyft</span><span class="company-tag">DoorDash</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="diagram-title">// HLD — DRIVER MATCHING & LOCATION TRACKING</div>
+          <div class="diagram-container">
+            <svg class="hld-svg" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+              <defs><marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>
+              <!-- Driver side -->
+              <rect x="10" y="40" width="80" height="40" rx="3" class="node-client"/><text x="50" y="65" text-anchor="middle" class="node-text" font-size="10">Driver App</text>
+              <!-- Rider side -->
+              <rect x="10" y="140" width="80" height="40" rx="3" class="node-client"/><text x="50" y="165" text-anchor="middle" class="node-text" font-size="10">Rider App</text>
+              <!-- API Gateway -->
+              <rect x="140" y="90" width="80" height="40" rx="3" class="node-lb"/>
+              <text x="180" y="110" text-anchor="middle" class="node-text">API GW</text>
+              <text x="180" y="124" text-anchor="middle" class="node-sub">WebSocket</text>
+              <!-- Location Service -->
+              <rect x="280" y="30" width="100" height="50" rx="3" class="node-api"/>
+              <text x="330" y="52" text-anchor="middle" class="node-text">Location</text>
+              <text x="330" y="66" text-anchor="middle" class="node-text">Service</text>
+              <text x="330" y="78" text-anchor="middle" class="node-sub">every 4s update</text>
+              <!-- Matching Service -->
+              <rect x="280" y="100" width="100" height="50" rx="3" class="node-api"/>
+              <text x="330" y="122" text-anchor="middle" class="node-text">Matching</text>
+              <text x="330" y="136" text-anchor="middle" class="node-text">Service</text>
+              <text x="330" y="148" text-anchor="middle" class="node-sub">Geohash query</text>
+              <!-- GeoSpatial DB -->
+              <rect x="440" y="30" width="100" height="50" rx="3" class="node-cache"/>
+              <text x="490" y="52" text-anchor="middle" class="node-text">Redis + Geo</text>
+              <text x="490" y="66" text-anchor="middle" class="node-sub">Driver positions</text>
+              <!-- Trip DB -->
+              <rect x="440" y="100" width="100" height="50" rx="3" class="node-db"/>
+              <text x="490" y="122" text-anchor="middle" class="node-text">Trip DB</text>
+              <text x="490" y="136" text-anchor="middle" class="node-sub">PostgreSQL</text>
+              <!-- Payment -->
+              <rect x="590" y="100" width="90" height="50" rx="3" class="node-queue"/>
+              <text x="635" y="122" text-anchor="middle" class="node-text">Payment</text>
+              <text x="635" y="136" text-anchor="middle" class="node-sub">Async Queue</text>
+              <!-- Edges -->
+              <line x1="90" y1="60" x2="138" y2="105" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="90" y1="160" x2="138" y2="115" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="220" y1="100" x2="278" y2="55" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="220" y1="110" x2="278" y2="125" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="380" y1="55" x2="438" y2="55" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="380" y1="125" x2="438" y2="125" stroke="#334155" stroke-width="1.5" marker-end="url(#ar4)"/>
+              <line x1="540" y1="125" x2="588" y2="125" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#ar4)"/>
+            </svg>
+          </div>
+          <div class="detail-label">Key Concepts</div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Geohash / S2 Library</span>
+            <span class="concept-pill pill-orange">Surge Pricing Algorithm</span>
+            <span class="concept-pill pill-green">OSRM / Map Routing</span>
+            <span class="concept-pill pill-purple">WebSocket for Live</span>
+            <span class="concept-pill pill-yellow">ETA Prediction ML</span>
+          </div>
+          <div class="detail-label">Critical: Geohash for Driver Lookup</div>
+          <div class="fw-step"><div class="fw-desc">Divide map into grid cells using Geohash. Drivers update location every 4s → Redis GEOADD. On rider request → query nearby drivers in geohash cell + adjacent 8 cells. Filter by availability → rank by ETA.</div></div>
+        </div>
+      </div>
+
+      <!-- Netflix -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Netflix / Video Streaming</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Netflix</span><span class="company-tag">YouTube</span><span class="company-tag">TikTok</span><span class="company-tag">Twitch</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Video Processing Pipeline</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Ingestion</div><div class="fw-desc">Raw video uploaded to S3. Message queued to Kafka → transcoding workers triggered. Original preserved.</div></div>
+            <div class="fw-step"><div class="fw-label">Transcoding</div><div class="fw-desc">FFmpeg workers: 240p / 480p / 720p / 1080p / 4K. Multiple codecs (H.264, VP9, AV1). Each produces chunked segments (~4s each).</div></div>
+            <div class="fw-step"><div class="fw-label">ABR Delivery</div><div class="fw-desc">Adaptive Bitrate: HLS/DASH manifests. Player selects quality based on bandwidth. CDN (Akamai/Open Connect) at ISP level.</div></div>
+            <div class="fw-step"><div class="fw-label">Recommendation</div><div class="fw-desc">Collaborative filtering + content signals. Offline training → model served via Feature Store. A/B test thumbnail art per user.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">CDN / Open Connect</span>
+            <span class="concept-pill pill-orange">HLS / DASH (ABR)</span>
+            <span class="concept-pill pill-green">DAG Transcoding</span>
+            <span class="concept-pill pill-purple">Microservices (700+)</span>
+            <span class="concept-pill pill-yellow">Chaos Engineering</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Airbnb -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Airbnb / Hotel Booking System</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Airbnb</span><span class="company-tag">Booking.com</span><span class="company-tag">Expedia</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Hardest Problem: Double Booking Prevention</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Optimistic Locking</div><div class="fw-desc">Check availability → reserve with version check → commit. Retry on conflict. Good for low contention.</div></div>
+            <div class="fw-step"><div class="fw-label">Pessimistic Locking</div><div class="fw-desc">SELECT FOR UPDATE on date ranges. Guaranteed no double booking. Slower, may cause deadlocks.</div></div>
+            <div class="fw-step"><div class="fw-label">Distributed Lock</div><div class="fw-desc">Redis Redlock on property+date. TTL=30s. Atomic via Lua script. Best for microservices architecture.</div></div>
+            <div class="fw-step"><div class="fw-label">Idempotency</div><div class="fw-desc">Idempotency key per booking request. Prevent duplicate charges on retry. Store in DB with TTL.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Distributed Lock (Redlock)</span>
+            <span class="concept-pill pill-orange">Two-Phase Commit</span>
+            <span class="concept-pill pill-green">Elasticsearch (search)</span>
+            <span class="concept-pill pill-purple">Geospatial Index</span>
+            <span class="concept-pill pill-yellow">Idempotency Keys</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification System -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Notification System</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Meta</span><span class="company-tag">LinkedIn</span><span class="company-tag">Airbnb</span><span class="company-tag">Twilio</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="diagram-title">// HLD — MULTI-CHANNEL NOTIFICATION</div>
+          <div class="diagram-container">
+            <svg class="hld-svg" viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg">
+              <defs><marker id="ar5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>
+              <rect x="10" y="70" width="90" height="40" rx="3" class="node-api"/>
+              <text x="55" y="88" text-anchor="middle" class="node-text">Services</text>
+              <text x="55" y="102" text-anchor="middle" class="node-sub">Order/Social/etc</text>
+              <rect x="155" y="70" width="90" height="40" rx="3" class="node-api"/>
+              <text x="200" y="88" text-anchor="middle" class="node-text">Notif</text>
+              <text x="200" y="102" text-anchor="middle" class="node-text">Service</text>
+              <rect x="300" y="70" width="90" height="40" rx="3" class="node-queue"/>
+              <text x="345" y="88" text-anchor="middle" class="node-text">Message</text>
+              <text x="345" y="102" text-anchor="middle" class="node-text">Queue</text>
+              <!-- Workers -->
+              <rect x="450" y="20" width="80" height="35" rx="3" class="node-cache"/><text x="490" y="43" text-anchor="middle" class="node-text" font-size="10">Push Worker</text>
+              <rect x="450" y="65" width="80" height="35" rx="3" class="node-api"/><text x="490" y="88" text-anchor="middle" class="node-text" font-size="10">SMS Worker</text>
+              <rect x="450" y="110" width="80" height="35" rx="3" class="node-lb"/><text x="490" y="133" text-anchor="middle" class="node-text" font-size="10">Email Worker</text>
+              <!-- Providers -->
+              <rect x="590" y="20" width="90" height="35" rx="3" class="node-db"/><text x="635" y="43" text-anchor="middle" class="node-text" font-size="10">APNs / FCM</text>
+              <rect x="590" y="65" width="90" height="35" rx="3" class="node-db"/><text x="635" y="88" text-anchor="middle" class="node-text" font-size="10">Twilio</text>
+              <rect x="590" y="110" width="90" height="35" rx="3" class="node-db"/><text x="635" y="133" text-anchor="middle" class="node-text" font-size="10">SendGrid</text>
+              <!-- Edges -->
+              <line x1="100" y1="90" x2="153" y2="90" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="245" y1="90" x2="298" y2="90" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="390" y1="80" x2="448" y2="40" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="390" y1="90" x2="448" y2="83" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="390" y1="100" x2="448" y2="125" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="530" y1="37" x2="588" y2="37" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="530" y1="82" x2="588" y2="82" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+              <line x1="530" y1="127" x2="588" y2="127" stroke="#334155" stroke-width="1.5" marker-end="url(#ar5)"/>
+            </svg>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">APNs / FCM</span>
+            <span class="concept-pill pill-orange">Dead Letter Queue</span>
+            <span class="concept-pill pill-green">User Preferences DB</span>
+            <span class="concept-pill pill-purple">Rate Limiting</span>
+            <span class="concept-pill pill-yellow">Deduplication</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- E-commerce / Amazon -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Amazon / E-Commerce Platform</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Amazon</span><span class="company-tag">Shopify</span><span class="company-tag">Flipkart</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Core Services Breakdown</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Product Service</div><div class="fw-desc">Product catalog in NoSQL (DynamoDB). Elasticsearch for full-text search. CDN for product images. Versioned for A/B price testing.</div></div>
+            <div class="fw-step"><div class="fw-label">Inventory Service</div><div class="fw-desc">Strong consistency required. SQL DB with row locking. Reservations pattern: soft reserve → payment → confirm or release.</div></div>
+            <div class="fw-step"><div class="fw-label">Order Service</div><div class="fw-desc">Saga pattern for distributed transactions (order → payment → inventory → shipping). Each step emits events.</div></div>
+            <div class="fw-step"><div class="fw-label">Recommendation</div><div class="fw-desc">"Customers also bought" via collaborative filtering. Real-time: stream click events → feature store → ML inference.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Saga Pattern</span>
+            <span class="concept-pill pill-orange">Inventory Reservation</span>
+            <span class="concept-pill pill-green">Event Sourcing</span>
+            <span class="concept-pill pill-purple">CQRS</span>
+            <span class="concept-pill pill-yellow">Flash Sale Design</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Maps -->
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design Google Maps / Navigation</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies">
+          <span class="company-tag">Google</span><span class="company-tag">Apple</span><span class="company-tag">HERE</span>
+        </div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="detail-label">Routing Algorithm</div>
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Graph Representation</div><div class="fw-desc">Road network as directed weighted graph. Nodes = intersections, Edges = road segments with time/distance weights. Partitioned by geohash regions.</div></div>
+            <div class="fw-step"><div class="fw-label">Shortest Path</div><div class="fw-desc">Dijkstra for single source. A* with Euclidean heuristic for faster directional search. Bidirectional search cuts time in half.</div></div>
+            <div class="fw-step"><div class="fw-label">Map Tiles</div><div class="fw-desc">Pre-render tiles at zoom levels 1–20. Store in object storage. CDN at edge. Client requests only visible viewport tiles.</div></div>
+            <div class="fw-step"><div class="fw-label">ETA & Traffic</div><div class="fw-desc">Real-time traffic from probe vehicles (1B+ GPS pings/day). ML model predicts ETA per segment. Update graph edge weights continuously.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Graph (Dijkstra / A*)</span>
+            <span class="concept-pill pill-orange">Map Tile Serving</span>
+            <span class="concept-pill pill-green">S2 Geometry</span>
+            <span class="concept-pill pill-purple">Real-time Traffic</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════ INFRASTRUCTURE ══════════════════ -->
+  <div id="infra" class="section">
+    <div class="section-header">
+      <div class="section-icon">🏗️</div>
+      <div><h2>Infrastructure & Platform Design</h2><p>Questions focused on building the underlying platform, not the product on top of it</p></div>
+    </div>
+    <div class="questions-grid">
+
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Web Crawler</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies"><span class="company-tag">Google</span><span class="company-tag">Bing</span><span class="company-tag">Amazon</span></div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">URL Frontier</div><div class="fw-desc">Priority queue weighted by PageRank + freshness. Politeness: per-domain rate limiting. BFS ensures breadth before depth.</div></div>
+            <div class="fw-step"><div class="fw-label">Deduplication</div><div class="fw-desc">Bloom filter for URL seen check (fast, probabilistic). SimHash for near-duplicate content detection at page level.</div></div>
+            <div class="fw-step"><div class="fw-label">Storage</div><div class="fw-desc">Raw HTML in distributed blob store (S3). Extracted content → Elasticsearch. URL metadata → Cassandra.</div></div>
+            <div class="fw-step"><div class="fw-label">robots.txt</div><div class="fw-desc">Respect crawl-delay and disallow rules. Cache robots.txt per domain. Re-fetch weekly.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Bloom Filter</span>
+            <span class="concept-pill pill-orange">SimHash</span>
+            <span class="concept-pill pill-green">DNS Cache</span>
+            <span class="concept-pill pill-purple">BFS Frontier</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Distributed Message Queue (Kafka)</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies"><span class="company-tag">LinkedIn</span><span class="company-tag">Uber</span><span class="company-tag">Confluent</span></div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Log-based Storage</div><div class="fw-desc">Append-only log on disk. Segments are immutable files. Offset per consumer group tracks position. Sequential I/O = very fast.</div></div>
+            <div class="fw-step"><div class="fw-label">Partitions</div><div class="fw-desc">Topic → N partitions across brokers. Partition key routes same user to same partition (ordering). More partitions = more parallelism.</div></div>
+            <div class="fw-step"><div class="fw-label">Replication</div><div class="fw-desc">Each partition has 1 leader + N-1 followers. Leader handles all reads/writes. Followers replicate via fetch protocol. ISR set.</div></div>
+            <div class="fw-step"><div class="fw-label">Consumer Groups</div><div class="fw-desc">Each group tracks its own offset. Multiple groups = multiple independent consumers. Group rebalance on member change.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Log Compaction</span>
+            <span class="concept-pill pill-orange">ISR (In-Sync Replicas)</span>
+            <span class="concept-pill pill-green">ZooKeeper / KRaft</span>
+            <span class="concept-pill pill-purple">Consumer Group</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a CDN</div>
+          <span class="q-badge badge-hard">HARD</span>
+        </div>
+        <div class="q-companies"><span class="company-tag">Cloudflare</span><span class="company-tag">Akamai</span><span class="company-tag">Amazon CF</span></div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Anycast Routing</div><div class="fw-desc">BGP anycast: same IP announced from all PoPs. Client DNS resolves to nearest PoP automatically. Reduces RTT dramatically.</div></div>
+            <div class="fw-step"><div class="fw-label">Cache Hierarchy</div><div class="fw-desc">L1 (edge PoP) → L2 (regional) → Origin. Cache miss propagates up. L2 acts as shield preventing origin overload.</div></div>
+            <div class="fw-step"><div class="fw-label">Cache Invalidation</div><div class="fw-desc">TTL-based expiry. Purge API for instant invalidation. Surrogate keys (cache tags) for grouped invalidation.</div></div>
+            <div class="fw-step"><div class="fw-label">TLS Termination</div><div class="fw-desc">TLS at edge PoP. Reduces latency: TLS handshake is local. Origin connection via persistent keep-alive.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Anycast BGP</span>
+            <span class="concept-pill pill-orange">Cache-Control Headers</span>
+            <span class="concept-pill pill-green">TLS Offloading</span>
+            <span class="concept-pill pill-purple">Origin Shield</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-card" onclick="toggleCard(this)">
+        <div class="q-card-header">
+          <div class="q-title">Design a Metrics & Monitoring System</div>
+          <span class="q-badge badge-medium">MEDIUM</span>
+        </div>
+        <div class="q-companies"><span class="company-tag">Datadog</span><span class="company-tag">Grafana</span><span class="company-tag">New Relic</span></div>
+        <div class="q-expand-icon">▶ EXPAND DESIGN</div>
+        <div class="q-detail">
+          <div class="framework-grid">
+            <div class="fw-step"><div class="fw-label">Collection</div><div class="fw-desc">Pull model (Prometheus) vs Push model (StatsD). Agents on each host. Aggregation at collection point before storage.</div></div>
+            <div class="fw-step"><div class="fw-label">Storage</div><div class="fw-desc">Time-series DB (InfluxDB, Prometheus, Cassandra). Downsampling for long-term storage: 1s → 1m → 1h granularity.</div></div>
+            <div class="fw-step"><div class="fw-label">Query Engine</div><div class="fw-desc">PromQL for aggregations, rate calculations, percentiles. Pre-compute heavy queries. Cache dashboard results.</div></div>
+            <div class="fw-step"><div class="fw-label">Alerting</div><div class="fw-desc">Threshold + anomaly detection. Alert Manager deduplicates & routes. PagerDuty/Slack integration. Silence windows for maintenance.</div></div>
+          </div>
+          <div class="concepts-list">
+            <span class="concept-pill pill-blue">Time-Series DB</span>
+            <span class="concept-pill pill-orange">Percentile (p99, p999)</span>
+            <span class="concept-pill pill-green">Downsampling</span>
+            <span class="concept-pill pill-purple">Pull vs Push Model</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════ CORE CONCEPTS ══════════════════ -->
+  <div id="concepts" class="section">
+    <div class="section-header">
+      <div class="section-icon">🧠</div>
+      <div><h2>Core Concepts Reference</h2><p>Every critical concept you must know for HLD interviews — organized by category</p></div>
+    </div>
+
+    <div class="concepts-section">
+      <div class="concepts-section-title">Data Storage</div>
+      <div class="concepts-grid">
+        <div class="concept-card"><div class="concept-icon">🗄️</div><div class="concept-name">SQL vs NoSQL</div><div class="concept-desc">SQL: ACID, joins, structured. NoSQL: horizontal scale, flexible schema. Choose SQL for transactions, NoSQL for scale/flexibility.</div><div class="concept-tags"><span class="ct">PostgreSQL</span><span class="ct">DynamoDB</span><span class="ct">Cassandra</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔀</div><div class="concept-name">Database Sharding</div><div class="concept-desc">Horizontal partitioning by shard key (user_id, geography). Consistent hashing minimizes reshuffling. Watch for hot shards.</div><div class="concept-tags"><span class="ct">Range-based</span><span class="ct">Hash-based</span><span class="ct">Directory</span></div></div>
+        <div class="concept-card"><div class="concept-icon">📡</div><div class="concept-name">Replication</div><div class="concept-desc">Master-slave: 1 write node, N read replicas. Replication lag = eventual consistency. Multi-master = conflict resolution needed.</div><div class="concept-tags"><span class="ct">Async</span><span class="ct">Sync</span><span class="ct">Semi-sync</span></div></div>
+        <div class="concept-card"><div class="concept-icon">📊</div><div class="concept-name">ACID vs BASE</div><div class="concept-desc">ACID: SQL guarantees. BASE: Basically Available, Soft state, Eventually consistent. NoSQL trades consistency for availability.</div><div class="concept-tags"><span class="ct">Atomicity</span><span class="ct">Consistency</span><span class="ct">Isolation</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔍</div><div class="concept-name">Indexing</div><div class="concept-desc">B-tree for range queries, Hash for equality. Composite index column order matters. Too many indexes slow writes.</div><div class="concept-tags"><span class="ct">B-tree</span><span class="ct">LSM-tree</span><span class="ct">Inverted</span></div></div>
+        <div class="concept-card"><div class="concept-icon">⏱️</div><div class="concept-name">Time-Series DB</div><div class="concept-desc">Optimized for append-only, time-ordered data. Column compression (same timestamps). Auto-downsampling. InfluxDB, TimescaleDB.</div><div class="concept-tags"><span class="ct">InfluxDB</span><span class="ct">Prometheus</span><span class="ct">Druid</span></div></div>
+      </div>
+    </div>
+
+    <div class="concepts-section">
+      <div class="concepts-section-title">Caching</div>
+      <div class="concepts-grid">
+        <div class="concept-card"><div class="concept-icon">⚡</div><div class="concept-name">Cache-Aside (Lazy Loading)</div><div class="concept-desc">App checks cache → miss → fetch DB → populate cache. Cache only hot data. Risk: cache stampede on cold start.</div><div class="concept-tags"><span class="ct">Redis</span><span class="ct">Memcached</span></div></div>
+        <div class="concept-card"><div class="concept-icon">✍️</div><div class="concept-name">Write-Through Cache</div><div class="concept-desc">Write to cache AND DB simultaneously. Always fresh data in cache. Higher write latency. Good for read-heavy.</div><div class="concept-tags"><span class="ct">Consistency</span><span class="ct">Latency++</span></div></div>
+        <div class="concept-card"><div class="concept-icon">📝</div><div class="concept-name">Write-Behind (Write-Back)</div><div class="concept-desc">Write to cache only, async flush to DB. Fast writes, risk of data loss if cache crashes before flush.</div><div class="concept-tags"><span class="ct">Performance</span><span class="ct">Risk</span></div></div>
+        <div class="concept-card"><div class="concept-icon">💥</div><div class="concept-name">Cache Stampede</div><div class="concept-desc">Many requests hit DB simultaneously on cache expiry. Solutions: mutex lock, probabilistic early expiry, background refresh.</div><div class="concept-tags"><span class="ct">Thundering herd</span><span class="ct">Mutex</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🌊</div><div class="concept-name">Eviction Policies</div><div class="concept-desc">LRU (least recently used) — standard. LFU (frequency) — for viral content. TTL for freshness. FIFO simplest.</div><div class="concept-tags"><span class="ct">LRU</span><span class="ct">LFU</span><span class="ct">TTL</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔒</div><div class="concept-name">Distributed Lock (Redlock)</div><div class="concept-desc">Redis multi-node lock algorithm. Acquire on N/2+1 nodes, TTL safety net. Release via Lua script atomically.</div><div class="concept-tags"><span class="ct">Mutex</span><span class="ct">TTL</span><span class="ct">Atomic</span></div></div>
+      </div>
+    </div>
+
+    <div class="concepts-section">
+      <div class="concepts-section-title">Scalability & Reliability</div>
+      <div class="concepts-grid">
+        <div class="concept-card"><div class="concept-icon">🔺</div><div class="concept-name">CAP Theorem</div><div class="concept-desc">Consistency, Availability, Partition Tolerance — pick 2. During partition: choose CP (banking) or AP (social media).</div><div class="concept-tags"><span class="ct">CP: HBase</span><span class="ct">AP: Cassandra</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🌀</div><div class="concept-name">Consistent Hashing</div><div class="concept-desc">Virtual nodes on a ring. Adding/removing nodes redistributes only K/N keys instead of all. Foundation of DynamoDB, Cassandra.</div><div class="concept-tags"><span class="ct">Virtual Nodes</span><span class="ct">Ring</span></div></div>
+        <div class="concept-card"><div class="concept-icon">⚖️</div><div class="concept-name">Load Balancing</div><div class="concept-desc">Algorithms: Round-robin, Least connections, IP hash (sticky sessions), Weighted. L4 (TCP) vs L7 (HTTP content-aware).</div><div class="concept-tags"><span class="ct">Nginx</span><span class="ct">HAProxy</span><span class="ct">AWS ALB</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔌</div><div class="concept-name">Circuit Breaker</div><div class="concept-desc">Prevent cascade failures. States: Closed → Open → Half-open. After N failures, open circuit and fail-fast. Hystrix pattern.</div><div class="concept-tags"><span class="ct">Resilience4j</span><span class="ct">Hystrix</span></div></div>
+        <div class="concept-card"><div class="concept-icon">📦</div><div class="concept-name">Message Queue</div><div class="concept-desc">Decouple producers/consumers. Async processing. Buffer traffic spikes. At-least-once vs exactly-once delivery semantics.</div><div class="concept-tags"><span class="ct">Kafka</span><span class="ct">RabbitMQ</span><span class="ct">SQS</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🎯</div><div class="concept-name">Service Mesh</div><div class="concept-desc">Sidecar proxy (Envoy) per service. Handles: mTLS, retries, circuit breaking, observability. Control plane = Istio.</div><div class="concept-tags"><span class="ct">Istio</span><span class="ct">Envoy</span><span class="ct">mTLS</span></div></div>
+      </div>
+    </div>
+
+    <div class="concepts-section">
+      <div class="concepts-section-title">Design Patterns</div>
+      <div class="concepts-grid">
+        <div class="concept-card"><div class="concept-icon">📖</div><div class="concept-name">CQRS</div><div class="concept-desc">Command Query Responsibility Segregation. Separate read/write models. Write model optimized for writes, read model for queries.</div><div class="concept-tags"><span class="ct">Event-Driven</span><span class="ct">Read Model</span></div></div>
+        <div class="concept-card"><div class="concept-icon">📜</div><div class="concept-name">Event Sourcing</div><div class="concept-desc">Store state as sequence of events, not current state. Rebuild state by replaying events. Perfect audit trail. Kafka as event log.</div><div class="concept-tags"><span class="ct">Immutable Log</span><span class="ct">Replay</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔗</div><div class="concept-name">Saga Pattern</div><div class="concept-desc">Distributed transaction via choreography or orchestration. Each step emits event. Compensating transactions on failure.</div><div class="concept-tags"><span class="ct">Choreography</span><span class="ct">Orchestration</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔑</div><div class="concept-name">Idempotency</div><div class="concept-desc">Same request twice = same result. Idempotency key in header. Store processed request IDs with TTL. Critical for payments.</div><div class="concept-tags"><span class="ct">UUID key</span><span class="ct">Deduplication</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🏭</div><div class="concept-name">Bulkhead Pattern</div><div class="concept-desc">Isolate critical resources (thread pools, connections). Failure in one bulkhead doesn't drain shared resource pool.</div><div class="concept-tags"><span class="ct">Isolation</span><span class="ct">Resilience</span></div></div>
+        <div class="concept-card"><div class="concept-icon">🔄</div><div class="concept-name">Two-Phase Commit</div><div class="concept-desc">Coordinator asks all participants to prepare, then commit. Guarantees atomicity. Slow (blocking protocol). Rarely used today.</div><div class="concept-tags"><span class="ct">2PC</span><span class="ct">XA Protocol</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ TRADE-OFFS ══════════════════ -->
+  <div id="tradeoffs" class="section">
+    <div class="section-header">
+      <div class="section-icon">⚖️</div>
+      <div><h2>Key Trade-offs & Decision Framework</h2><p>The most common design decision points — knowing these separates senior engineers from juniors</p></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:20px">
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:var(--accent)">▶</span> SQL vs NoSQL
+        </div>
+        <table class="tradeoff-table">
+          <tr><th>Factor</th><th>SQL</th><th>NoSQL</th></tr>
+          <tr><td>Schema</td><td class="pro">Rigid, safe</td><td class="pro">Flexible</td></tr>
+          <tr><td>Scale</td><td class="con">Vertical (hard)</td><td class="pro">Horizontal (easy)</td></tr>
+          <tr><td>Consistency</td><td class="pro">Strong ACID</td><td class="con">Eventually consistent</td></tr>
+          <tr><td>Joins</td><td class="pro">Native support</td><td class="con">Application-side</td></tr>
+          <tr><td>Transactions</td><td class="pro">Multi-row ACID</td><td class="con">Limited</td></tr>
+          <tr><td>Choose when</td><td>Finance, ERP, relational data</td><td>Social, IoT, catalog, user prefs</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:var(--accent2)">▶</span> Sync vs Async
+        </div>
+        <table class="tradeoff-table">
+          <tr><th>Factor</th><th>Synchronous</th><th>Asynchronous</th></tr>
+          <tr><td>Latency</td><td class="pro">Immediate response</td><td class="con">Delayed (queued)</td></tr>
+          <tr><td>Reliability</td><td class="con">Coupled failure</td><td class="pro">Decoupled</td></tr>
+          <tr><td>Throughput</td><td class="con">Limited by slowest</td><td class="pro">High (buffered)</td></tr>
+          <tr><td>Complexity</td><td class="pro">Simple flow</td><td class="con">Eventual consistency</td></tr>
+          <tr><td>Choose when</td><td>User-facing, needs immediate result</td><td>Background jobs, notifications, ML</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:#a78bfa">▶</span> Push vs Pull (Feed)
+        </div>
+        <table class="tradeoff-table">
+          <tr><th>Factor</th><th>Push (Fanout Write)</th><th>Pull (Fanout Read)</th></tr>
+          <tr><td>Read latency</td><td class="pro">Very fast (pre-built)</td><td class="con">Slower (computed)</td></tr>
+          <tr><td>Write cost</td><td class="con">High (M×N writes)</td><td class="pro">Single write</td></tr>
+          <tr><td>Celebrity</td><td class="con">Explodes (100M writes)</td><td class="pro">Same cost</td></tr>
+          <tr><td>Inactive users</td><td class="con">Wasted work</td><td class="pro">No waste</td></tr>
+          <tr><td>Best practice</td><td colspan="2" style="color:var(--accent)">Hybrid: Push for normal users, Pull for celebrities</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:var(--accent4)">▶</span> CP vs AP (CAP Theorem)
+        </div>
+        <table class="tradeoff-table">
+          <tr><th>System</th><th>Choice</th><th>Reasoning</th></tr>
+          <tr><td>Banking / Payments</td><td class="pro">CP</td><td>Can't show wrong balance</td></tr>
+          <tr><td>Social Media Feed</td><td class="pro">AP</td><td>Stale feed is acceptable</td></tr>
+          <tr><td>Inventory (e-comm)</td><td class="pro">CP</td><td>No overselling</td></tr>
+          <tr><td>User Profile Views</td><td class="pro">AP</td><td>Stale data tolerable</td></tr>
+          <tr><td>Distributed Lock</td><td class="pro">CP</td><td>Must guarantee exclusion</td></tr>
+          <tr><td>DNS</td><td class="pro">AP</td><td>Availability critical</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:#eab308">▶</span> REST vs gRPC vs GraphQL
+        </div>
+        <table class="tradeoff-table">
+          <tr><th></th><th>REST</th><th>gRPC</th><th>GraphQL</th></tr>
+          <tr><td>Protocol</td><td>HTTP/1.1</td><td>HTTP/2</td><td>HTTP/1.1</td></tr>
+          <tr><td>Performance</td><td>Good</td><td class="pro">Best</td><td>Moderate</td></tr>
+          <tr><td>Flexibility</td><td>Fixed endpoints</td><td>Fixed contracts</td><td class="pro">Query exactly what you need</td></tr>
+          <tr><td>Type Safety</td><td>None</td><td class="pro">Protobuf</td><td class="pro">Schema</td></tr>
+          <tr><td>Best For</td><td>Public APIs</td><td>Microservices</td><td>Mobile/BFF</td></tr>
+        </table>
+      </div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px;">
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:#fff; margin-bottom:16px; display:flex; align-items:center; gap:8px">
+          <span style="color:#f472b6">▶</span> Monolith vs Microservices
+        </div>
+        <table class="tradeoff-table">
+          <tr><th>Factor</th><th>Monolith</th><th>Microservices</th></tr>
+          <tr><td>Complexity</td><td class="pro">Simple</td><td class="con">High (infra, comms)</td></tr>
+          <tr><td>Deploy</td><td class="con">All-or-nothing</td><td class="pro">Independent</td></tr>
+          <tr><td>Scale</td><td class="con">Scale everything</td><td class="pro">Scale by service</td></tr>
+          <tr><td>Debugging</td><td class="pro">Easy (single process)</td><td class="con">Distributed tracing</td></tr>
+          <tr><td>Team size</td><td>Small (&lt;20 eng)</td><td>Large (Conway's Law)</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer style="text-align:center; padding:40px; color:var(--muted); font-family:'Space Mono',monospace; font-size:11px; border-top:1px solid var(--border); margin-top:40px; position:relative; z-index:1">
+  HLD SYSTEM DESIGN INTERVIEW MASTER GUIDE &nbsp;·&nbsp; CLICK ANY CARD TO EXPAND &nbsp;·&nbsp; USE FRAMEWORK TAB FOR APPROACH
+</footer>
+
+<script>
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toggleCard(card) {
+    const wasExpanded = card.classList.contains('expanded');
+    // Collapse siblings in same grid
+    card.closest('.questions-grid').querySelectorAll('.q-card').forEach(c => c.classList.remove('expanded'));
+    if (!wasExpanded) {
+      card.classList.add('expanded');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // Animate cards on load
+  document.querySelectorAll('.q-card, .fw-card, .concept-card').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+      el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 60 + i * 30);
+  });
+</script>
+
+</body>
+</html>

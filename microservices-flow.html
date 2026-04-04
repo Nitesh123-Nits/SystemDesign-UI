@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microservices Request Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04060d;
+  --surface: #080c17;
+  --panel: #0b0f1c;
+  --border: #172035;
+  --text: #b0bfd4;
+  --muted: #334155;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --green: #10b981;
+  --red: #ef4444;
+  --sky: #0ea5e9;
+  --white: #e2e8f0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse at 15% 40%, rgba(59,130,246,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 60%, rgba(168,85,247,0.05) 0%, transparent 55%);
+  pointer-events:none; z-index:0;
+}
+.wrap { max-width:1120px; margin:0 auto; padding:28px 18px; position:relative; z-index:1; }
+
+/* ── HEADER ── */
+.header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:22px; gap:16px; flex-wrap:wrap;
+}
+.eyebrow { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--cyan); margin-bottom:5px; }
+h1 { font-family:'Bebas Neue',sans-serif; font-size:clamp(26px,4vw,46px); color:var(--white); letter-spacing:2px; line-height:1.05; }
+h1 em { color:var(--purple); font-style:normal; }
+
+/* ── TABS ── */
+.tabs { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start; }
+.tab {
+  padding:8px 18px; border-radius:7px;
+  border:1px solid var(--border); background:var(--panel);
+  color:var(--muted); font-family:'IBM Plex Mono',monospace;
+  font-size:12px; cursor:pointer; transition:all .2s; letter-spacing:.5px;
+}
+.tab.active {
+  border-color:var(--tc,var(--cyan)); color:var(--tc,var(--cyan));
+  background:color-mix(in srgb,var(--tc,var(--cyan)) 12%,transparent);
+  box-shadow:0 0 18px color-mix(in srgb,var(--tc,var(--cyan)) 22%,transparent);
+}
+
+/* ── DIAGRAM ── */
+.diag-shell {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; margin-bottom:18px; position:relative;
+}
+.diag-shell::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:1;
+  background-image:
+    linear-gradient(rgba(59,130,246,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,.022) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+.diag-inner { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+#svg { display:block; min-width:1060px; position:relative; z-index:2; }
+
+/* ── PROGRESS DOTS ── */
+.pdots { display:flex; gap:5px; margin-bottom:16px; overflow-x:auto; padding-bottom:2px; }
+.pd {
+  flex-shrink:0; height:6px; border-radius:3px; background:var(--border);
+  transition:all .3s; cursor:pointer;
+}
+.pd.done { background:rgba(6,182,212,.3); }
+.pd.now  { background:var(--cyan); box-shadow:0 0 10px rgba(6,182,212,.5); }
+
+/* ── DETAIL PANEL ── */
+.detail {
+  background:var(--panel); border:1px solid var(--border); border-radius:14px;
+  padding:22px; transition:border-color .3s; position:relative; overflow:hidden;
+}
+.detail::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:var(--dc,var(--cyan)); transition:background .3s;
+}
+.dtop { display:flex; gap:18px; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; }
+.dnum {
+  width:46px; height:46px; border-radius:10px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:24px; border:1px solid;
+  transition:all .3s;
+}
+.dhead { flex:1; min-width:200px; }
+.dtag { font-size:10px; letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; transition:color .3s; }
+.dtitle { font-family:'Syne',sans-serif; font-weight:700; font-size:17px; color:var(--white); margin-bottom:6px; }
+.dtech { display:flex; gap:5px; flex-wrap:wrap; }
+.dtech span {
+  font-size:10px; padding:2px 7px; border-radius:4px; border:1px solid;
+  opacity:.8; letter-spacing:.3px;
+}
+.dbody { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:620px) { .dbody { grid-template-columns:1fr; } }
+.ddesc { font-size:12.5px; line-height:1.9; color:var(--text); }
+.dcode {
+  background:rgba(0,0,0,.45); border:1px solid var(--border);
+  border-radius:8px; padding:14px; font-size:11.5px; line-height:1.85; overflow-x:auto;
+}
+.dcode .c  { color:#253858; }
+.dcode .k  { color:var(--purple); }
+.dcode .v  { color:var(--green); }
+.dcode .h  { color:var(--cyan); }
+.dcode .w  { color:var(--amber); }
+.dcode .e  { color:var(--red); }
+.dcode .ok { color:#10b981; }
+
+/* ── METRICS ── */
+.mrow { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+@media(max-width:520px){ .mrow{ grid-template-columns:repeat(2,1fr); } }
+.mc {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  border-radius:8px; padding:12px; text-align:center;
+}
+.mc .ml { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.mc .mv { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--cyan); letter-spacing:1px; transition:color .3s; }
+
+/* ── CONTROLS ── */
+.ctrls { display:flex; gap:9px; justify-content:center; margin-top:18px; flex-wrap:wrap; }
+.btn {
+  padding:10px 22px; border-radius:8px; border:1px solid;
+  font-family:'IBM Plex Mono',monospace; font-size:12px;
+  cursor:pointer; transition:all .2s; letter-spacing:1px;
+}
+.bplay { background:var(--cyan); color:var(--bg); border-color:var(--cyan); font-weight:600; }
+.bstep { background:transparent; color:var(--text); border-color:var(--border); }
+.breset { background:transparent; color:var(--muted); border-color:var(--border); }
+
+footer { text-align:center; margin-top:36px; font-size:10px; color:var(--muted); letter-spacing:1.5px; }
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="eyebrow">// distributed systems — production scale</div>
+    <h1>MICROSERVICES<br><em>REQUEST</em> FLOW</h1>
+  </div>
+  <div class="tabs">
+    <button class="tab active" style="--tc:#e50914" id="tab-netflix" onclick="setScenario('netflix')">🎬 Netflix</button>
+    <button class="tab" style="--tc:#1db954" id="tab-uber"    onclick="setScenario('uber')">🚗 Uber</button>
+    <button class="tab" style="--tc:#ff9900" id="tab-amazon"  onclick="setScenario('amazon')">🛒 Amazon</button>
+  </div>
+</div>
+
+<!-- ARCHITECTURE DIAGRAM -->
+<div class="diag-shell">
+  <div class="diag-inner">
+<svg id="svg" viewBox="0 0 1060 450" width="1060" height="450" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <filter id="fg" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="fg2" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <marker id="ma" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,7 L7,3.5 z" fill="context-stroke" opacity=".7"/>
+  </marker>
+</defs>
+
+<!-- layer labels -->
+<text x="55"  y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">CLIENT</text>
+<text x="200" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">EDGE</text>
+<text x="358" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">GATEWAY</text>
+<text x="570" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">MIDDLEWARE</text>
+<text x="700" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">SERVICES</text>
+<text x="836" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">DATA</text>
+<text x="968" y="19" fill="#1c3050" font-family="'IBM Plex Mono'" font-size="9" text-anchor="middle" letter-spacing="1.5">AGGREGATE</text>
+
+<!-- dividers -->
+<line x1="120" y1="26" x2="120" y2="430" stroke="#0d1829" stroke-width="1"/>
+<line x1="258" y1="26" x2="258" y2="430" stroke="#0d1829" stroke-width="1"/>
+<line x1="490" y1="26" x2="490" y2="430" stroke="#0d1829" stroke-width="1"/>
+<line x1="632" y1="26" x2="632" y2="430" stroke="#0d1829" stroke-width="1"/>
+<line x1="772" y1="26" x2="772" y2="430" stroke="#0d1829" stroke-width="1"/>
+<line x1="912" y1="26" x2="912" y2="430" stroke="#0d1829" stroke-width="1"/>
+
+<!-- ═══ EDGES ═══ -->
+<!-- client → cdn -->
+<path id="e-client-cdn"   d="M100,225 L158,225" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- cdn → lb -->
+<path id="e-cdn-lb"       d="M245,225 L268,225" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- lb → apigw -->
+<path id="e-lb-apigw"     d="M355,225 L392,225" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- apigw → auth -->
+<path id="e-apigw-auth"   d="M492,210 C504,168 530,143 530,143" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- apigw → mesh -->
+<path id="e-apigw-mesh"   d="M492,225 L530,225" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- apigw → rate -->
+<path id="e-apigw-rate"   d="M492,240 C504,280 530,305 530,305" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- auth ↔ mesh (dashed internal) -->
+<path id="e-auth-mesh"    d="M570,153 L570,205" stroke="#172035" stroke-width="1.2" stroke-dasharray="4,3" fill="none"/>
+<!-- mesh → svc1 -->
+<path id="e-mesh-svc1"    d="M616,218 C634,186 648,143 654,108" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- mesh → svc2 -->
+<path id="e-mesh-svc2"    d="M616,222 C632,215 643,202 654,193" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- mesh → svc3 -->
+<path id="e-mesh-svc3"    d="M616,228 C632,242 643,262 654,270" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- mesh → svc4 -->
+<path id="e-mesh-svc4"    d="M616,232 C634,270 648,328 654,348" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- svc1 → redis -->
+<path id="e-svc1-redis"   d="M750,112 C767,120 782,136 792,148" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- svc2 → redis -->
+<path id="e-svc2-redis"   d="M750,185 C768,172 782,162 792,155" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- svc3 → kafka -->
+<path id="e-svc3-kafka"   d="M750,270 C768,268 782,262 792,255" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- svc4 → kafka -->
+<path id="e-svc4-kafka"   d="M750,343 C770,315 785,278 792,265" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- svc1 → db (dashed) -->
+<path id="e-svc1-db"      d="M700,128 C715,215 786,288 792,320" stroke="#172035" stroke-width="1.1" stroke-dasharray="3,4" fill="none"/>
+<!-- svc2 → db (dashed) -->
+<path id="e-svc2-db"      d="M700,213 C720,260 784,300 792,322" stroke="#172035" stroke-width="1.1" stroke-dasharray="3,4" fill="none"/>
+<!-- redis → agg -->
+<path id="e-redis-agg"    d="M878,155 C897,175 912,200 922,220" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- kafka → agg -->
+<path id="e-kafka-agg"    d="M878,250 C897,248 910,240 922,235" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- db → agg -->
+<path id="e-db-agg"       d="M878,335 C897,308 912,272 922,248" stroke="#172035" stroke-width="1.8" fill="none" marker-end="url(#ma)"/>
+<!-- agg → client (return arc through bottom) -->
+<path id="e-agg-client"   d="M968,248 C1010,418 14,418 14,248" stroke="#172035" stroke-width="1.5" stroke-dasharray="6,4" fill="none" marker-end="url(#ma)"/>
+
+<!-- ═══ NODES ═══ -->
+<!-- CLIENT -->
+<g id="n-client">
+  <rect x="14" y="205" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="57" y="222" fill="#f59e0b" font-family="'IBM Plex Mono'" font-size="16" text-anchor="middle">📱</text>
+  <text x="57" y="238" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">CLIENT</text>
+</g>
+
+<!-- CDN -->
+<g id="n-cdn">
+  <rect x="158" y="205" width="87" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="202" y="222" fill="#3b82f6" font-family="'IBM Plex Mono'" font-size="16" text-anchor="middle">🌐</text>
+  <text x="202" y="238" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">CDN / EDGE</text>
+</g>
+
+<!-- LB -->
+<g id="n-lb">
+  <rect x="268" y="205" width="87" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="312" y="222" fill="#3b82f6" font-family="'IBM Plex Mono'" font-size="16" text-anchor="middle">⚖️</text>
+  <text x="312" y="238" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">LOAD BAL.</text>
+</g>
+
+<!-- API GATEWAY -->
+<g id="n-apigw">
+  <rect x="392" y="205" width="100" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="442" y="221" fill="#a855f7" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">🚪</text>
+  <text x="442" y="237" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">API GATEWAY</text>
+</g>
+
+<!-- AUTH -->
+<g id="n-auth">
+  <rect x="530" y="113" width="80" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="570" y="129" fill="#ef4444" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">🔐</text>
+  <text x="570" y="145" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">AUTH SVC</text>
+</g>
+
+<!-- SERVICE MESH -->
+<g id="n-mesh">
+  <rect x="530" y="205" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="573" y="222" fill="#a855f7" font-family="'IBM Plex Mono'" font-size="13" text-anchor="middle">🕸️</text>
+  <text x="573" y="237" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">SVC MESH</text>
+</g>
+
+<!-- RATE LIMITER -->
+<g id="n-rate">
+  <rect x="530" y="285" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="573" y="301" fill="#f59e0b" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">🚦</text>
+  <text x="573" y="317" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">RATE LIMIT</text>
+</g>
+
+<!-- SVC 1 -->
+<g id="n-svc1">
+  <rect x="654" y="88" width="96" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text id="i1" x="702" y="103" fill="#10b981" font-family="'IBM Plex Mono'" font-size="12" text-anchor="middle">👤</text>
+  <text id="l1" x="702" y="120" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">USER PROFILE</text>
+</g>
+
+<!-- SVC 2 -->
+<g id="n-svc2">
+  <rect x="654" y="173" width="96" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text id="i2" x="702" y="188" fill="#10b981" font-family="'IBM Plex Mono'" font-size="12" text-anchor="middle">🎬</text>
+  <text id="l2" x="702" y="205" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">CONTENT API</text>
+</g>
+
+<!-- SVC 3 -->
+<g id="n-svc3">
+  <rect x="654" y="250" width="96" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text id="i3" x="702" y="265" fill="#10b981" font-family="'IBM Plex Mono'" font-size="12" text-anchor="middle">🤖</text>
+  <text id="l3" x="702" y="282" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">REC ENGINE</text>
+</g>
+
+<!-- SVC 4 -->
+<g id="n-svc4">
+  <rect x="654" y="328" width="96" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text id="i4" x="702" y="343" fill="#10b981" font-family="'IBM Plex Mono'" font-size="12" text-anchor="middle">🎫</text>
+  <text id="l4" x="702" y="360" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">PLAYBACK SVC</text>
+</g>
+
+<!-- REDIS/CACHE -->
+<g id="n-redis">
+  <rect x="792" y="128" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="835" y="143" fill="#ef4444" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">⚡</text>
+  <text id="lredis" x="835" y="160" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">EVCACHE</text>
+</g>
+
+<!-- KAFKA/QUEUE -->
+<g id="n-kafka">
+  <rect x="792" y="225" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="835" y="240" fill="#f59e0b" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">📨</text>
+  <text id="lkafka" x="835" y="257" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">KAFKA</text>
+</g>
+
+<!-- DATABASE -->
+<g id="n-db">
+  <rect x="792" y="320" width="86" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="835" y="336" fill="#0ea5e9" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">🗄️</text>
+  <text id="ldb" x="835" y="352" fill="#475569" font-family="'IBM Plex Mono'" font-size="8" text-anchor="middle" letter-spacing=".5">CASSANDRA</text>
+</g>
+
+<!-- AGGREGATOR / BFF -->
+<g id="n-agg">
+  <rect x="922" y="205" width="90" height="40" rx="8" fill="#080c17" stroke="#172035" stroke-width="1.5"/>
+  <text x="967" y="220" fill="#a855f7" font-family="'IBM Plex Mono'" font-size="14" text-anchor="middle">🔀</text>
+  <text x="967" y="237" fill="#475569" font-family="'IBM Plex Mono'" font-size="8.5" text-anchor="middle" letter-spacing=".8">AGGREGATOR</text>
+</g>
+
+<!-- Packet layer -->
+<g id="pks"></g>
+</svg>
+  </div>
+</div>
+
+<!-- PROGRESS DOTS -->
+<div class="pdots" id="pdots"></div>
+
+<!-- DETAIL PANEL -->
+<div class="detail" id="detail">
+  <div class="dtop">
+    <div class="dnum" id="dnum" style="border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.1)">—</div>
+    <div class="dhead">
+      <div class="dtag" id="dtag" style="color:var(--cyan)">// select a step or press Play</div>
+      <div class="dtitle" id="dtitle">Distributed Microservices Architecture</div>
+      <div class="dtech" id="dtech"></div>
+    </div>
+  </div>
+  <div class="dbody">
+    <div class="ddesc" id="ddesc">
+      Press <strong style="color:#06b6d4">▶ Play</strong> to watch a single request travel through a production-grade distributed system used by Netflix, Uber, or Amazon — hitting CDN edges, load balancers, API gateways, auth services, service meshes, and parallel microservices before returning to the user.<br><br>
+      Switch scenarios to see how each company uses the <strong>same architecture patterns</strong> with different tech stacks and service names.
+    </div>
+    <div class="dcode" id="dcode"><span class="c">// ready — choose a scenario</span><br><span class="c">// press ▶ Play to begin</span></div>
+  </div>
+</div>
+
+<!-- METRICS -->
+<div class="mrow">
+  <div class="mc"><div class="ml">Services Hit</div><div class="mv" id="ms">0</div></div>
+  <div class="mc"><div class="ml">Latency</div><div class="mv" id="ml">0ms</div></div>
+  <div class="mc"><div class="ml">Network Hops</div><div class="mv" id="mh">0</div></div>
+  <div class="mc"><div class="ml">Step</div><div class="mv" id="mstep">—</div></div>
+</div>
+
+<!-- CONTROLS -->
+<div class="ctrls">
+  <button class="btn bplay" id="playBtn" onclick="playPause()">▶ PLAY</button>
+  <button class="btn bstep" onclick="stepFwd()">STEP →</button>
+  <button class="btn breset" onclick="resetAll()">↺ RESET</button>
+</div>
+
+<footer>// microservices request flow — distributed systems explorer</footer>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// SCENARIOS
+// ══════════════════════════════════════════════════════════
+const S = {
+  netflix: {
+    name:'Netflix', action:'Play Movie', tc:'#e50914',
+    s1:{i:'👤',l:'USER PROFILE',n:'User Profile Svc'},
+    s2:{i:'🎬',l:'CONTENT API',n:'Content API'},
+    s3:{i:'🤖',l:'REC ENGINE',n:'Rec Engine'},
+    s4:{i:'🎫',l:'PLAYBACK SVC',n:'Playback Svc'},
+    rl:'EVCACHE', kl:'KAFKA', dl:'CASSANDRA',
+    cdn:'Akamai + Open Connect', lb:'AWS ELB / Zuul',
+    gw:'Zuul API Gateway', auth:'Passport + OAuth2',
+    mesh:'Envoy + Hystrix', cache:'EVCache / Memcached',
+    queue:'Apache Kafka', db:'Cassandra + DynamoDB', agg:'Falcor / GraphQL',
+  },
+  uber: {
+    name:'Uber', action:'Request Ride', tc:'#1db954',
+    s1:{i:'🧑',l:'RIDER PROFILE',n:'Rider Profile Svc'},
+    s2:{i:'💰',l:'SURGE PRICING',n:'Surge Pricing Svc'},
+    s3:{i:'🗺️',l:'DISPATCH SVC',n:'Dispatch & Matching'},
+    s4:{i:'⏱️',l:'ETA SERVICE',n:'ETA & Route Svc'},
+    rl:'REDIS CLUSTER', kl:'KAFKA + RINGPOP', dl:'MYSQL / SCHEMALESS',
+    cdn:'Cloudflare', lb:'AWS ELB / HAProxy',
+    gw:'NGINX + TChannel', auth:'Bearer Token + 2FA',
+    mesh:'Envoy + Jaeger', cache:'Redis Cluster',
+    queue:'Kafka + Ringpop', db:'MySQL + Schemaless', agg:'YARPC / BFF',
+  },
+  amazon: {
+    name:'Amazon', action:'Place Order', tc:'#ff9900',
+    s1:{i:'🛒',l:'CUSTOMER SVC',n:'Customer Service'},
+    s2:{i:'📦',l:'PRODUCT SVC',n:'Product Catalog'},
+    s3:{i:'🏭',l:'INVENTORY SVC',n:'Inventory Service'},
+    s4:{i:'💳',l:'PAYMENT SVC',n:'Payment Service'},
+    rl:'ELASTICACHE', kl:'SQS + KINESIS', dl:'DYNAMODB',
+    cdn:'AWS CloudFront', lb:'AWS ALB / NLB',
+    gw:'AWS API Gateway', auth:'Cognito + IAM',
+    mesh:'AWS App Mesh', cache:'ElastiCache Redis',
+    queue:'SQS + SNS + Kinesis', db:'DynamoDB + Aurora', agg:'GraphQL / REST BFF',
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// STEPS FACTORY
+// ══════════════════════════════════════════════════════════
+function mkSteps(s) {
+  return [
+    { n:1, col:'#f59e0b', tag:'CLIENT REQUEST',
+      title:`${s.name} — ${s.action}`,
+      nodes:['client'], edges:[],
+      tech:[`iOS / Android`, `HTTP/2`, `TLS 1.3`],
+      desc:`The user taps "${s.action}" on the ${s.name} app. The client constructs an HTTPS/2 request with a JWT auth token in the header. Before hitting the network, it checks its local cache (no hit). The device's TLS stack validates certificate pins and initiates the encrypted connection toward the nearest CDN edge.`,
+      code:`<span class="h">// Client request</span>\n<span class="k">POST</span> <span class="v">/api/v3/${s.action.toLowerCase().replace(' ','-')}</span>\n<span class="k">Authorization</span>: Bearer &lt;jwt_token&gt;\n<span class="k">X-Client-Version</span>: 14.2.1\n<span class="k">Accept-Encoding</span>: gzip, br\n<span class="k">X-Device-ID</span>: abc-def-123\n<span class="c">// TLS 1.3 — 0-RTT resumption</span>`,
+      svc:1, lat:'0ms', hops:1 },
+
+    { n:2, col:'#3b82f6', tag:'CDN / EDGE',
+      title:`CDN Edge — ${s.cdn}`,
+      nodes:['client','cdn'], edges:['e-client-cdn'],
+      tech:[s.cdn, `PoP`, `TLS Termination`],
+      desc:`The request hits the geographically nearest PoP (Point of Presence). Static assets and some API responses may be cached here. A cache hit returns immediately without reaching origin servers. The CDN also handles DDoS mitigation, rate-limiting by IP, and routes the request to the lowest-latency origin data center.`,
+      code:`<span class="h">// CDN edge decision</span>\n<span class="k">CACHE_KEY</span>: <span class="w">${s.action.toLowerCase().replace(' ','_')}_user_4829</span>\n<span class="k">RESULT</span>:    <span class="e">MISS</span> → forward to origin\n<span class="k">TTL</span>:       static=<span class="v">86400s</span> api=<span class="v">0s</span>\n<span class="k">PoP</span>:       <span class="v">nearest to user</span>\n<span class="c">// ~250+ global edge nodes</span>`,
+      svc:1, lat:'+4ms', hops:2 },
+
+    { n:3, col:'#3b82f6', tag:'LOAD BALANCER',
+      title:`Load Balancer — ${s.lb}`,
+      nodes:['cdn','lb'], edges:['e-cdn-lb'],
+      tech:[s.lb, `Health Checks`, `L7 Routing`],
+      desc:`The Layer 7 load balancer distributes traffic across thousands of backend instances using a least-connections algorithm weighted by health scores. It terminates the outer TLS layer, handles sticky sessions via cookies, runs TCP health probes every 5s, and automatically removes unhealthy instances from the rotation within seconds.`,
+      code:`<span class="h">// LB config snapshot</span>\n<span class="k">algorithm</span>:  <span class="v">least_connections</span>\n<span class="k">health</span>:     <span class="v">GET /health → 200</span>\n<span class="k">interval</span>:   <span class="v">5s</span>\n<span class="k">active</span>:     <span class="v">1,243 / 1,250</span>\n<span class="e">7 unhealthy</span>  → auto-drained\n<span class="c">// Sticky via X-Affinity header</span>`,
+      svc:1, lat:'+2ms', hops:3 },
+
+    { n:4, col:'#a855f7', tag:'API GATEWAY',
+      title:`API Gateway — ${s.gw}`,
+      nodes:['lb','apigw'], edges:['e-lb-apigw'],
+      tech:[s.gw, `Rate Limit`, `gRPC`, `Tracing`],
+      desc:`The API Gateway is the single entry point for all client traffic. It handles route matching to the correct downstream service, JSON/REST to gRPC protocol translation, request schema validation, API versioning, and injects distributed trace IDs into every downstream request. This is where per-client rate limits are enforced before any backend is touched.`,
+      code:`<span class="h">// Gateway processing</span>\n<span class="k">route</span>:      <span class="v">/api/v3/* → svc-router</span>\n<span class="k">rate</span>:       <span class="v">1000 req/min/user</span>\n<span class="k">schema</span>:     <span class="w">validating...</span> <span class="ok">✓</span>\n<span class="k">protocol</span>:   <span class="v">REST → gRPC</span>\n<span class="k">trace-id</span>:   <span class="v">a1b2c3d4-e5f6</span>\n<span class="c">// X-Request-ID propagated downstream</span>`,
+      svc:2, lat:'+3ms', hops:4 },
+
+    { n:5, col:'#ef4444', tag:'AUTH SERVICE',
+      title:`Authentication — ${s.auth}`,
+      nodes:['apigw','auth'], edges:['e-apigw-auth'],
+      tech:[s.auth, `JWT RS256`, `Session Cache`],
+      desc:`The Auth service validates the JWT bearer token: it checks the RS256 signature against the public key, verifies the exp/iss/aud claims, and fetches the user's active subscription status from an in-memory session store. The result is cached for the token's remaining TTL. Failed auth returns 401; anomalous patterns flag a fraud review pipeline.`,
+      code:`<span class="h">// JWT validation</span>\n<span class="k">alg</span>:  <span class="v">RS256</span>\n<span class="k">sub</span>:  <span class="v">user_4829ab</span>\n<span class="k">exp</span>:  <span class="v">valid (1h 42m left)</span>\n<span class="k">plan</span>: <span class="v">premium</span> <span class="ok">✓</span>\n<span class="k">geo</span>:  <span class="v">us-east-1</span>\n<span class="ok">✓ Auth granted — proceeding</span>`,
+      svc:3, lat:'+5ms', hops:5 },
+
+    { n:6, col:'#a855f7', tag:'SERVICE MESH',
+      title:`Service Mesh — ${s.mesh}`,
+      nodes:['apigw','mesh','rate'], edges:['e-apigw-mesh','e-apigw-rate','e-auth-mesh'],
+      tech:[s.mesh, `Circuit Breaker`, `mTLS`, `Retry`],
+      desc:`Every microservice has an Envoy sidecar proxy injected by the mesh control plane. This transparent proxy layer enables: mutual TLS (mTLS) between all services, automatic circuit breaking (opens after 5 consecutive failures, half-opens after 30s), retry-with-exponential-jitter for transient errors, and traffic splitting for canary deployments. All spans are exported to distributed tracing.`,
+      code:`<span class="h">// Envoy sidecar policy</span>\n<span class="k">mTLS</span>:          <span class="v">enabled</span>\n<span class="k">circuit_breaker</span>: <span class="v">CLOSED</span> (healthy)\n<span class="k">retry</span>:         <span class="v">3x, 50-200ms jitter</span>\n<span class="k">timeout</span>:       <span class="v">2000ms</span>\n<span class="k">canary_split</span>:   <span class="v">95% v1 / 5% v2</span>\n<span class="c">// Spans → Jaeger / Zipkin</span>`,
+      svc:4, lat:'+2ms', hops:6 },
+
+    { n:7, col:'#10b981', tag:'MICROSERVICES FAN-OUT',
+      title:`Parallel Services — ${s.s1.n}, ${s.s2.n}, ${s.s3.n}, ${s.s4.n}`,
+      nodes:['mesh','svc1','svc2','svc3','svc4'],
+      edges:['e-mesh-svc1','e-mesh-svc2','e-mesh-svc3','e-mesh-svc4'],
+      tech:[`gRPC`, `Protobuf`, `Async Fan-out`, `Saga Pattern`],
+      desc:`The request fans out to all 4 services simultaneously via async orchestration. Each service is independently deployable, owns its own database (Database-per-Service pattern), and communicates via gRPC with protobuf serialization for efficiency. A coordinator collects results with a 2s timeout, using graceful degradation — partial responses are still returned if one service is slow.`,
+      code:`<span class="h">// Async fan-out (Promise.all)</span>\n<span class="k">const</span> [a,b,c,d] = <span class="k">await</span> Promise.all([\n  <span class="v">${s.s1.n}</span>.get(userId),\n  <span class="v">${s.s2.n}</span>.get(contentId),\n  <span class="v">${s.s3.n}</span>.recommend(userId),\n  <span class="v">${s.s4.n}</span>.validate(userId),\n])\n<span class="c">// Timeout: 2s, fallback on miss</span>`,
+      svc:8, lat:'+18ms', hops:10 },
+
+    { n:8, col:'#ef4444', tag:'CACHE LAYER',
+      title:`Distributed Cache — ${s.cache}`,
+      nodes:['svc1','svc2','redis'], edges:['e-svc1-redis','e-svc2-redis'],
+      tech:[s.cache, `Cache-Aside`, `TTL`, `Stampede Protection`],
+      desc:`Hot data is served from the distributed cache cluster before touching the database. Cache hit rates of 95%+ are typical for popular content. The cache-aside pattern: service checks cache → on miss, reads from DB, writes result back with a TTL. Probabilistic early expiration (PER) prevents cache stampede. Redis Lua scripts ensure atomic compare-and-set operations.`,
+      code:`<span class="h">// Cache lookup</span>\n<span class="k">GET</span> user:<span class="v">4829ab</span>:profile\n→ <span class="ok">HIT</span> (TTL: 842s remaining)\n<span class="k">GET</span> content:<span class="v">item-tt0111161</span>\n→ <span class="e">MISS</span> → fetch DB → SET (TTL: 300s)\n<span class="k">hit_rate</span>: <span class="v">94.7%</span>\n<span class="c">// 12 shards, 3 replicas each</span>`,
+      svc:9, lat:'+8ms', hops:12 },
+
+    { n:9, col:'#f59e0b', tag:'MESSAGE BROKER',
+      title:`Event Bus — ${s.queue}`,
+      nodes:['svc3','svc4','kafka'], edges:['e-svc3-kafka','e-svc4-kafka'],
+      tech:[s.queue, `Event Sourcing`, `Pub/Sub`, `At-Least-Once`],
+      desc:`Side effects are handled asynchronously via the message broker, keeping them out of the critical response path. Publishing a single event decouples multiple concerns: analytics, recommendation updates, notification triggers, billing events, and audit logs all consume from their own partitions independently. This event-driven pattern ensures zero coupling between producers and consumers.`,
+      code:`<span class="h">// Async event publish</span>\n<span class="k">topic</span>:   <span class="v">user.actions.v3</span>\n<span class="k">partition</span>: <span class="v">user_id % 256</span>\n<span class="k">payload</span>: {\n  type: <span class="v">"${s.action.toLowerCase().replace(' ','_')}_started"</span>,\n  userId: <span class="v">"4829ab"</span>, ts: <span class="v">${Date.now()}</span>\n}\n<span class="c">// 14 consumer groups subscribed</span>`,
+      svc:10, lat:'+1ms', hops:13 },
+
+    { n:10, col:'#0ea5e9', tag:'DATABASE LAYER',
+      title:`Polyglot Persistence — ${s.db}`,
+      nodes:['svc1','svc2','db'], edges:['e-svc1-db','e-svc2-db'],
+      tech:[s.db, `DB-per-Service`, `Read Replicas`, `CQRS`],
+      desc:`Each service owns its own data store — no shared databases. This is polyglot persistence: different data models for different access patterns. User data in a key-value store for sub-millisecond reads; time-series data (history) in a wide-column DB; relational metadata in Aurora PostgreSQL; and large objects/media in object storage. All writes go to the primary; reads use regional replicas.`,
+      code:`<span class="h">// Polyglot persistence</span>\n<span class="k">User data</span>:   <span class="v">DynamoDB</span>   (p99: 3ms)\n<span class="k">History</span>:    <span class="v">Cassandra</span>  (wide-col)\n<span class="k">Metadata</span>:   <span class="v">Aurora PG</span>  (relational)\n<span class="k">Media/blobs</span>: <span class="v">S3/GCS</span>     (object)\n<span class="c">// reads → replica  writes → primary</span>`,
+      svc:10, lat:'+12ms', hops:15 },
+
+    { n:11, col:'#a855f7', tag:'AGGREGATION / BFF',
+      title:`Response Aggregator — ${s.agg}`,
+      nodes:['redis','kafka','db','agg'], edges:['e-redis-agg','e-kafka-agg','e-db-agg'],
+      tech:[s.agg, `BFF Pattern`, `Brotli`, `Projection`],
+      desc:`The Backend-for-Frontend (BFF) aggregator collects responses from all parallel service calls, merges them into a single client-specific payload, and applies field projection — only the fields the client actually needs are included. GraphQL resolvers or Falcor paths determine the exact shape. The payload is Brotli-compressed for a 4x size reduction before transmission.`,
+      code:`<span class="h">// BFF aggregation</span>\n<span class="k">merge</span>([profile, content, recs, license])\n<span class="k">project</span>: client-specific shape\n<span class="k">compress</span>: <span class="v">brotli</span> (ratio: 4.1×)\n<span class="k">raw</span>:      <span class="v">8.4 KB</span>\n<span class="k">compressed</span>: <span class="v">2.0 KB</span>\n<span class="ok">→ 200 OK — ready to transmit</span>`,
+      svc:11, lat:'+4ms', hops:16 },
+
+    { n:12, col:'#f59e0b', tag:'RESPONSE + OBSERVABILITY',
+      title:`Response Delivered — End-to-End`,
+      nodes:['agg','client'], edges:['e-agg-client'],
+      tech:[`HTTP/2`, `OpenTelemetry`, `Prometheus`, `Elasticsearch`],
+      desc:`The compressed response travels back through the service mesh to the client in ~55ms total. The app decodes the payload and begins rendering. In parallel: distributed traces (24 spans) ship to the observability platform, metrics emit to Prometheus/Atlas (p50/p95/p99 histograms), and structured JSON logs stream to Elasticsearch. An SLO dashboard tracks that p99 < 200ms.`,
+      code:`<span class="h">// End-to-end summary</span>\n<span class="k">HTTP Status</span>:     <span class="ok">200 OK</span>\n<span class="k">Total latency</span>:   <span class="v">~55ms</span>\n<span class="k">Trace spans</span>:     <span class="v">24 collected</span>\n<span class="k">Services hit</span>:    <span class="v">11</span>\n<span class="k">Network hops</span>:    <span class="v">16+</span>\n<span class="ok">✓ Content delivered to device</span>`,
+      svc:11, lat:'~55ms total', hops:16 },
+  ];
+}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let scenario = 'netflix';
+let steps = mkSteps(S.netflix);
+let cur = 0;
+let playing = false;
+let timer = null;
+let pktAnims = [];
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+function init() {
+  makeDots();
+  applySVG(S[scenario]);
+}
+
+function makeDots() {
+  const c = document.getElementById('pdots');
+  c.innerHTML = '';
+  steps.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'pd';
+    d.id = 'pd'+(i+1);
+    d.style.width = '32px';
+    d.onclick = () => jumpTo(i+1);
+    d.title = steps[i].title;
+    c.appendChild(d);
+  });
+}
+
+function applySVG(s) {
+  setText('i1',s.s1.i,'l1',s.s1.l);
+  setText('i2',s.s2.i,'l2',s.s2.l);
+  setText('i3',s.s3.i,'l3',s.s3.l);
+  setText('i4',s.s4.i,'l4',s.s4.l);
+  document.getElementById('lredis').textContent = s.rl;
+  document.getElementById('lkafka').textContent = s.kl;
+  document.getElementById('ldb').textContent    = s.dl;
+}
+
+function setText(iId,icon,lId,label) {
+  document.getElementById(iId).textContent = icon;
+  document.getElementById(lId).textContent = label;
+}
+
+// ══════════════════════════════════════════════════════════
+// NODE + EDGE ACTIVATION
+// ══════════════════════════════════════════════════════════
+const nodeCol = {
+  client:'#f59e0b',cdn:'#3b82f6',lb:'#3b82f6',apigw:'#a855f7',
+  auth:'#ef4444',mesh:'#a855f7',rate:'#f59e0b',
+  svc1:'#10b981',svc2:'#10b981',svc3:'#10b981',svc4:'#10b981',
+  redis:'#ef4444',kafka:'#f59e0b',db:'#0ea5e9',agg:'#a855f7'
+};
+
+function resetNodes() {
+  document.querySelectorAll('[id^="n-"] rect').forEach(r => {
+    r.setAttribute('stroke','#172035');
+    r.setAttribute('stroke-width','1.5');
+    r.setAttribute('fill','#080c17');
+    r.removeAttribute('filter');
+  });
+}
+
+function resetEdges() {
+  document.querySelectorAll('[id^="e-"]').forEach(p => {
+    p.setAttribute('stroke','#172035');
+    p.setAttribute('stroke-width', p.id === 'e-auth-mesh' || p.id === 'e-svc1-db' || p.id === 'e-svc2-db' ? '1.1' : '1.8');
+    p.removeAttribute('filter');
+  });
+}
+
+function activateNodes(ids, col) {
+  ids.forEach(id => {
+    const el = document.querySelector(`#n-${id} rect`);
+    if (!el) return;
+    const c = nodeCol[id] || col;
+    el.setAttribute('stroke', c);
+    el.setAttribute('stroke-width','2.5');
+    el.setAttribute('fill', hexAlpha(c, 0.12));
+    el.setAttribute('filter','url(#fg)');
+  });
+}
+
+function activateEdges(ids, col) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('stroke', col);
+    el.setAttribute('stroke-width','2.5');
+    el.setAttribute('filter','url(#fg)');
+  });
+}
+
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PACKET ANIMATION
+// ══════════════════════════════════════════════════════════
+function clearPackets() {
+  pktAnims.forEach(({raf,el}) => { cancelAnimationFrame(raf); el && el.remove(); });
+  pktAnims = [];
+}
+
+function spawnPackets(edgeIds, col) {
+  clearPackets();
+  const c = document.getElementById('pks');
+  edgeIds.forEach(eid => {
+    const path = document.getElementById(eid);
+    if (!path) return;
+    const len = path.getTotalLength();
+    [0, 0.38, 0.72].forEach((phase,pi) => {
+      const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circ.setAttribute('r', pi===0 ? '4.5' : '3');
+      circ.setAttribute('fill', col);
+      circ.setAttribute('opacity','0');
+      circ.style.filter = `drop-shadow(0 0 5px ${col})`;
+      c.appendChild(circ);
+      let t = -phase;
+      let raf;
+      function animate() {
+        t += 0.007;
+        if (t > 1.15) t = -0.05;
+        const cT = Math.max(0, Math.min(1, t));
+        const pt = path.getPointAtLength(cT * len);
+        circ.setAttribute('cx', pt.x);
+        circ.setAttribute('cy', pt.y);
+        circ.setAttribute('opacity', (t>=0 && t<=1) ? (pi===0?'1':'0.7') : '0');
+        raf = requestAnimationFrame(animate);
+      }
+      raf = requestAnimationFrame(animate);
+      pktAnims.push({raf, el:circ});
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER STEP
+// ══════════════════════════════════════════════════════════
+function renderStep(n) {
+  if (n<1||n>steps.length) return;
+  const st = steps[n-1];
+  cur = n;
+
+  // dots
+  steps.forEach((_,i) => {
+    const d = document.getElementById('pd'+(i+1));
+    if (!d) return;
+    d.className = 'pd' + (i+1<n ? ' done' : i+1===n ? ' now' : '');
+  });
+
+  resetNodes(); resetEdges();
+  activateNodes(st.nodes, st.col);
+  activateEdges(st.edges, st.col);
+  spawnPackets(st.edges, st.col);
+
+  // detail panel
+  const det = document.getElementById('detail');
+  det.style.setProperty('--dc', st.col);
+
+  const numEl = document.getElementById('dnum');
+  numEl.textContent = n;
+  numEl.style.cssText = `border-color:${st.col};color:${st.col};background:${hexAlpha(st.col,0.1)}`;
+
+  const tagEl = document.getElementById('dtag');
+  tagEl.textContent = '// ' + st.tag;
+  tagEl.style.color = st.col;
+
+  document.getElementById('dtitle').textContent = st.title;
+  document.getElementById('dtech').innerHTML = st.tech.map(t=>`<span style="color:${st.col};border-color:${st.col}">${t}</span>`).join('');
+  document.getElementById('ddesc').innerHTML = st.desc;
+  document.getElementById('dcode').innerHTML = st.code;
+
+  document.getElementById('ms').textContent = st.svc;
+  document.getElementById('ml').textContent = st.lat;
+  document.getElementById('mh').textContent = st.hops;
+  document.getElementById('mstep').textContent = `${n}/${steps.length}`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CONTROLS
+// ══════════════════════════════════════════════════════════
+function playPause() {
+  if (playing) {
+    playing = false; clearTimeout(timer);
+    document.getElementById('playBtn').textContent = '▶ PLAY';
+  } else {
+    playing = true;
+    document.getElementById('playBtn').textContent = '⏸ PAUSE';
+    if (cur >= steps.length) cur = 0;
+    autoPlay();
+  }
+}
+
+function autoPlay() {
+  if (!playing) return;
+  const next = cur + 1;
+  if (next > steps.length) {
+    playing = false;
+    document.getElementById('playBtn').textContent = '▶ PLAY';
+    return;
+  }
+  renderStep(next);
+  timer = setTimeout(autoPlay, 2400);
+}
+
+function stepFwd() {
+  if (playing) { playing=false; clearTimeout(timer); document.getElementById('playBtn').textContent='▶ PLAY'; }
+  renderStep(Math.min(cur+1, steps.length));
+}
+
+function jumpTo(n) {
+  if (playing) { playing=false; clearTimeout(timer); document.getElementById('playBtn').textContent='▶ PLAY'; }
+  renderStep(n);
+}
+
+function resetAll() {
+  playing=false; clearTimeout(timer); clearPackets(); cur=0;
+  document.getElementById('playBtn').textContent='▶ PLAY';
+  resetNodes(); resetEdges();
+  steps.forEach((_,i)=>{ const d=document.getElementById('pd'+(i+1)); if(d) d.className='pd'; });
+  document.getElementById('dnum').textContent='—';
+  document.getElementById('dnum').style.cssText='border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.1)';
+  document.getElementById('dtag').textContent='// select a step or press Play';
+  document.getElementById('dtag').style.color='var(--cyan)';
+  document.getElementById('dtitle').textContent='Distributed Microservices Architecture';
+  document.getElementById('dtech').innerHTML='';
+  document.getElementById('ddesc').innerHTML='Press <strong style="color:#06b6d4">▶ Play</strong> to watch a request travel through a production-grade distributed system — hitting CDN edges, load balancers, API gateways, auth, service meshes, and parallel microservices.<br><br>Switch scenarios to compare how <strong>Netflix</strong>, <strong>Uber</strong>, and <strong>Amazon</strong> architect the same patterns.';
+  document.getElementById('dcode').innerHTML='<span class="c">// ready — choose a scenario</span><br><span class="c">// press ▶ Play to begin</span>';
+  document.getElementById('ms').textContent='0';
+  document.getElementById('ml').textContent='0ms';
+  document.getElementById('mh').textContent='0';
+  document.getElementById('mstep').textContent='—';
+}
+
+// ══════════════════════════════════════════════════════════
+// SCENARIO SWITCH
+// ══════════════════════════════════════════════════════════
+function setScenario(name) {
+  scenario = name;
+  ['netflix','uber','amazon'].forEach(n=>{
+    const t = document.getElementById('tab-'+n);
+    t.classList.toggle('active', n===name);
+  });
+  steps = mkSteps(S[name]);
+  makeDots();
+  applySVG(S[name]);
+  resetAll();
+  setTimeout(()=>playPause(),300);
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+init();
+setTimeout(()=>playPause(), 900);
+</script>
+</body>
+</html>

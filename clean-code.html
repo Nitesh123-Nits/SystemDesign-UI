@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean Code — Robert C. Martin</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080810;
+    --surface: #0E0E1A;
+    --border: #1C1C2E;
+    --text: #C8C8D8;
+    --muted: #555570;
+    --accent: #E8572A;
+    --code-bg: #06060F;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: rgba(8,8,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .logo-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .3em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .logo-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .logo-title span { color: var(--accent); transition: color .3s; }
+  .header-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .15em;
+  }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: flex;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ── SIDEBAR ── */
+  nav {
+    width: 260px;
+    min-width: 260px;
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #222 transparent;
+  }
+  .nav-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    padding: 13px 18px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: background .15s, border-color .15s;
+  }
+  .nav-item.active { background: #0C0C18; }
+  .nav-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .15em;
+    font-weight: 700;
+    min-width: 22px;
+    transition: color .2s;
+    color: var(--muted);
+  }
+  .nav-item.active .nav-num { /* set per item via JS */ }
+  .nav-labels {}
+  .nav-name {
+    font-size: 13px;
+    letter-spacing: .05em;
+    color: #666;
+    transition: color .15s;
+    font-weight: 500;
+  }
+  .nav-item.active .nav-name { color: #E8E8F0; }
+  .nav-chapter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #333;
+    letter-spacing: .1em;
+    margin-top: 2px;
+  }
+
+  /* ── MAIN ── */
+  main {
+    flex: 1;
+    padding: 48px 52px;
+    overflow-y: auto;
+    max-width: 900px;
+  }
+
+  .principle-section { display: none; }
+  .principle-section.visible { display: block; }
+
+  .principle-hero { margin-bottom: 36px; }
+  .hero-bg-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 100px;
+    font-weight: 800;
+    color: #0E0E1A;
+    line-height: 1;
+    user-select: none;
+    margin-bottom: -18px;
+  }
+  .hero-title {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #E8E8F0;
+    text-transform: uppercase;
+  }
+  .hero-tagline {
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 10px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn.active { color: #E8E8F0; }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── DEFINITION ── */
+  .definition-text {
+    font-size: 15px;
+    line-height: 1.85;
+    color: #8888A0;
+    max-width: 660px;
+    margin-bottom: 36px;
+  }
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+  .rule-card {
+    background: #0B0B16;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color .2s;
+  }
+  .rule-bullet {
+    font-size: 10px;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+  .rule-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: #666;
+    letter-spacing: .03em;
+    line-height: 1.55;
+  }
+
+  /* ── CODE PANES ── */
+  .code-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.red { background: #E8572A; }
+  .dot.green { background: #2AE87B; }
+  .code-label-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .2em;
+    text-transform: uppercase;
+  }
+  pre.code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #777790;
+    overflow-x: auto;
+    white-space: pre;
+    tab-size: 2;
+  }
+  pre.code-block.bad  { border-left: 3px solid #E8572A; }
+  pre.code-block.good { border-left: 3px solid #2AE87B; }
+
+  /* token colors */
+  .c  { color: #3D3D5C; } /* comment */
+  .k  { color: #8855AA; } /* keyword */
+  .f  { color: #5599DD; } /* function */
+  .s  { color: #55AA77; } /* string */
+  .p  { color: #9988BB; } /* punctuation */
+  .n  { color: #AAAACC; } /* name/var */
+  .op { color: #DD8855; } /* operator */
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-arrow {
+    background: transparent;
+    border: 1px solid #1E1E30;
+    color: #555;
+    padding: 10px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .15em;
+    cursor: pointer;
+    transition: all .2s;
+    border-radius: 3px;
+  }
+  .nav-arrow.next { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .nav-arrow:disabled { opacity: .2; cursor: default; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1E1E30; border-radius: 3px; }
+
+  /* animated underline on active nav */
+  @keyframes slideIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  /* responsive */
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 28px 20px; }
+    header { padding: 0 20px; }
+    .hero-title { font-size: 28px; }
+    .hero-bg-num { font-size: 64px; }
+  }
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+
+<header>
+  <div class="logo">
+    <span class="logo-eyebrow">Robert C. Martin</span>
+    <span style="color:#333">·</span>
+    <h1 class="logo-title">Clean <span id="accent-word">Code</span></h1>
+  </div>
+  <span class="header-counter" id="counter">1 / 8</span>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- MAIN -->
+  <main id="main"></main>
+
+</div>
+
+<script>
+const principles = [
+  {
+    id: "names",
+    num: "01",
+    title: "Meaningful Names",
+    chapter: "Chapter 2",
+    tagline: "Names should reveal intent",
+    color: "#E8572A",
+    definition: "Names should tell you why something exists, what it does, and how it is used. If a name requires a comment, the name does not reveal its intent. Choose names that make the code read like well-written prose — clear, unambiguous, and self-documenting.",
+    rules: [
+      "Use intention-revealing names",
+      "Avoid disinformation",
+      "Make meaningful distinctions",
+      "Use pronounceable names",
+      "Use searchable names",
+      "Avoid encodings & prefixes",
+      "Avoid mental mapping",
+      "Class names should be nouns",
+    ],
+    bad: `<span class="c">// ❌ BAD — names that hide intent</span>
+
+<span class="k">int</span> <span class="n">d</span>; <span class="c">// elapsed time in days</span>
+<span class="k">boolean</span> <span class="n">flag</span>;
+<span class="k">String</span> <span class="n">s1</span>, <span class="n">s2</span>;
+
+<span class="k">void</span> <span class="f">getThem</span>() {
+  <span class="k">List</span>&lt;<span class="k">int</span>[]&gt; <span class="n">list1</span> <span class="op">=</span> <span class="k">new</span> <span class="f">ArrayList</span>&lt;&gt;();
+  <span class="k">for</span> (<span class="k">int</span>[] <span class="n">x</span> : <span class="n">theList</span>)
+    <span class="k">if</span> (<span class="n">x</span>[<span class="s">0</span>] <span class="op">==</span> <span class="s">4</span>) <span class="n">list1</span>.<span class="f">add</span>(<span class="n">x</span>);
+  <span class="k">return</span> <span class="n">list1</span>;
+}
+
+<span class="k">class</span> <span class="n">DtaRcrd102</span> {}
+<span class="k">int</span> <span class="f">a</span>(<span class="k">int</span> <span class="n">b</span>, <span class="k">int</span> <span class="n">c</span>) { <span class="k">return</span> <span class="n">b</span> <span class="op">*</span> <span class="n">c</span>; }`,
+    good: `<span class="c">// ✅ GOOD — names that reveal intent</span>
+
+<span class="k">int</span> <span class="n">elapsedTimeInDays</span>;
+<span class="k">boolean</span> <span class="n">isUserLoggedIn</span>;
+<span class="k">String</span> <span class="n">firstName</span>, <span class="n">lastName</span>;
+
+<span class="k">void</span> <span class="f">getFlaggedCells</span>() {
+  <span class="k">List</span>&lt;<span class="k">Cell</span>&gt; <span class="n">flaggedCells</span> <span class="op">=</span> <span class="k">new</span> <span class="f">ArrayList</span>&lt;&gt;();
+  <span class="k">for</span> (<span class="k">Cell</span> <span class="n">cell</span> : <span class="n">gameBoard</span>)
+    <span class="k">if</span> (<span class="n">cell</span>.<span class="f">isFlagged</span>()) <span class="n">flaggedCells</span>.<span class="f">add</span>(<span class="n">cell</span>);
+  <span class="k">return</span> <span class="n">flaggedCells</span>;
+}
+
+<span class="k">class</span> <span class="n">CustomerRecord</span> {}
+<span class="k">int</span> <span class="f">calculateArea</span>(<span class="k">int</span> <span class="n">width</span>, <span class="k">int</span> <span class="n">height</span>) { <span class="k">return</span> <span class="n">width</span> <span class="op">*</span> <span class="n">height</span>; }`,
+  },
+  {
+    id: "functions",
+    num: "02",
+    title: "Functions",
+    chapter: "Chapter 3",
+    tagline: "Do one thing. Do it well.",
+    color: "#2A7BE8",
+    definition: "Functions should be small — rarely over 20 lines. They should do ONE thing, and do it well. If a function does more than one thing, extract those parts into separate functions. The name of a function should describe what it does completely and without surprise.",
+    rules: [
+      "Functions should be small",
+      "Do one thing only",
+      "One level of abstraction per function",
+      "Avoid switch statements",
+      "Use descriptive names",
+      "Prefer fewer arguments (0–2)",
+      "Have no side effects",
+      "Command-Query Separation",
+    ],
+    bad: `<span class="c">// ❌ BAD — function does too many things</span>
+
+<span class="k">function</span> <span class="f">processUserData</span>(<span class="n">user</span>) {
+  <span class="c">// validate</span>
+  <span class="k">if</span> (<span class="op">!</span><span class="n">user</span>.<span class="n">email</span> <span class="op">||</span> <span class="op">!</span><span class="n">user</span>.<span class="n">name</span>) <span class="k">return</span>;
+  <span class="c">// format</span>
+  <span class="n">user</span>.<span class="n">email</span> <span class="op">=</span> <span class="n">user</span>.<span class="n">email</span>.<span class="f">toLowerCase</span>();
+  <span class="n">user</span>.<span class="n">name</span>  <span class="op">=</span> <span class="n">user</span>.<span class="n">name</span>.<span class="f">trim</span>();
+  <span class="c">// save to db</span>
+  <span class="n">db</span>.<span class="f">save</span>(<span class="n">user</span>);
+  <span class="c">// send welcome email</span>
+  <span class="n">mailer</span>.<span class="f">send</span>(<span class="n">user</span>.<span class="n">email</span>, <span class="s">"Welcome!"</span>);
+  <span class="c">// write log</span>
+  <span class="n">logger</span>.<span class="f">info</span>(<span class="s">"User saved: "</span> <span class="op">+</span> <span class="n">user</span>.<span class="n">id</span>);
+}`,
+    good: `<span class="c">// ✅ GOOD — each function does one thing</span>
+
+<span class="k">function</span> <span class="f">processUserData</span>(<span class="n">user</span>) {
+  <span class="f">validateUser</span>(<span class="n">user</span>);
+  <span class="k">const</span> <span class="n">formatted</span> <span class="op">=</span> <span class="f">formatUser</span>(<span class="n">user</span>);
+  <span class="f">saveUser</span>(<span class="n">formatted</span>);
+  <span class="f">sendWelcomeEmail</span>(<span class="n">formatted</span>.<span class="n">email</span>);
+  <span class="f">logUserCreated</span>(<span class="n">formatted</span>.<span class="n">id</span>);
+}
+
+<span class="k">function</span> <span class="f">validateUser</span>(<span class="n">user</span>) {
+  <span class="k">if</span> (<span class="op">!</span><span class="n">user</span>.<span class="n">email</span>) <span class="k">throw new</span> <span class="n">ValidationError</span>(<span class="s">"Email required"</span>);
+  <span class="k">if</span> (<span class="op">!</span><span class="n">user</span>.<span class="n">name</span>)  <span class="k">throw new</span> <span class="n">ValidationError</span>(<span class="s">"Name required"</span>);
+}
+
+<span class="k">function</span> <span class="f">formatUser</span>(<span class="n">user</span>) {
+  <span class="k">return</span> { ...<span class="n">user</span>, <span class="n">email</span>: <span class="n">user</span>.<span class="n">email</span>.<span class="f">toLowerCase</span>(), <span class="n">name</span>: <span class="n">user</span>.<span class="n">name</span>.<span class="f">trim</span>() };
+}`,
+  },
+  {
+    id: "comments",
+    num: "03",
+    title: "Comments",
+    chapter: "Chapter 4",
+    tagline: "Code should speak for itself",
+    color: "#2AE87B",
+    definition: "Every time you write a comment, ask if you could express the same intent in the code. Comments compensate for our failure to express ourselves in code — and they lie. Code changes; comments often don't. The best comment is the code that doesn't need one.",
+    rules: [
+      "Don't comment bad code — rewrite it",
+      "Legal comments are acceptable",
+      "Informative comments can be useful",
+      "Explain intent when non-obvious",
+      "Warn of consequences",
+      "TODO comments when necessary",
+      "Avoid redundant / noisy comments",
+      "Never leave commented-out code",
+    ],
+    bad: `<span class="c">// ❌ BAD — comments that add noise</span>
+
+<span class="c">// Check to see if the employee is eligible</span>
+<span class="c">// for full benefits</span>
+<span class="k">if</span> ((<span class="n">employee</span>.<span class="n">flags</span> <span class="op">&</span> <span class="n">HOURLY_FLAG</span>) <span class="op">&&</span> (<span class="n">employee</span>.<span class="n">age</span> <span class="op">></span> <span class="s">65</span>)) {}
+
+<span class="k">int</span> <span class="n">d</span>; <span class="c">// elapsed time in days</span>
+
+<span class="c">// Returns the day of the month.</span>
+<span class="c">// @param month — The month of the year.</span>
+<span class="c">// @return The day of the month.</span>
+<span class="k">int</span> <span class="f">getDayOfMonth</span>(<span class="k">int</span> <span class="n">month</span>) { ... }
+
+<span class="c">// i = i + 1 — increment i</span>
+<span class="n">i</span> <span class="op">=</span> <span class="n">i</span> <span class="op">+</span> <span class="s">1</span>;`,
+    good: `<span class="c">// ✅ GOOD — code that doesn't need comments</span>
+
+<span class="k">if</span> (<span class="n">employee</span>.<span class="f">isEligibleForFullBenefits</span>()) {}
+
+<span class="k">int</span> <span class="n">elapsedTimeInDays</span>;
+
+<span class="k">int</span> <span class="f">getDayOfMonth</span>(<span class="k">int</span> <span class="n">month</span>) { ... }
+
+<span class="c">// FIXME: known race condition — needs mutex</span>
+<span class="c">// before this ships to production.</span>
+<span class="k">void</span> <span class="f">syncUserSessions</span>() { ... }
+
+<span class="c">// Business rule: customers ≥65 get senior discount</span>
+<span class="k">if</span> (<span class="n">customer</span>.<span class="n">age</span> <span class="op">>=</span> <span class="n">SENIOR_DISCOUNT_THRESHOLD</span>) { ... }`,
+  },
+  {
+    id: "formatting",
+    num: "04",
+    title: "Formatting",
+    chapter: "Chapter 5",
+    tagline: "Code is communication",
+    color: "#E8D42A",
+    definition: "Code formatting is about communication. The style you choose today survives well past your immediate task. The code you write today will be read by many developers tomorrow. Agree on team rules, use a formatter, and follow them religiously.",
+    rules: [
+      "Vertical openness between concepts",
+      "Vertical density for related code",
+      "Dependent functions should be close",
+      "Similar concepts stay together",
+      "Keep lines short (80–120 chars)",
+      "Use horizontal whitespace intentionally",
+      "Team rules override personal preference",
+      "Use automated formatters (Prettier, etc.)",
+    ],
+    bad: `<span class="c">// ❌ BAD — cramped, unreadable</span>
+
+<span class="k">function</span> <span class="f">buildHtml</span>(<span class="n">tag</span>,<span class="n">text</span>,<span class="n">attrs</span>){<span class="k">const</span> <span class="n">a</span><span class="op">=</span><span class="n">Object</span>.<span class="f">entries</span>(<span class="n">attrs</span>).<span class="f">map</span>(([<span class="n">k</span>,<span class="n">v</span>])<span class="op">=></span><span class="s">\`\${k}="\${v}"\`</span>).<span class="f">join</span>(<span class="s">' '</span>);<span class="k">return</span> <span class="s">\`&lt;\${tag} \${a}&gt;\${text}&lt;/\${tag}&gt;\`</span>;}
+<span class="k">class</span> <span class="n">UserService</span>{<span class="f">constructor</span>(<span class="n">db</span>,<span class="n">mailer</span>){<span class="k">this</span>.<span class="n">db</span><span class="op">=</span><span class="n">db</span>;<span class="k">this</span>.<span class="n">mailer</span><span class="op">=</span><span class="n">mailer</span>;}
+<span class="f">save</span>(<span class="n">u</span>){<span class="k">this</span>.<span class="n">db</span>.<span class="f">save</span>(<span class="n">u</span>);<span class="k">this</span>.<span class="n">mailer</span>.<span class="f">send</span>(<span class="n">u</span>.<span class="n">email</span>);}
+<span class="f">delete</span>(<span class="n">id</span>){<span class="k">this</span>.<span class="n">db</span>.<span class="f">delete</span>(<span class="n">id</span>);}}`,
+    good: `<span class="c">// ✅ GOOD — breathable, intentional</span>
+
+<span class="k">function</span> <span class="f">buildHtml</span>(<span class="n">tag</span>, <span class="n">text</span>, <span class="n">attrs</span>) {
+  <span class="k">const</span> <span class="n">attrString</span> <span class="op">=</span> <span class="n">Object</span>.<span class="f">entries</span>(<span class="n">attrs</span>)
+    .<span class="f">map</span>(([<span class="n">key</span>, <span class="n">val</span>]) <span class="op">=></span> <span class="s">\`\${key}="\${val}"\`</span>)
+    .<span class="f">join</span>(<span class="s">' '</span>);
+
+  <span class="k">return</span> <span class="s">\`&lt;\${tag} \${attrString}&gt;\${text}&lt;/\${tag}&gt;\`</span>;
+}
+
+<span class="k">class</span> <span class="n">UserService</span> {
+  <span class="f">constructor</span>(<span class="n">db</span>, <span class="n">mailer</span>) {
+    <span class="k">this</span>.<span class="n">db</span>     <span class="op">=</span> <span class="n">db</span>;
+    <span class="k">this</span>.<span class="n">mailer</span> <span class="op">=</span> <span class="n">mailer</span>;
+  }
+
+  <span class="f">save</span>(<span class="n">user</span>)    { <span class="k">this</span>.<span class="n">db</span>.<span class="f">save</span>(<span class="n">user</span>); <span class="k">this</span>.<span class="n">mailer</span>.<span class="f">send</span>(<span class="n">user</span>.<span class="n">email</span>); }
+  <span class="f">delete</span>(<span class="n">id</span>)   { <span class="k">this</span>.<span class="n">db</span>.<span class="f">delete</span>(<span class="n">id</span>); }
+}`,
+  },
+  {
+    id: "errors",
+    num: "05",
+    title: "Error Handling",
+    chapter: "Chapter 7",
+    tagline: "Don't obscure logic with errors",
+    color: "#E82A7B",
+    definition: "Error handling is important, but if it obscures logic, it's wrong. Use exceptions rather than return codes. Write your try-catch-finally statement first. Don't return null — it creates null-pointer landmines. Don't pass null to methods either.",
+    rules: [
+      "Use exceptions, not return codes",
+      "Write try-catch-finally first",
+      "Provide context with exceptions",
+      "Define exceptions by caller needs",
+      "Don't return null",
+      "Don't pass null",
+      "Use Optional / Result types",
+      "Fail fast and loudly",
+    ],
+    bad: `<span class="c">// ❌ BAD — null returns & error codes</span>
+
+<span class="k">function</span> <span class="f">getUser</span>(<span class="n">id</span>) {
+  <span class="k">const</span> <span class="n">user</span> <span class="op">=</span> <span class="n">db</span>.<span class="f">find</span>(<span class="n">id</span>);
+  <span class="k">if</span> (<span class="n">user</span> <span class="op">==</span> <span class="k">null</span>) <span class="k">return</span> <span class="k">null</span>; <span class="c">// caller must null-check!</span>
+  <span class="k">return</span> <span class="n">user</span>;
+}
+
+<span class="c">// Error codes buried in logic</span>
+<span class="k">const</span> <span class="n">result</span> <span class="op">=</span> <span class="f">processPayment</span>(<span class="n">order</span>);
+<span class="k">if</span>      (<span class="n">result</span> <span class="op">===</span> <span class="op">-</span><span class="s">1</span>) { <span class="c">/* insufficient funds */</span> }
+<span class="k">else if</span> (<span class="n">result</span> <span class="op">===</span> <span class="op">-</span><span class="s">2</span>) { <span class="c">/* card expired */</span>     }
+<span class="k">else if</span> (<span class="n">result</span> <span class="op">===</span> <span class="op">-</span><span class="s">3</span>) { <span class="c">/* network error */</span>    }
+<span class="k">else</span>                  { <span class="c">/* success? maybe? */</span>  }`,
+    good: `<span class="c">// ✅ GOOD — meaningful exceptions, no nulls</span>
+
+<span class="k">function</span> <span class="f">getUser</span>(<span class="n">id</span>) {
+  <span class="k">const</span> <span class="n">user</span> <span class="op">=</span> <span class="n">db</span>.<span class="f">find</span>(<span class="n">id</span>);
+  <span class="k">if</span> (<span class="op">!</span><span class="n">user</span>) <span class="k">throw new</span> <span class="n">UserNotFoundException</span>(
+    <span class="s">\`No user found with id: \${id}\`</span>
+  );
+  <span class="k">return</span> <span class="n">user</span>;
+}
+
+<span class="c">// Typed exceptions = clear intent</span>
+<span class="k">try</span> {
+  <span class="k">await</span> <span class="f">processPayment</span>(<span class="n">order</span>);
+} <span class="k">catch</span> (<span class="n">e</span>) {
+  <span class="k">if</span> (<span class="n">e</span> <span class="k">instanceof</span> <span class="n">InsufficientFundsError</span>) <span class="f">notifyUser</span>(<span class="n">e</span>.<span class="n">message</span>);
+  <span class="k">else if</span> (<span class="n">e</span> <span class="k">instanceof</span> <span class="n">CardExpiredError</span>)  <span class="f">promptCardUpdate</span>();
+  <span class="k">else</span> <span class="k">throw</span> <span class="n">e</span>; <span class="c">// re-throw unexpected errors</span>
+}`,
+  },
+  {
+    id: "classes",
+    num: "06",
+    title: "Classes",
+    chapter: "Chapter 10",
+    tagline: "Small. Cohesive. One reason to change.",
+    color: "#A82AE8",
+    definition: "Classes should be small. The Single Responsibility Principle states that a class should have one, and only one, reason to change. High cohesion means your methods and variables are co-dependent and hang together as a logical whole. Avoid God classes.",
+    rules: [
+      "Single Responsibility Principle (SRP)",
+      "Classes should be small",
+      "High cohesion",
+      "Maintain encapsulation",
+      "Open/Closed Principle (OCP)",
+      "Dependency Inversion Principle (DIP)",
+      "Prefer composition over inheritance",
+      "Avoid God objects",
+    ],
+    bad: `<span class="c">// ❌ BAD — God class with too many jobs</span>
+
+<span class="k">class</span> <span class="n">User</span> {
+  <span class="c">// User data concerns</span>
+  <span class="f">getName</span>()  {}
+  <span class="f">setEmail</span>() {}
+
+  <span class="c">// Database concerns</span>
+  <span class="f">save</span>()       {}
+  <span class="f">delete</span>()     {}
+  <span class="f">findById</span>()   {}
+
+  <span class="c">// Email concerns</span>
+  <span class="f">sendWelcomeEmail</span>()   {}
+  <span class="f">sendPasswordReset</span>()  {}
+
+  <span class="c">// Auth concerns</span>
+  <span class="f">login</span>()        {}
+  <span class="f">logout</span>()       {}
+  <span class="f">hashPassword</span>() {}
+}`,
+    good: `<span class="c">// ✅ GOOD — each class has one responsibility</span>
+
+<span class="k">class</span> <span class="n">User</span> {
+  <span class="f">constructor</span>(<span class="n">name</span>, <span class="n">email</span>) { ... }
+  <span class="f">getFullProfile</span>() { ... }
+}
+
+<span class="k">class</span> <span class="n">UserRepository</span> {
+  <span class="f">save</span>(<span class="n">user</span>)    { ... }
+  <span class="f">findById</span>(<span class="n">id</span>) { ... }
+  <span class="f">delete</span>(<span class="n">id</span>)   { ... }
+}
+
+<span class="k">class</span> <span class="n">UserMailer</span> {
+  <span class="f">sendWelcome</span>(<span class="n">user</span>)        { ... }
+  <span class="f">sendPasswordReset</span>(<span class="n">user</span>)  { ... }
+}
+
+<span class="k">class</span> <span class="n">AuthService</span> {
+  <span class="f">login</span>(<span class="n">credentials</span>)  { ... }
+  <span class="f">logout</span>(<span class="n">session</span>)     { ... }
+}`,
+  },
+  {
+    id: "dry",
+    num: "07",
+    title: "DRY Principle",
+    chapter: "Chapters 3 & 17",
+    tagline: "Don't Repeat Yourself",
+    color: "#2AE8D4",
+    definition: "Duplication is the primary enemy of a well-designed system. Every piece of knowledge must have a single, unambiguous, authoritative representation. When you find duplication in your code, extract and name the concept — don't copy-paste it.",
+    rules: [
+      "Extract repeated code into functions",
+      "Centralise business logic",
+      "Avoid copy-paste programming",
+      "Abstract shared behaviour",
+      "Use data-driven approaches",
+      "Watch for subtle duplication",
+      "Name the abstraction well",
+      "DRY applies to data, docs & tests too",
+    ],
+    bad: `<span class="c">// ❌ BAD — duplicated validation logic</span>
+
+<span class="k">function</span> <span class="f">createUser</span>(<span class="n">name</span>, <span class="n">email</span>, <span class="n">age</span>) {
+  <span class="k">if</span> (<span class="op">!</span><span class="n">name</span>  <span class="op">||</span> <span class="n">name</span>.<span class="n">length</span> <span class="op">&lt;</span> <span class="s">2</span>) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid name"</span>);
+  <span class="k">if</span> (<span class="op">!</span><span class="n">email</span> <span class="op">||</span> <span class="op">!</span><span class="n">email</span>.<span class="f">includes</span>(<span class="s">"@"</span>)) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid email"</span>);
+  <span class="k">if</span> (<span class="n">age</span> <span class="op">&lt;</span> <span class="s">0</span> <span class="op">||</span> <span class="n">age</span> <span class="op">></span> <span class="s">150</span>)        <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid age"</span>);
+  <span class="c">// create...</span>
+}
+
+<span class="k">function</span> <span class="f">updateUser</span>(<span class="n">name</span>, <span class="n">email</span>, <span class="n">age</span>) {
+  <span class="k">if</span> (<span class="op">!</span><span class="n">name</span>  <span class="op">||</span> <span class="n">name</span>.<span class="n">length</span> <span class="op">&lt;</span> <span class="s">2</span>) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid name"</span>);  <span class="c">// duplicate!</span>
+  <span class="k">if</span> (<span class="op">!</span><span class="n">email</span> <span class="op">||</span> <span class="op">!</span><span class="n">email</span>.<span class="f">includes</span>(<span class="s">"@"</span>)) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid email"</span>); <span class="c">// duplicate!</span>
+  <span class="c">// update...</span>
+}`,
+    good: `<span class="c">// ✅ GOOD — single source of truth</span>
+
+<span class="k">const</span> <span class="n">validators</span> <span class="op">=</span> {
+  <span class="f">name</span>:  (<span class="n">v</span>) <span class="op">=></span> <span class="n">v</span> <span class="op">&&</span> <span class="n">v</span>.<span class="n">length</span> <span class="op">>=</span> <span class="s">2</span>,
+  <span class="f">email</span>: (<span class="n">v</span>) <span class="op">=></span> <span class="n">v</span> <span class="op">&&</span> <span class="n">v</span>.<span class="f">includes</span>(<span class="s">"@"</span>),
+  <span class="f">age</span>:   (<span class="n">v</span>) <span class="op">=></span> <span class="n">v</span> <span class="op">>=</span> <span class="s">0</span> <span class="op">&&</span> <span class="n">v</span> <span class="op">&lt;=</span> <span class="s">150</span>,
+};
+
+<span class="k">function</span> <span class="f">validateUserFields</span>(<span class="n">fields</span>) {
+  <span class="k">for</span> (<span class="k">const</span> [<span class="n">field</span>, <span class="n">validate</span>] <span class="k">of</span> <span class="n">Object</span>.<span class="f">entries</span>(<span class="n">validators</span>)) {
+    <span class="k">if</span> (<span class="op">!</span><span class="f">validate</span>(<span class="n">fields</span>[<span class="n">field</span>]))
+      <span class="k">throw new</span> <span class="n">ValidationError</span>(<span class="s">\`Invalid \${field}\`</span>);
+  }
+}
+
+<span class="k">function</span> <span class="f">createUser</span>(<span class="n">data</span>) { <span class="f">validateUserFields</span>(<span class="n">data</span>); <span class="c">/* create */</span> }
+<span class="k">function</span> <span class="f">updateUser</span>(<span class="n">data</span>) { <span class="f">validateUserFields</span>(<span class="n">data</span>); <span class="c">/* update */</span> }`,
+  },
+  {
+    id: "solid",
+    num: "08",
+    title: "SOLID Principles",
+    chapter: "Chapters 8–12",
+    tagline: "The five pillars of OOP design",
+    color: "#E87B2A",
+    definition: "SOLID is an acronym for five design principles: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, and Dependency Inversion. Together they guide you toward flexible, maintainable, and testable systems.",
+    rules: [
+      "S — Single Responsibility Principle",
+      "O — Open/Closed Principle",
+      "L — Liskov Substitution Principle",
+      "I — Interface Segregation Principle",
+      "D — Dependency Inversion Principle",
+    ],
+    bad: `<span class="c">// ❌ BAD — violates OCP & DIP</span>
+
+<span class="k">class</span> <span class="n">PaymentProcessor</span> {
+  <span class="f">process</span>(<span class="n">payment</span>, <span class="n">type</span>) {
+    <span class="k">if</span> (<span class="n">type</span> <span class="op">===</span> <span class="s">"credit"</span>) {
+      <span class="f">chargeCard</span>(<span class="n">payment</span>);          <span class="c">// must edit this class</span>
+    } <span class="k">else if</span> (<span class="n">type</span> <span class="op">===</span> <span class="s">"paypal"</span>) {
+      <span class="f">sendToPaypal</span>(<span class="n">payment</span>);        <span class="c">// every time a new method</span>
+    } <span class="k">else if</span> (<span class="n">type</span> <span class="op">===</span> <span class="s">"crypto"</span>) {
+      <span class="f">broadcastTransaction</span>(<span class="n">payment</span>); <span class="c">// is added ← bad</span>
+    }
+  }
+}`,
+    good: `<span class="c">// ✅ GOOD — OCP & DIP via abstractions</span>
+
+<span class="k">interface</span> <span class="n">PaymentMethod</span> {
+  <span class="f">process</span>(<span class="n">payment</span>: <span class="n">Payment</span>): <span class="k">void</span>;
+}
+
+<span class="k">class</span> <span class="n">CreditCardPayment</span> <span class="k">implements</span> <span class="n">PaymentMethod</span> {
+  <span class="f">process</span>(<span class="n">p</span>) { <span class="f">chargeCard</span>(<span class="n">p</span>); }
+}
+<span class="k">class</span> <span class="n">PayPalPayment</span> <span class="k">implements</span> <span class="n">PaymentMethod</span> {
+  <span class="f">process</span>(<span class="n">p</span>) { <span class="f">sendToPaypal</span>(<span class="n">p</span>); }
+}
+<span class="c">// Adding new method = new class only, no edits ✓</span>
+<span class="k">class</span> <span class="n">CryptoPayment</span> <span class="k">implements</span> <span class="n">PaymentMethod</span> {
+  <span class="f">process</span>(<span class="n">p</span>) { <span class="f">broadcast</span>(<span class="n">p</span>); }
+}
+
+<span class="k">class</span> <span class="n">PaymentProcessor</span> {
+  <span class="f">constructor</span>(<span class="k">private</span> <span class="n">method</span>: <span class="n">PaymentMethod</span>) {}
+  <span class="f">process</span>(<span class="n">payment</span>) { <span class="k">this</span>.<span class="n">method</span>.<span class="f">process</span>(<span class="n">payment</span>); }
+}`,
+  },
+];
+
+let currentId = principles[0].id;
+
+// ── Build sidebar ──
+const sidebar = document.getElementById('sidebar');
+principles.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'nav-item';
+  btn.dataset.id = p.id;
+  btn.innerHTML = `
+    <span class="nav-num">${p.num}</span>
+    <div class="nav-labels">
+      <div class="nav-name">${p.title}</div>
+      <div class="nav-chapter">${p.chapter}</div>
+    </div>`;
+  btn.addEventListener('click', () => activate(p.id));
+  sidebar.appendChild(btn);
+});
+
+// ── Build main panels ──
+const mainEl = document.getElementById('main');
+principles.forEach(p => {
+  const sec = document.createElement('section');
+  sec.className = 'principle-section';
+  sec.id = `sec-${p.id}`;
+  sec.innerHTML = `
+    <div class="principle-hero">
+      <div class="hero-bg-num">${p.num}</div>
+      <h2 class="hero-title">${p.title}</h2>
+      <p class="hero-tagline" style="color:${p.color}">${p.tagline}</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="def">Definition</button>
+      <button class="tab-btn" data-tab="bad">Bad Code</button>
+      <button class="tab-btn" data-tab="good">Clean Code</button>
+    </div>
+
+    <div class="tab-pane active" id="def-${p.id}">
+      <p class="definition-text">${p.definition}</p>
+      <div class="rules-grid">
+        ${p.rules.map(r => `
+          <div class="rule-card">
+            <span class="rule-bullet" style="color:${p.color}">▸</span>
+            <span class="rule-text">${r}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="tab-pane" id="bad-${p.id}">
+      <div class="code-label">
+        <div class="dot red"></div>
+        <span class="code-label-text">Anti-pattern — do not use</span>
+      </div>
+      <pre class="code-block bad">${p.bad}</pre>
+    </div>
+
+    <div class="tab-pane" id="good-${p.id}">
+      <div class="code-label">
+        <div class="dot green"></div>
+        <span class="code-label-text">Clean — follow this pattern</span>
+      </div>
+      <pre class="code-block good">${p.good}</pre>
+    </div>
+
+    <div class="bottom-nav">
+      <button class="nav-arrow prev" onclick="movePrev('${p.id}')">← Prev</button>
+      <button class="nav-arrow next" onclick="moveNext('${p.id}')">Next →</button>
+    </div>`;
+
+  // Tab logic
+  sec.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabKey = btn.dataset.tab;
+      sec.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      sec.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      btn.classList.add('active');
+      sec.querySelector(`#${tabKey}-${p.id}`).classList.add('active');
+
+      // Tab button underline color
+      sec.querySelectorAll('.tab-btn').forEach(b => b.style.borderBottomColor = 'transparent');
+      btn.style.borderBottomColor = p.color;
+    });
+  });
+
+  // Set initial active tab border
+  sec.querySelector('.tab-btn.active').style.borderBottomColor = p.color;
+
+  mainEl.appendChild(sec);
+});
+
+function activate(id) {
+  currentId = id;
+  const p = principles.find(x => x.id === id);
+  const idx = principles.findIndex(x => x.id === id);
+
+  // Section visibility
+  document.querySelectorAll('.principle-section').forEach(s => s.classList.remove('visible'));
+  document.getElementById(`sec-${id}`).classList.add('visible');
+
+  // Sidebar active state
+  document.querySelectorAll('.nav-item').forEach(b => {
+    b.classList.remove('active');
+    b.style.borderLeftColor = 'transparent';
+    b.querySelector('.nav-num').style.color = '#555570';
+  });
+  const activeBtn = document.querySelector(`.nav-item[data-id="${id}"]`);
+  activeBtn.classList.add('active');
+  activeBtn.style.borderLeftColor = p.color;
+  activeBtn.querySelector('.nav-num').style.color = p.color;
+
+  // Update header
+  document.getElementById('accent-word').style.color = p.color;
+  document.getElementById('counter').textContent = `${idx + 1} / ${principles.length}`;
+
+  // Prev / Next button states
+  const sec = document.getElementById(`sec-${id}`);
+  const prevBtn = sec.querySelector('.nav-arrow.prev');
+  const nextBtn = sec.querySelector('.nav-arrow.next');
+  prevBtn.disabled = idx === 0;
+  nextBtn.disabled = idx === principles.length - 1;
+  if (idx < principles.length - 1) {
+    nextBtn.style.color = principles[idx + 1].color;
+    nextBtn.style.borderColor = principles[idx + 1].color + '55';
+  }
+
+  mainEl.scrollTop = 0;
+}
+
+function movePrev(id) {
+  const idx = principles.findIndex(x => x.id === id);
+  if (idx > 0) activate(principles[idx - 1].id);
+}
+function moveNext(id) {
+  const idx = principles.findIndex(x => x.id === id);
+  if (idx < principles.length - 1) activate(principles[idx + 1].id);
+}
+
+// Init
+activate(principles[0].id);
+</script>
+</body>
+</html>

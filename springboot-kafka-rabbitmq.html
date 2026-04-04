@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Boot — Kafka & RabbitMQ Code Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --kafka: #00e5a0;
+  --kafka-glow: rgba(0,229,160,0.15);
+  --kafka-border: rgba(0,229,160,0.28);
+  --rabbit: #ff6b35;
+  --rabbit-glow: rgba(255,107,53,0.15);
+  --rabbit-border: rgba(255,107,53,0.28);
+  --spring: #6db33f;
+  --spring-glow: rgba(109,179,63,0.12);
+  --bg: #080c14;
+  --s1: #0d1524;
+  --s2: #111d30;
+  --s3: #16243a;
+  --border: rgba(255,255,255,0.07);
+  --text: #dde6f5;
+  --muted: #4e6080;
+  --muted2: #7a90b0;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(0,229,160,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 85% 100%, rgba(255,107,53,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 300;
+  display: flex; align-items: center; gap: 0;
+  padding: 0 48px;
+  height: 56px;
+  background: rgba(8,12,20,0.94);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-brand {
+  font-family: var(--mono); font-size: 12px; color: var(--muted2);
+  margin-right: 36px; white-space: nowrap; letter-spacing: 1px;
+}
+.nav-brand b { color: var(--spring); }
+.nav-pills { display: flex; gap: 2px; flex: 1; }
+.npill {
+  padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  cursor: pointer; border: none; background: transparent; color: var(--muted2);
+  transition: all .18s; font-family: var(--sans); white-space: nowrap;
+}
+.npill.ak { color: var(--kafka); background: var(--kafka-glow); }
+.npill.ar { color: var(--rabbit); background: var(--rabbit-glow); }
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 1;
+  padding: 72px 48px 52px; text-align: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2.5px; color: var(--muted2);
+  border: 1px solid var(--border); border-radius: 100px; padding: 6px 18px;
+  margin-bottom: 28px;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot.g { background: var(--spring); box-shadow: 0 0 8px var(--spring); animation: blink 2.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+.hero h1 {
+  font-size: clamp(36px, 5.5vw, 68px); font-weight: 900;
+  letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 16px;
+}
+.hero h1 .sp { color: var(--spring); }
+.hero h1 .k  { color: var(--kafka); }
+.hero h1 .r  { color: var(--rabbit); }
+.hero p { color: var(--muted2); font-size: 15px; max-width: 500px; margin: 0 auto; font-weight: 300; }
+
+/* ── LAYOUT ── */
+.wrap { max-width: 1360px; margin: 0 auto; padding: 0 48px 80px; position: relative; z-index: 1; }
+.sec-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--muted);
+  margin-bottom: 32px; display: flex; align-items: center; gap: 14px; text-transform: uppercase;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.badge-inline {
+  padding: 2px 9px; border-radius: 4px; font-size: 9px; font-weight: 700;
+  font-family: var(--mono); letter-spacing: .5px;
+}
+.bi-k { background: var(--kafka-glow); color: var(--kafka); border: 1px solid var(--kafka-border); }
+.bi-r { background: var(--rabbit-glow); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+.bi-s { background: var(--spring-glow); color: var(--spring); border: 1px solid rgba(109,179,63,.3); }
+
+/* ── TAB BAR ── */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+.tab-btn {
+  padding: 8px 18px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--s1);
+  color: var(--muted2); transition: all .18s; font-family: var(--sans);
+}
+.tab-btn.tk { background: var(--kafka-glow); border-color: var(--kafka-border); color: var(--kafka); }
+.tab-btn.tr { background: var(--rabbit-glow); border-color: var(--rabbit-border); color: var(--rabbit); }
+
+.pane { display: none; }
+.pane.on { display: block; animation: up .28s ease; }
+@keyframes up { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* ── CODE GRID ── */
+.code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.code-grid.single { grid-template-columns: 1fr; }
+.code-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ── CODE BLOCK ── */
+.cb {
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border); background: #050810;
+  display: flex; flex-direction: column;
+}
+.cb-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px; background: var(--s2); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cb-head-l { display: flex; align-items: center; gap: 10px; }
+.dots { display: flex; gap: 5px; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+.dots .r { background: #ff5f56; } .dots .y { background: #ffbd2e; } .dots .g { background: #27c93f; }
+.cb-file { font-family: var(--mono); font-size: 10px; color: var(--muted2); }
+.cb-lang {
+  font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 1px;
+  padding: 2px 8px; border-radius: 4px;
+}
+.cl-k { background: var(--kafka-glow); color: var(--kafka); border: 1px solid var(--kafka-border); }
+.cl-r { background: var(--rabbit-glow); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+.cl-y { background: rgba(255,189,46,0.12); color: #ffbd2e; border: 1px solid rgba(255,189,46,0.3); }
+.cl-s { background: var(--spring-glow); color: var(--spring); border: 1px solid rgba(109,179,63,.3); }
+.copy-btn {
+  font-family: var(--mono); font-size: 9px; color: var(--muted); cursor: pointer;
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 9px; transition: all .18s; letter-spacing: 1px;
+}
+.copy-btn.ok { color: var(--kafka); border-color: var(--kafka-border); }
+
+pre {
+  padding: 18px 20px; overflow-x: auto; font-family: var(--mono);
+  font-size: 11.5px; line-height: 1.8; color: #8fa8c8; margin: 0; flex: 1;
+  scrollbar-width: thin; scrollbar-color: var(--s3) transparent;
+}
+pre::-webkit-scrollbar { height: 4px; width: 4px; }
+pre::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 2px; }
+
+/* Java syntax */
+.j-kw  { color: #c084fc; }   /* keyword: @, class, public, etc */
+.j-an  { color: #60a5fa; }   /* annotation */
+.j-ty  { color: #34d399; }   /* type / class name */
+.j-st  { color: #86efac; }   /* string literal */
+.j-nu  { color: #fbbf24; }   /* number */
+.j-cm  { color: #3d5070; font-style:italic; }  /* comment */
+.j-me  { color: #93c5fd; }   /* method call */
+.j-fi  { color: #f0abfc; }   /* field / variable */
+.j-op  { color: #64748b; }   /* operator / punctuation */
+/* YAML syntax */
+.y-k   { color: #60a5fa; }   /* key */
+.y-v   { color: #86efac; }   /* value */
+.y-cm  { color: #3d5070; font-style:italic; }
+.y-s   { color: #fbbf24; }   /* string value */
+.y-n   { color: #f0abfc; }   /* number */
+.y-b   { color: #34d399; }   /* boolean */
+
+/* ── EXPLAIN STRIP ── */
+.explain { display: flex; flex-direction: column; gap: 9px; }
+.exp-pill {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px 14px;
+}
+.exp-key {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+  flex-shrink: 0; margin-top: 2px; letter-spacing: .5px;
+}
+.ek { background: var(--kafka-glow); color: var(--kafka); border: 1px solid var(--kafka-border); }
+.er { background: var(--rabbit-glow); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+.exp-body { font-size: 11.5px; color: var(--muted2); line-height: 1.6; }
+.exp-body strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 12px; }
+
+/* ── FILE TREE ── */
+.file-tree {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px; font-family: var(--mono); font-size: 11px; margin-bottom: 28px;
+}
+.ft-title { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 14px; text-transform: uppercase; }
+.ft-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; color: var(--muted2); }
+.ft-item.ind1 { padding-left: 18px; }
+.ft-item.ind2 { padding-left: 36px; }
+.ft-item.ind3 { padding-left: 54px; }
+.ft-icon { font-size: 12px; }
+.ft-name { color: var(--text); }
+.ft-name.k { color: var(--kafka); }
+.ft-name.r { color: var(--rabbit); }
+.ft-name.s { color: var(--spring); }
+.ft-note { font-size: 9px; color: var(--muted); margin-left: auto; }
+
+/* ── SECTION DIVIDER ── */
+.sdiv { height: 1px; background: var(--border); margin: 52px 0; }
+
+/* RESPONSIVE */
+@media(max-width:1100px) {
+  .wrap, .hero, nav { padding-left: 24px; padding-right: 24px; }
+  .code-grid, .code-grid.triple { grid-template-columns: 1fr; }
+}
+@media(max-width:640px) {
+  .nav-pills { display: none; }
+}
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+
+<nav>
+  <div class="nav-brand"><b>Spring</b> · Kafka &amp; RabbitMQ</div>
+  <div class="nav-pills">
+    <button class="npill ak" onclick="scrollTo2('kafka-section')">⚡ Kafka</button>
+    <button class="npill ar" onclick="scrollTo2('rabbit-section')">🐇 RabbitMQ</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge"><div class="dot g"></div>SPRING BOOT CODE REFERENCE</div>
+  <h1><span class="sp">Spring Boot</span> +<br><span class="k">Kafka</span> &amp; <span class="r">RabbitMQ</span></h1>
+  <p>Production-ready Java code — config, producers, consumers, error handling, and patterns.</p>
+</div>
+
+<!-- ═══════════════════ KAFKA ═══════════════════ -->
+<div class="wrap" id="kafka-section">
+  <div class="sec-label">01 — APACHE KAFKA <span class="badge-inline bi-k">SPRING KAFKA</span> <span class="badge-inline bi-s">SPRING BOOT 3.x</span></div>
+
+  <!-- File tree -->
+  <div class="file-tree">
+    <div class="ft-title">project structure — kafka module</div>
+    <div class="ft-item"><span class="ft-icon">📁</span><span class="ft-name s">src/main/</span></div>
+    <div class="ft-item ind1"><span class="ft-icon">📁</span><span class="ft-name">java/com/example/</span></div>
+    <div class="ft-item ind2"><span class="ft-icon">📁</span><span class="ft-name k">kafka/</span></div>
+    <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">KafkaProducerConfig.java</span><span class="ft-note">producer factory + template</span></div>
+    <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">KafkaConsumerConfig.java</span><span class="ft-note">consumer factory + listener factory</span></div>
+    <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">OrderEventProducer.java</span><span class="ft-note">service: send events</span></div>
+    <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">OrderEventConsumer.java</span><span class="ft-note">@KafkaListener</span></div>
+    <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">KafkaErrorHandler.java</span><span class="ft-note">DLT + retry config</span></div>
+    <div class="ft-item ind1"><span class="ft-icon">📁</span><span class="ft-name">resources/</span></div>
+    <div class="ft-item ind2"><span class="ft-icon">📄</span><span class="ft-name k">application.yml</span><span class="ft-note">Spring Kafka auto-config</span></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab-btn tk" onclick="tab('kafka','yml')">application.yml</button>
+    <button class="tab-btn" onclick="tab('kafka','prod-cfg')">Producer Config</button>
+    <button class="tab-btn" onclick="tab('kafka','cons-cfg')">Consumer Config</button>
+    <button class="tab-btn" onclick="tab('kafka','producer')">Producer Service</button>
+    <button class="tab-btn" onclick="tab('kafka','consumer')">Consumer</button>
+    <button class="tab-btn" onclick="tab('kafka','error')">Error Handling</button>
+    <button class="tab-btn" onclick="tab('kafka','txn')">Transactions</button>
+  </div>
+
+  <!-- application.yml -->
+  <div class="pane on" id="kafka-yml">
+    <div class="code-grid single">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">src/main/resources/application.yml</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-y">YAML</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="y-k">spring</span><span class="j-op">:</span>
+  <span class="y-k">kafka</span><span class="j-op">:</span>
+    <span class="y-cm"># ── Broker connection ─────────────────────────</span>
+    <span class="y-k">bootstrap-servers</span><span class="j-op">:</span> <span class="y-s">kafka-1:9092,kafka-2:9092,kafka-3:9092</span>
+
+    <span class="y-k">producer</span><span class="j-op">:</span>
+      <span class="y-k">key-serializer</span><span class="j-op">:</span>   <span class="y-s">org.apache.kafka.common.serialization.StringSerializer</span>
+      <span class="y-k">value-serializer</span><span class="j-op">:</span> <span class="y-s">org.springframework.kafka.support.serializer.JsonSerializer</span>
+      <span class="y-k">acks</span><span class="j-op">:</span>             <span class="y-s">all</span>          <span class="y-cm"># strongest durability</span>
+      <span class="y-k">retries</span><span class="j-op">:</span>         <span class="y-n">2147483647</span>   <span class="y-cm"># infinite retries</span>
+      <span class="y-k">batch-size</span><span class="j-op">:</span>      <span class="y-n">65536</span>        <span class="y-cm"># 64KB</span>
+      <span class="y-k">linger-ms</span><span class="j-op">:</span>       <span class="y-n">10</span>
+      <span class="y-k">compression-type</span><span class="j-op">:</span> <span class="y-s">lz4</span>
+      <span class="y-k">enable-idempotence</span><span class="j-op">:</span> <span class="y-b">true</span>
+      <span class="y-k">transaction-id-prefix</span><span class="j-op">:</span> <span class="y-s">order-txn-</span>
+      <span class="y-k">properties</span><span class="j-op">:</span>
+        <span class="y-k">spring.json.add.type.headers</span><span class="j-op">:</span> <span class="y-b">false</span>
+
+    <span class="y-k">consumer</span><span class="j-op">:</span>
+      <span class="y-k">group-id</span><span class="j-op">:</span>           <span class="y-s">order-processor-v2</span>
+      <span class="y-k">auto-offset-reset</span><span class="j-op">:</span>  <span class="y-s">earliest</span>
+      <span class="y-k">enable-auto-commit</span><span class="j-op">:</span> <span class="y-b">false</span>    <span class="y-cm"># manual ack</span>
+      <span class="y-k">key-deserializer</span><span class="j-op">:</span>   <span class="y-s">org.apache.kafka.common.serialization.StringDeserializer</span>
+      <span class="y-k">value-deserializer</span><span class="j-op">:</span> <span class="y-s">org.springframework.kafka.support.serializer.ErrorHandlingDeserializer</span>
+      <span class="y-k">isolation-level</span><span class="j-op">:</span>    <span class="y-s">read_committed</span>
+      <span class="y-k">max-poll-records</span><span class="j-op">:</span>   <span class="y-n">500</span>
+      <span class="y-k">properties</span><span class="j-op">:</span>
+        <span class="y-k">spring.deserializer.value.delegate.class</span><span class="j-op">:</span> <span class="y-s">org.springframework.kafka.support.serializer.JsonDeserializer</span>
+        <span class="y-k">spring.json.trusted.packages</span><span class="j-op">:</span> <span class="y-s">com.example.*</span>
+        <span class="y-k">spring.json.value.default.type</span><span class="j-op">:</span> <span class="y-s">com.example.model.OrderEvent</span>
+        <span class="y-k">partition.assignment.strategy</span><span class="j-op">:</span> <span class="y-s">org.apache.kafka.clients.consumer.CooperativeStickyAssignor</span>
+
+    <span class="y-k">listener</span><span class="j-op">:</span>
+      <span class="y-k">ack-mode</span><span class="j-op">:</span>         <span class="y-s">MANUAL_IMMEDIATE</span>  <span class="y-cm"># ack after each record</span>
+      <span class="y-k">concurrency</span><span class="j-op">:</span>      <span class="y-n">3</span>                 <span class="y-cm"># threads per listener</span>
+      <span class="y-k">poll-timeout</span><span class="j-op">:</span>     <span class="y-n">3000</span>
+      <span class="y-k">missing-topics-fatal</span><span class="j-op">:</span> <span class="y-b">false</span>
+
+    <span class="y-cm"># ── Schema Registry (Confluent / Avro) ────────</span>
+    <span class="y-cm"># properties:</span>
+    <span class="y-cm">#   schema.registry.url: http://schema-registry:8081</span>
+
+<span class="y-k">app</span><span class="j-op">:</span>
+  <span class="y-k">kafka</span><span class="j-op">:</span>
+    <span class="y-k">topics</span><span class="j-op">:</span>
+      <span class="y-k">orders</span><span class="j-op">:</span>     <span class="y-s">orders.events</span>
+      <span class="y-k">orders-dlt</span><span class="j-op">:</span> <span class="y-s">orders.events.DLT</span>
+      <span class="y-k">payments</span><span class="j-op">:</span>  <span class="y-s">payments.events</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Producer Config -->
+  <div class="pane" id="kafka-prod-cfg">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">KafkaProducerConfig.java</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Configuration</span>
+<span class="j-an">@EnableKafka</span>
+<span class="j-kw">public class</span> <span class="j-ty">KafkaProducerConfig</span> <span class="j-op">{</span>
+
+  <span class="j-an">@Value</span><span class="j-op">(</span><span class="j-st">"${spring.kafka.bootstrap-servers}"</span><span class="j-op">)</span>
+  <span class="j-kw">private</span> <span class="j-ty">String</span> <span class="j-fi">bootstrapServers</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Producer factory (non-transactional) ──────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">ProducerFactory</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-me">producerFactory</span><span class="j-op">() {</span>
+    <span class="j-ty">Map</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">props</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">HashMap</span><span class="j-op">&lt;&gt;();</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">BOOTSTRAP_SERVERS_CONFIG</span><span class="j-op">,</span> <span class="j-fi">bootstrapServers</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">KEY_SERIALIZER_CLASS_CONFIG</span><span class="j-op">,</span>   <span class="j-ty">StringSerializer</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="j-op">, </span><span class="j-ty">JsonSerializer</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">ACKS_CONFIG</span><span class="j-op">,</span>                   <span class="j-st">"all"</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">ENABLE_IDEMPOTENCE_CONFIG</span><span class="j-op">,</span>      <span class="j-kw">true</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">RETRIES_CONFIG</span><span class="j-op">,</span>                <span class="j-ty">Integer</span><span class="j-op">.</span><span class="j-fi">MAX_VALUE</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">LINGER_MS_CONFIG</span><span class="j-op">,</span>               <span class="j-nu">10</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">BATCH_SIZE_CONFIG</span><span class="j-op">,</span>             <span class="j-nu">65536</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ProducerConfig</span><span class="j-op">.</span><span class="j-fi">COMPRESSION_TYPE_CONFIG</span><span class="j-op">,</span>       <span class="j-st">"lz4"</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">JsonSerializer</span><span class="j-op">.</span><span class="j-fi">ADD_TYPE_INFO_HEADERS</span><span class="j-op">,</span>         <span class="j-kw">false</span><span class="j-op">);</span>
+    <span class="j-kw">return new</span> <span class="j-ty">DefaultKafkaProducerFactory</span><span class="j-op">&lt;&gt;(</span><span class="j-fi">props</span><span class="j-op">);</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── KafkaTemplate (use this in services) ──────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">KafkaTemplate</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-me">kafkaTemplate</span><span class="j-op">() {</span>
+    <span class="j-kw">return new</span> <span class="j-ty">KafkaTemplate</span><span class="j-op">&lt;&gt;(</span><span class="j-me">producerFactory</span><span class="j-op">());</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Topic auto-creation ───────────────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">NewTopic</span> <span class="j-me">ordersTopic</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">TopicBuilder</span><span class="j-op">.</span><span class="j-me">name</span><span class="j-op">(</span><span class="j-st">"orders.events"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">partitions</span><span class="j-op">(</span><span class="j-nu">6</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">replicas</span><span class="j-op">(</span><span class="j-nu">3</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">config</span><span class="j-op">(</span><span class="j-ty">TopicConfig</span><span class="j-op">.</span><span class="j-fi">RETENTION_MS_CONFIG</span><span class="j-op">,</span> <span class="j-st">"604800000"</span><span class="j-op">)</span> <span class="j-cm">// 7 days</span>
+        <span class="j-op">.</span><span class="j-me">config</span><span class="j-op">(</span><span class="j-ty">TopicConfig</span><span class="j-op">.</span><span class="j-fi">CLEANUP_POLICY_CONFIG</span><span class="j-op">,</span> <span class="j-st">"delete"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">NewTopic</span> <span class="j-me">ordersDltTopic</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">TopicBuilder</span><span class="j-op">.</span><span class="j-me">name</span><span class="j-op">(</span><span class="j-st">"orders.events.DLT"</span><span class="j-op">).</span><span class="j-me">partitions</span><span class="j-op">(</span><span class="j-nu">3</span><span class="j-op">).</span><span class="j-me">replicas</span><span class="j-op">(</span><span class="j-nu">3</span><span class="j-op">).</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">ENABLE_IDEMPOTENCE</span><div class="exp-body"><strong>Exactly-once per partition</strong>Prevents duplicate records on producer retry. Requires <code>acks=all</code> and <code>retries &gt; 0</code>. Spring auto-sets these when idempotence is enabled.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">TopicBuilder</span><div class="exp-body"><strong>Auto-create topics on startup</strong>Declare <code>NewTopic</code> beans and Spring Kafka creates them via the Admin client. Idempotent — safe to run on every restart.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">JsonSerializer</span><div class="exp-body"><strong>Auto-serialize POJOs</strong>Spring's <code>JsonSerializer</code> uses Jackson to convert your model classes to JSON bytes. Set <code>ADD_TYPE_INFO_HEADERS=false</code> to avoid tight coupling between producer and consumer schemas.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">LINGER_MS + BATCH_SIZE</span><div class="exp-body"><strong>Throughput tuning</strong>Wait up to 10ms to fill a 64KB batch before sending. More records per network request = better throughput and compression ratio.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumer Config -->
+  <div class="pane" id="kafka-cons-cfg">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">KafkaConsumerConfig.java</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Configuration</span>
+<span class="j-an">@EnableKafka</span>
+<span class="j-kw">public class</span> <span class="j-ty">KafkaConsumerConfig</span> <span class="j-op">{</span>
+
+  <span class="j-an">@Value</span><span class="j-op">(</span><span class="j-st">"${spring.kafka.bootstrap-servers}"</span><span class="j-op">)</span>
+  <span class="j-kw">private</span> <span class="j-ty">String</span> <span class="j-fi">bootstrapServers</span><span class="j-op">;</span>
+
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">ConsumerFactory</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">OrderEvent</span><span class="j-op">&gt;</span> <span class="j-me">consumerFactory</span><span class="j-op">() {</span>
+    <span class="j-ty">JsonDeserializer</span><span class="j-op">&lt;</span><span class="j-ty">OrderEvent</span><span class="j-op">&gt;</span> <span class="j-fi">deser</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">JsonDeserializer</span><span class="j-op">&lt;&gt;(</span><span class="j-ty">OrderEvent</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">);</span>
+    <span class="j-fi">deser</span><span class="j-op">.</span><span class="j-me">addTrustedPackages</span><span class="j-op">(</span><span class="j-st">"com.example.*"</span><span class="j-op">);</span>
+    <span class="j-fi">deser</span><span class="j-op">.</span><span class="j-me">setUseTypeMapperForKey</span><span class="j-op">(</span><span class="j-kw">false</span><span class="j-op">);</span>
+
+    <span class="j-ty">Map</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">props</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">HashMap</span><span class="j-op">&lt;&gt;();</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">BOOTSTRAP_SERVERS_CONFIG</span><span class="j-op">,</span>        <span class="j-fi">bootstrapServers</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">GROUP_ID_CONFIG</span><span class="j-op">,</span>                 <span class="j-st">"order-processor-v2"</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">AUTO_OFFSET_RESET_CONFIG</span><span class="j-op">,</span>        <span class="j-st">"earliest"</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">ENABLE_AUTO_COMMIT_CONFIG</span><span class="j-op">,</span>        <span class="j-kw">false</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">ISOLATION_LEVEL_CONFIG</span><span class="j-op">,</span>           <span class="j-st">"read_committed"</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">MAX_POLL_RECORDS_CONFIG</span><span class="j-op">,</span>          <span class="j-nu">500</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">SESSION_TIMEOUT_MS_CONFIG</span><span class="j-op">,</span>         <span class="j-nu">45000</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">HEARTBEAT_INTERVAL_MS_CONFIG</span><span class="j-op">,</span>     <span class="j-nu">15000</span><span class="j-op">);</span>
+    <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">put</span><span class="j-op">(</span><span class="j-ty">ConsumerConfig</span><span class="j-op">.</span><span class="j-fi">PARTITION_ASSIGNMENT_STRATEGY_CONFIG</span><span class="j-op">,</span>
+        <span class="j-ty">List</span><span class="j-op">.</span><span class="j-me">of</span><span class="j-op">(</span><span class="j-ty">CooperativeStickyAssignor</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">));</span>
+    <span class="j-kw">return new</span> <span class="j-ty">DefaultKafkaConsumerFactory</span><span class="j-op">&lt;&gt;(</span><span class="j-fi">props</span><span class="j-op">,</span>
+        <span class="j-kw">new</span> <span class="j-ty">StringDeserializer</span><span class="j-op">(),</span> <span class="j-fi">deser</span><span class="j-op">);</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Concurrent listener container factory ─────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">ConcurrentKafkaListenerContainerFactory</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">OrderEvent</span><span class="j-op">&gt;</span>
+      <span class="j-me">kafkaListenerContainerFactory</span><span class="j-op">(</span>
+          <span class="j-ty">DefaultErrorHandler</span> <span class="j-fi">errorHandler</span><span class="j-op">) {</span>
+
+    <span class="j-kw">var</span> <span class="j-fi">factory</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">ConcurrentKafkaListenerContainerFactory</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">OrderEvent</span><span class="j-op">&gt;();</span>
+    <span class="j-fi">factory</span><span class="j-op">.</span><span class="j-me">setConsumerFactory</span><span class="j-op">(</span><span class="j-me">consumerFactory</span><span class="j-op">());</span>
+    <span class="j-fi">factory</span><span class="j-op">.</span><span class="j-me">setConcurrency</span><span class="j-op">(</span><span class="j-nu">3</span><span class="j-op">);</span>
+    <span class="j-fi">factory</span><span class="j-op">.</span><span class="j-me">getContainerProperties</span><span class="j-op">().</span><span class="j-me">setAckMode</span><span class="j-op">(</span><span class="j-ty">ContainerProperties</span><span class="j-op">.</span><span class="j-ty">AckMode</span><span class="j-op">.</span><span class="j-fi">MANUAL_IMMEDIATE</span><span class="j-op">);</span>
+    <span class="j-fi">factory</span><span class="j-op">.</span><span class="j-me">setCommonErrorHandler</span><span class="j-op">(</span><span class="j-fi">errorHandler</span><span class="j-op">);</span>
+    <span class="j-fi">factory</span><span class="j-op">.</span><span class="j-me">setBatchListener</span><span class="j-op">(</span><span class="j-kw">false</span><span class="j-op">);</span>  <span class="j-cm">// true for batch mode</span>
+    <span class="j-kw">return</span> <span class="j-fi">factory</span><span class="j-op">;</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">MANUAL_IMMEDIATE</span><div class="exp-body"><strong>Ack mode</strong>Offset is committed the moment <code>acknowledgment.acknowledge()</code> is called in your listener. Never commit before processing — use this with <code>enable-auto-commit: false</code>.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">setConcurrency(3)</span><div class="exp-body"><strong>Parallel listener threads</strong>Creates 3 consumer threads per listener. Each thread owns partitions from the group. Should not exceed the number of partitions — extra threads sit idle.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">CooperativeStickyAssignor</span><div class="exp-body"><strong>Zero-downtime rebalances</strong>Only reassigns partitions that need to move. Consumers keep their existing partitions during rebalance, eliminating the stop-the-world pause of EagerAssignor.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">read_committed</span><div class="exp-body"><strong>Skip dirty reads</strong>Consumers only see records from committed transactions. Required for exactly-once end-to-end when paired with a transactional producer.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Producer Service -->
+  <div class="pane" id="kafka-producer">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">OrderEventProducer.java</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Service</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">OrderEventProducer</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">KafkaTemplate</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">kafkaTemplate</span><span class="j-op">;</span>
+
+  <span class="j-an">@Value</span><span class="j-op">(</span><span class="j-st">"${app.kafka.topics.orders}"</span><span class="j-op">)</span>
+  <span class="j-kw">private</span> <span class="j-ty">String</span> <span class="j-fi">ordersTopic</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Simple async send ──────────────────────────</span>
+  <span class="j-kw">public</span> <span class="j-ty">CompletableFuture</span><span class="j-op">&lt;</span><span class="j-ty">SendResult</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;&gt;</span>
+      <span class="j-me">sendOrderEvent</span><span class="j-op">(</span><span class="j-ty">OrderEvent</span> <span class="j-fi">event</span><span class="j-op">) {</span>
+
+    <span class="j-ty">ProducerRecord</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">record</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">ProducerRecord</span><span class="j-op">&lt;&gt;(</span>
+        <span class="j-fi">ordersTopic</span><span class="j-op">,</span>
+        <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span>    <span class="j-cm">// key → partition routing</span>
+        <span class="j-fi">event</span>
+    <span class="j-op">);</span>
+
+    <span class="j-cm">// Add custom headers for tracing</span>
+    <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">headers</span><span class="j-op">().</span><span class="j-me">add</span><span class="j-op">(</span><span class="j-st">"X-Correlation-Id"</span><span class="j-op">,</span>
+        <span class="j-ty">UUID</span><span class="j-op">.</span><span class="j-me">randomUUID</span><span class="j-op">().</span><span class="j-me">toString</span><span class="j-op">().</span><span class="j-me">getBytes</span><span class="j-op">());</span>
+    <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">headers</span><span class="j-op">().</span><span class="j-me">add</span><span class="j-op">(</span><span class="j-st">"X-Source-Service"</span><span class="j-op">,</span> <span class="j-st">"order-service"</span><span class="j-op">.</span><span class="j-me">getBytes</span><span class="j-op">());</span>
+
+    <span class="j-kw">return</span> <span class="j-fi">kafkaTemplate</span><span class="j-op">.</span><span class="j-me">send</span><span class="j-op">(</span><span class="j-fi">record</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">whenComplete</span><span class="j-op">((</span><span class="j-fi">result</span><span class="j-op">,</span> <span class="j-fi">ex</span><span class="j-op">) -&gt; {</span>
+          <span class="j-kw">if</span> <span class="j-op">(</span><span class="j-fi">ex</span> <span class="j-op">!= null) {</span>
+            <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"Failed to send order event: {}"</span><span class="j-op">,</span>
+                <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span> <span class="j-fi">ex</span><span class="j-op">);</span>
+          <span class="j-op">}</span> <span class="j-kw">else</span> <span class="j-op">{</span>
+            <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">debug</span><span class="j-op">(</span><span class="j-st">"Sent [{}] to {}@{}"</span><span class="j-op">,</span>
+                <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span>
+                <span class="j-fi">result</span><span class="j-op">.</span><span class="j-me">getRecordMetadata</span><span class="j-op">().</span><span class="j-me">topic</span><span class="j-op">(),</span>
+                <span class="j-fi">result</span><span class="j-op">.</span><span class="j-me">getRecordMetadata</span><span class="j-op">().</span><span class="j-me">offset</span><span class="j-op">());</span>
+          <span class="j-op">}</span>
+        <span class="j-op">});</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Batch send ────────────────────────────────</span>
+  <span class="j-kw">public void</span> <span class="j-me">sendBatch</span><span class="j-op">(</span><span class="j-ty">List</span><span class="j-op">&lt;</span><span class="j-ty">OrderEvent</span><span class="j-op">&gt;</span> <span class="j-fi">events</span><span class="j-op">) {</span>
+    <span class="j-fi">events</span><span class="j-op">.</span><span class="j-me">forEach</span><span class="j-op">(</span><span class="j-fi">e</span> <span class="j-op">-&gt;</span> <span class="j-me">sendOrderEvent</span><span class="j-op">(</span><span class="j-fi">e</span><span class="j-op">));</span>
+    <span class="j-fi">kafkaTemplate</span><span class="j-op">.</span><span class="j-me">flush</span><span class="j-op">();</span>  <span class="j-cm">// force immediate dispatch</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">ProducerRecord key</span><div class="exp-body"><strong>Partition routing</strong>Records with the same key always go to the same partition, guaranteeing ordering for that key. Use the entity ID (orderId, userId) as the key.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">whenComplete()</span><div class="exp-body"><strong>Non-blocking callbacks</strong>Returns a <code>CompletableFuture</code> — never call <code>.get()</code> in a hot path. Use <code>whenComplete</code> for logging/metrics and let callers chain futures as needed.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">record.headers()</span><div class="exp-body"><strong>Metadata propagation</strong>Use headers to carry correlation IDs, source service names, schema version, or trace context (W3C Trace-Context). Consumers can read these without deserializing the body.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">flush()</span><div class="exp-body"><strong>Force batch send</strong>Without flush, records sit in the buffer until <code>linger.ms</code> expires. Call flush() after a batch to dispatch immediately — useful at the end of a bulk import job.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumer -->
+  <div class="pane" id="kafka-consumer">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">OrderEventConsumer.java</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Component</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">OrderEventConsumer</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">OrderService</span> <span class="j-fi">orderService</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Single-record listener ─────────────────────</span>
+  <span class="j-an">@KafkaListener</span><span class="j-op">(</span>
+      topics   <span class="j-op">=</span> <span class="j-st">"${app.kafka.topics.orders}"</span><span class="j-op">,</span>
+      groupId  <span class="j-op">=</span> <span class="j-st">"order-processor-v2"</span><span class="j-op">,</span>
+      containerFactory <span class="j-op">=</span> <span class="j-st">"kafkaListenerContainerFactory"</span>
+  <span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onOrderEvent</span><span class="j-op">(</span>
+      <span class="j-an">@Payload</span>          <span class="j-ty">OrderEvent</span>       <span class="j-fi">event</span><span class="j-op">,</span>
+      <span class="j-an">@Header</span><span class="j-op">(</span><span class="j-ty">KafkaHeaders</span><span class="j-op">.</span><span class="j-fi">RECEIVED_TOPIC</span><span class="j-op">)</span>     <span class="j-ty">String</span> <span class="j-fi">topic</span><span class="j-op">,</span>
+      <span class="j-an">@Header</span><span class="j-op">(</span><span class="j-ty">KafkaHeaders</span><span class="j-op">.</span><span class="j-fi">RECEIVED_PARTITION</span><span class="j-op">)</span> <span class="j-ty">int</span>    <span class="j-fi">partition</span><span class="j-op">,</span>
+      <span class="j-an">@Header</span><span class="j-op">(</span><span class="j-ty">KafkaHeaders</span><span class="j-op">.</span><span class="j-fi">OFFSET</span><span class="j-op">)</span>              <span class="j-ty">long</span>   <span class="j-fi">offset</span><span class="j-op">,</span>
+      <span class="j-ty">Acknowledgment</span>                                    <span class="j-fi">ack</span>
+  <span class="j-op">) {</span>
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">info</span><span class="j-op">(</span><span class="j-st">"Consuming [{}] from {}:{}@{}"</span><span class="j-op">,</span>
+        <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span> <span class="j-fi">topic</span><span class="j-op">,</span> <span class="j-fi">partition</span><span class="j-op">,</span> <span class="j-fi">offset</span><span class="j-op">);</span>
+
+    <span class="j-fi">orderService</span><span class="j-op">.</span><span class="j-me">process</span><span class="j-op">(</span><span class="j-fi">event</span><span class="j-op">);</span>
+
+    <span class="j-fi">ack</span><span class="j-op">.</span><span class="j-me">acknowledge</span><span class="j-op">();</span>  <span class="j-cm">// commit offset AFTER processing</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Batch listener (high-throughput) ───────────</span>
+  <span class="j-an">@KafkaListener</span><span class="j-op">(</span>
+      topics   <span class="j-op">=</span> <span class="j-st">"${app.kafka.topics.payments}"</span><span class="j-op">,</span>
+      groupId  <span class="j-op">=</span> <span class="j-st">"payment-processor"</span><span class="j-op">,</span>
+      containerFactory <span class="j-op">=</span> <span class="j-st">"batchListenerContainerFactory"</span>
+  <span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onPaymentEventBatch</span><span class="j-op">(</span>
+      <span class="j-ty">List</span><span class="j-op">&lt;</span><span class="j-ty">ConsumerRecord</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">PaymentEvent</span><span class="j-op">&gt;&gt;</span> <span class="j-fi">records</span><span class="j-op">,</span>
+      <span class="j-ty">Acknowledgment</span> <span class="j-fi">ack</span>
+  <span class="j-op">) {</span>
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">info</span><span class="j-op">(</span><span class="j-st">"Batch of {} payment events"</span><span class="j-op">,</span> <span class="j-fi">records</span><span class="j-op">.</span><span class="j-me">size</span><span class="j-op">());</span>
+    <span class="j-ty">List</span><span class="j-op">&lt;</span><span class="j-ty">PaymentEvent</span><span class="j-op">&gt;</span> <span class="j-fi">events</span> <span class="j-op">=</span> <span class="j-fi">records</span><span class="j-op">.</span><span class="j-me">stream</span><span class="j-op">()</span>
+        <span class="j-op">.</span><span class="j-me">map</span><span class="j-op">(</span><span class="j-ty">ConsumerRecord</span><span class="j-op">::</span><span class="j-me">value</span><span class="j-op">).</span><span class="j-me">toList</span><span class="j-op">();</span>
+    <span class="j-fi">orderService</span><span class="j-op">.</span><span class="j-me">processBatch</span><span class="j-op">(</span><span class="j-fi">events</span><span class="j-op">);</span>
+    <span class="j-fi">ack</span><span class="j-op">.</span><span class="j-me">acknowledge</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── DLT listener (dead letter topic) ──────────</span>
+  <span class="j-an">@KafkaListener</span><span class="j-op">(</span>topics <span class="j-op">=</span> <span class="j-st">"${app.kafka.topics.orders-dlt}"</span><span class="j-op">,</span>
+                 groupId <span class="j-op">=</span> <span class="j-st">"orders-dlt-handler"</span><span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onDeadLetter</span><span class="j-op">(</span><span class="j-ty">ConsumerRecord</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">record</span><span class="j-op">) {</span>
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"DLT record key={} value={}"</span><span class="j-op">,</span>
+        <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">key</span><span class="j-op">(),</span> <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">value</span><span class="j-op">());</span>
+    <span class="j-cm">// alert, store in DB, trigger manual review...</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">@Payload</span><div class="exp-body"><strong>Deserialized POJO</strong>Spring deserializes the Kafka value bytes into your model class automatically. Use <code>@Header</code> to inject metadata like topic, partition, and offset without parsing them manually.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">ack.acknowledge()</span><div class="exp-body"><strong>Manual offset commit</strong>Call this only after your processing is complete and durable. If your service crashes before this line, the record will be redelivered — giving you at-least-once guarantees.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">Batch listener</span><div class="exp-body"><strong>Bulk processing</strong>Receives up to <code>max.poll.records</code> at once. Ideal for DB bulk inserts or batch API calls. One ack commits all offsets in the batch.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">DLT listener</span><div class="exp-body"><strong>Poison message handling</strong>After max retry exhaustion, Spring Kafka routes the record to <code>topic.DLT</code>. Listen here to alert, persist failed records for analysis, or trigger manual review workflows.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Handling -->
+  <div class="pane" id="kafka-error">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">KafkaErrorHandler.java</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Configuration</span>
+<span class="j-kw">public class</span> <span class="j-ty">KafkaErrorHandler</span> <span class="j-op">{</span>
+
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">DefaultErrorHandler</span> <span class="j-me">defaultErrorHandler</span><span class="j-op">(</span>
+      <span class="j-ty">KafkaTemplate</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">kafkaTemplate</span><span class="j-op">) {</span>
+
+    <span class="j-cm">// ── Dead letter publisher ──────────────────────</span>
+    <span class="j-kw">var</span> <span class="j-fi">dltPublisher</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">DeadLetterPublishingRecoverer</span><span class="j-op">(</span><span class="j-fi">kafkaTemplate</span><span class="j-op">,</span>
+        <span class="j-op">(</span><span class="j-fi">record</span><span class="j-op">,</span> <span class="j-fi">ex</span><span class="j-op">) -&gt;</span> <span class="j-kw">new</span> <span class="j-ty">TopicPartition</span><span class="j-op">(</span>
+            <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">topic</span><span class="j-op">() +</span> <span class="j-st">".DLT"</span><span class="j-op">,</span>
+            <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">partition</span><span class="j-op">()  </span><span class="j-cm">// same partition for ordering</span>
+        <span class="j-op">));</span>
+
+    <span class="j-cm">// ── Exponential backoff: 1s → 2s → 4s (3 tries) ─</span>
+    <span class="j-kw">var</span> <span class="j-fi">backoff</span> <span class="j-op">=</span> <span class="j-ty">ExponentialBackOffWithMaxRetries</span><span class="j-op">.</span><span class="j-me">builder</span><span class="j-op">()</span>
+        <span class="j-op">.</span><span class="j-me">initialInterval</span><span class="j-op">(</span><span class="j-nu">1_000L</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">multiplier</span><span class="j-op">(</span><span class="j-nu">2.0</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">maxRetries</span><span class="j-op">(</span><span class="j-nu">3</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+
+    <span class="j-kw">var</span> <span class="j-fi">handler</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">DefaultErrorHandler</span><span class="j-op">(</span><span class="j-fi">dltPublisher</span><span class="j-op">,</span> <span class="j-fi">backoff</span><span class="j-op">);</span>
+
+    <span class="j-cm">// ── Don't retry on non-recoverable errors ──────</span>
+    <span class="j-fi">handler</span><span class="j-op">.</span><span class="j-me">addNotRetryableExceptions</span><span class="j-op">(</span>
+        <span class="j-ty">JsonProcessingException</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">,</span>   <span class="j-cm">// bad JSON → DLT immediately</span>
+        <span class="j-ty">ValidationException</span><span class="j-op">.</span><span class="j-fi">class</span><span class="j-op">,</span>       <span class="j-cm">// business rule violation</span>
+        <span class="j-ty">DeserializationException</span><span class="j-op">.</span><span class="j-fi">class</span>   <span class="j-cm">// unreadable payload</span>
+    <span class="j-op">);</span>
+
+    <span class="j-cm">// ── Log all failures ───────────────────────────</span>
+    <span class="j-fi">handler</span><span class="j-op">.</span><span class="j-me">setRetryListeners</span><span class="j-op">((</span><span class="j-fi">record</span><span class="j-op">,</span> <span class="j-fi">ex</span><span class="j-op">,</span> <span class="j-fi">deliveryAttempt</span><span class="j-op">) -&gt;</span>
+        <span class="j-ty">log</span><span class="j-op">.</span><span class="j-me">warn</span><span class="j-op">(</span><span class="j-st">"Retry #{} for key={}"</span><span class="j-op">,</span> <span class="j-fi">deliveryAttempt</span><span class="j-op">,</span> <span class="j-fi">record</span><span class="j-op">.</span><span class="j-me">key</span><span class="j-op">(),</span> <span class="j-fi">ex</span><span class="j-op">));</span>
+
+    <span class="j-kw">return</span> <span class="j-fi">handler</span><span class="j-op">;</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">DeadLetterPublishingRecoverer</span><div class="exp-body"><strong>Auto-publish to DLT</strong>After retries are exhausted, the failed record is published to <code>topic.DLT</code>. The resolver lambda lets you control which DLT partition to use — keeping it on the same partition preserves ordering for analysis.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">ExponentialBackoff</span><div class="exp-body"><strong>Retry with backoff</strong>Retries at 1s, 2s, 4s before giving up. Prevents a flapping downstream from hammering the system. The consumer thread blocks during retries — for high-throughput, consider non-blocking retry with a retry topic.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">addNotRetryableExceptions</span><div class="exp-body"><strong>Fast-fail non-transient errors</strong>Deserialization failures and validation errors will never succeed on retry — send them straight to DLT. Only retry transient failures like DB timeouts or HTTP 503s.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <div class="pane" id="kafka-txn">
+    <div class="code-grid">
+      <div class="cb">
+        <div class="cb-head">
+          <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">OrderService.java — Transactional Producer</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-k">KAFKA</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+        </div>
+        <pre><span class="j-an">@Service</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">OrderService</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">KafkaTemplate</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span> <span class="j-ty">Object</span><span class="j-op">&gt;</span> <span class="j-fi">kafka</span><span class="j-op">;</span>
+  <span class="j-kw">private final</span> <span class="j-ty">OrderRepository</span>                   <span class="j-fi">repo</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Exactly-once: DB write + Kafka publish ─────</span>
+  <span class="j-cm">// Both are atomic — if Kafka fails, DB rolls back</span>
+  <span class="j-an">@Transactional</span><span class="j-op">(</span><span class="j-st">"chainedKafkaTransactionManager"</span><span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">createOrder</span><span class="j-op">(</span><span class="j-ty">CreateOrderRequest</span> <span class="j-fi">req</span><span class="j-op">) {</span>
+    <span class="j-ty">Order</span> <span class="j-fi">order</span> <span class="j-op">=</span> <span class="j-fi">repo</span><span class="j-op">.</span><span class="j-me">save</span><span class="j-op">(</span><span class="j-ty">Order</span><span class="j-op">.</span><span class="j-me">from</span><span class="j-op">(</span><span class="j-fi">req</span><span class="j-op">));</span>  <span class="j-cm">// DB save</span>
+
+    <span class="j-ty">OrderEvent</span> <span class="j-fi">event</span> <span class="j-op">=</span> <span class="j-ty">OrderEvent</span><span class="j-op">.</span><span class="j-me">builder</span><span class="j-op">()</span>
+        <span class="j-op">.</span><span class="j-me">orderId</span><span class="j-op">(</span><span class="j-fi">order</span><span class="j-op">.</span><span class="j-me">getId</span><span class="j-op">().</span><span class="j-me">toString</span><span class="j-op">())</span>
+        <span class="j-op">.</span><span class="j-me">status</span><span class="j-op">(</span><span class="j-st">"CREATED"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">timestamp</span><span class="j-op">(</span><span class="j-ty">Instant</span><span class="j-op">.</span><span class="j-me">now</span><span class="j-op">())</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+
+    <span class="j-fi">kafka</span><span class="j-op">.</span><span class="j-me">send</span><span class="j-op">(</span><span class="j-st">"orders.events"</span><span class="j-op">,</span> <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span> <span class="j-fi">event</span><span class="j-op">());</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Consume-transform-produce (read-process-write)</span>
+  <span class="j-an">@KafkaListener</span><span class="j-op">(</span>topics <span class="j-op">=</span> <span class="j-st">"orders.events"</span><span class="j-op">)</span>
+  <span class="j-an">@Transactional</span><span class="j-op">(</span><span class="j-st">"chainedKafkaTransactionManager"</span><span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">processAndEmit</span><span class="j-op">(</span><span class="j-ty">OrderEvent</span> <span class="j-fi">in</span><span class="j-op">) {</span>
+    <span class="j-cm">// Processing + outgoing publish are one atomic unit</span>
+    <span class="j-ty">PaymentEvent</span> <span class="j-fi">payment</span> <span class="j-op">=</span> <span class="j-me">buildPayment</span><span class="j-op">(</span><span class="j-fi">in</span><span class="j-op">);</span>
+    <span class="j-fi">kafka</span><span class="j-op">.</span><span class="j-me">send</span><span class="j-op">(</span><span class="j-st">"payments.events"</span><span class="j-op">,</span> <span class="j-fi">payment</span><span class="j-op">.</span><span class="j-me">getId</span><span class="j-op">(),</span> <span class="j-fi">payment</span><span class="j-op">);</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+      </div>
+      <div class="explain">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+        <div class="exp-pill"><span class="exp-key ek">@Transactional (chained)</span><div class="exp-body"><strong>DB + Kafka atomicity</strong>Use <code>ChainedKafkaTransactionManager</code> to bind your JPA transaction manager to Kafka's. If Kafka commit fails, the DB transaction rolls back — ensuring both are always in sync.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">transaction-id-prefix</span><div class="exp-body"><strong>Producer fencing</strong>Set in <code>application.yml</code>. Each producer instance gets a unique transactional ID (prefix + counter). Brokers use this to fence zombie producers from the previous instance after a restart.</div></div>
+        <div class="exp-pill"><span class="exp-key ek">read-process-write</span><div class="exp-body"><strong>Exactly-once stream processing</strong>Consuming from one topic and producing to another in the same transaction ensures the output is published if and only if the input offset is committed — no duplicates, no data loss.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sdiv"></div>
+
+  <!-- ═══════════════════ RABBITMQ ═══════════════════ -->
+  <div id="rabbit-section">
+    <div class="sec-label">02 — RABBITMQ <span class="badge-inline bi-r">SPRING AMQP</span> <span class="badge-inline bi-s">SPRING BOOT 3.x</span></div>
+
+    <!-- File tree -->
+    <div class="file-tree">
+      <div class="ft-title">project structure — rabbitmq module</div>
+      <div class="ft-item"><span class="ft-icon">📁</span><span class="ft-name s">src/main/</span></div>
+      <div class="ft-item ind1"><span class="ft-icon">📁</span><span class="ft-name">java/com/example/</span></div>
+      <div class="ft-item ind2"><span class="ft-icon">📁</span><span class="ft-name r">rabbit/</span></div>
+      <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">RabbitConfig.java</span><span class="ft-note">topology + factory + template</span></div>
+      <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">OrderPublisher.java</span><span class="ft-note">service: publish messages</span></div>
+      <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">OrderConsumer.java</span><span class="ft-note">@RabbitListener</span></div>
+      <div class="ft-item ind3"><span class="ft-icon">☕</span><span class="ft-name">DlxConsumer.java</span><span class="ft-note">dead-letter handler</span></div>
+      <div class="ft-item ind1"><span class="ft-icon">📁</span><span class="ft-name">resources/</span></div>
+      <div class="ft-item ind2"><span class="ft-icon">📄</span><span class="ft-name r">application.yml</span><span class="ft-note">Spring AMQP auto-config</span></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button class="tab-btn tr" onclick="tab('rabbit','yml')">application.yml</button>
+      <button class="tab-btn" onclick="tab('rabbit','config')">Topology Config</button>
+      <button class="tab-btn" onclick="tab('rabbit','publisher')">Publisher Service</button>
+      <button class="tab-btn" onclick="tab('rabbit','consumer')">Consumer</button>
+      <button class="tab-btn" onclick="tab('rabbit','dlx')">DLX + Retry</button>
+    </div>
+
+    <!-- RabbitMQ YML -->
+    <div class="pane on" id="rabbit-yml">
+      <div class="code-grid single">
+        <div class="cb">
+          <div class="cb-head">
+            <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">src/main/resources/application.yml</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-y">YAML</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+          </div>
+          <pre><span class="y-k">spring</span><span class="j-op">:</span>
+  <span class="y-k">rabbitmq</span><span class="j-op">:</span>
+    <span class="y-cm"># ── Connection ──────────────────────────────────</span>
+    <span class="y-k">host</span><span class="j-op">:</span>              <span class="y-s">rabbitmq.prod.internal</span>
+    <span class="y-k">port</span><span class="j-op">:</span>              <span class="y-n">5672</span>
+    <span class="y-k">virtual-host</span><span class="j-op">:</span>      <span class="y-s">/production</span>
+    <span class="y-k">username</span><span class="j-op">:</span>          <span class="y-s">order-service</span>
+    <span class="y-k">password</span><span class="j-op">:</span>          <span class="y-s">${RABBITMQ_PASS}</span>     <span class="y-cm"># env var</span>
+
+    <span class="y-cm"># ── Connection pool ─────────────────────────────</span>
+    <span class="y-k">connection-timeout</span><span class="j-op">:</span> <span class="y-n">5000</span>
+    <span class="y-k">channel-rpc-timeout</span><span class="j-op">:</span> <span class="y-n">10000</span>
+    <span class="y-k">requested-heartbeat</span><span class="j-op">:</span> <span class="y-n">60</span>
+
+    <span class="y-cm"># ── TLS ─────────────────────────────────────────</span>
+    <span class="y-k">ssl</span><span class="j-op">:</span>
+      <span class="y-k">enabled</span><span class="j-op">:</span>  <span class="y-b">true</span>
+      <span class="y-k">key-store</span><span class="j-op">:</span> <span class="y-s">classpath:keystore.p12</span>
+      <span class="y-k">key-store-password</span><span class="j-op">:</span> <span class="y-s">${KS_PASS}</span>
+      <span class="y-k">verify-hostname</span><span class="j-op">:</span> <span class="y-b">true</span>
+
+    <span class="y-cm"># ── Publisher confirms ───────────────────────────</span>
+    <span class="y-k">publisher-confirm-type</span><span class="j-op">:</span> <span class="y-s">correlated</span>   <span class="y-cm"># or SIMPLE</span>
+    <span class="y-k">publisher-returns</span><span class="j-op">:</span>      <span class="y-b">true</span>
+
+    <span class="y-cm"># ── Listener / consumer ─────────────────────────</span>
+    <span class="y-k">listener</span><span class="j-op">:</span>
+      <span class="y-k">simple</span><span class="j-op">:</span>
+        <span class="y-k">acknowledge-mode</span><span class="j-op">:</span>   <span class="y-s">MANUAL</span>     <span class="y-cm"># always manual ACK</span>
+        <span class="y-k">concurrency</span><span class="j-op">:</span>        <span class="y-n">3</span>
+        <span class="y-k">max-concurrency</span><span class="j-op">:</span>    <span class="y-n">10</span>
+        <span class="y-k">prefetch</span><span class="j-op">:</span>           <span class="y-n">20</span>         <span class="y-cm"># unacked msgs per consumer</span>
+        <span class="y-k">auto-startup</span><span class="j-op">:</span>       <span class="y-b">true</span>
+        <span class="y-k">retry</span><span class="j-op">:</span>
+          <span class="y-k">enabled</span><span class="j-op">:</span>          <span class="y-b">true</span>
+          <span class="y-k">initial-interval</span><span class="j-op">:</span>  <span class="y-n">1000</span>
+          <span class="y-k">max-attempts</span><span class="j-op">:</span>      <span class="y-n">3</span>
+          <span class="y-k">multiplier</span><span class="j-op">:</span>        <span class="y-n">2.0</span>
+          <span class="y-k">max-interval</span><span class="j-op">:</span>      <span class="y-n">10000</span>
+
+<span class="y-k">app</span><span class="j-op">:</span>
+  <span class="y-k">rabbit</span><span class="j-op">:</span>
+    <span class="y-k">exchange</span><span class="j-op">:</span>       <span class="y-s">orders.exchange</span>
+    <span class="y-k">queue</span><span class="j-op">:</span>          <span class="y-s">orders.email.queue</span>
+    <span class="y-k">routing-key</span><span class="j-op">:</span>    <span class="y-s">order.#</span>
+    <span class="y-k">dlx-exchange</span><span class="j-op">:</span>   <span class="y-s">orders.dlx</span>
+    <span class="y-k">dlx-queue</span><span class="j-op">:</span>      <span class="y-s">orders.dead-letter</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- RabbitMQ Config -->
+    <div class="pane" id="rabbit-config">
+      <div class="code-grid">
+        <div class="cb">
+          <div class="cb-head">
+            <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">RabbitConfig.java — topology + factory</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-r">RABBITMQ</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+          </div>
+          <pre><span class="j-an">@Configuration</span>
+<span class="j-kw">public class</span> <span class="j-ty">RabbitConfig</span> <span class="j-op">{</span>
+
+  <span class="j-cm">// ── Exchange (topic type) ─────────────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">TopicExchange</span> <span class="j-me">ordersExchange</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">ExchangeBuilder</span><span class="j-op">.</span><span class="j-me">topicExchange</span><span class="j-op">(</span><span class="j-st">"orders.exchange"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">durable</span><span class="j-op">(</span><span class="j-kw">true</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">withArgument</span><span class="j-op">(</span><span class="j-st">"alternate-exchange"</span><span class="j-op">,</span> <span class="j-st">"orders.unrouted"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Dead Letter Exchange ──────────────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">DirectExchange</span> <span class="j-me">dlxExchange</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">ExchangeBuilder</span><span class="j-op">.</span><span class="j-me">directExchange</span><span class="j-op">(</span><span class="j-st">"orders.dlx"</span><span class="j-op">).</span><span class="j-me">durable</span><span class="j-op">(</span><span class="j-kw">true</span><span class="j-op">).</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Quorum queue with DLX + TTL ───────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">Queue</span> <span class="j-me">emailQueue</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">QueueBuilder</span><span class="j-op">.</span><span class="j-me">durable</span><span class="j-op">(</span><span class="j-st">"orders.email.queue"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">quorum</span><span class="j-op">()</span>                     <span class="j-cm">// Raft-based HA queue</span>
+        <span class="j-op">.</span><span class="j-me">deadLetterExchange</span><span class="j-op">(</span><span class="j-st">"orders.dlx"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">deadLetterRoutingKey</span><span class="j-op">(</span><span class="j-st">"failed.email"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">ttl</span><span class="j-op">(</span><span class="j-nu">86_400_000</span><span class="j-op">)</span>              <span class="j-cm">// 24h message TTL</span>
+        <span class="j-op">.</span><span class="j-me">maxLength</span><span class="j-op">(</span><span class="j-nu">100_000L</span><span class="j-op">)</span>            <span class="j-cm">// max queue depth</span>
+        <span class="j-op">.</span><span class="j-me">overflow</span><span class="j-op">(</span><span class="j-ty">Overflow</span><span class="j-op">.</span><span class="j-fi">rejectPublishDlx</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">withArgument</span><span class="j-op">(</span><span class="j-st">"x-delivery-limit"</span><span class="j-op">,</span> <span class="j-nu">5</span><span class="j-op">)</span> <span class="j-cm">// quorum redelivery limit</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Dead letter queue ─────────────────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">Queue</span> <span class="j-me">dlQueue</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">QueueBuilder</span><span class="j-op">.</span><span class="j-me">durable</span><span class="j-op">(</span><span class="j-st">"orders.dead-letter"</span><span class="j-op">).</span><span class="j-me">quorum</span><span class="j-op">().</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Binding ───────────────────────────────────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">Binding</span> <span class="j-me">emailBinding</span><span class="j-op">(</span><span class="j-ty">Queue</span> <span class="j-fi">emailQueue</span><span class="j-op">,</span> <span class="j-ty">TopicExchange</span> <span class="j-fi">ordersExchange</span><span class="j-op">) {</span>
+    <span class="j-kw">return</span> <span class="j-ty">BindingBuilder</span><span class="j-op">.</span><span class="j-me">bind</span><span class="j-op">(</span><span class="j-fi">emailQueue</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">to</span><span class="j-op">(</span><span class="j-fi">ordersExchange</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">with</span><span class="j-op">(</span><span class="j-st">"order.#"</span><span class="j-op">);</span>  <span class="j-cm">// matches order.created, order.shipped.eu</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── RabbitTemplate with publisher confirms ────</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">RabbitTemplate</span> <span class="j-me">rabbitTemplate</span><span class="j-op">(</span><span class="j-ty">ConnectionFactory</span> <span class="j-fi">cf</span><span class="j-op">) {</span>
+    <span class="j-kw">var</span> <span class="j-fi">tpl</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">RabbitTemplate</span><span class="j-op">(</span><span class="j-fi">cf</span><span class="j-op">);</span>
+    <span class="j-fi">tpl</span><span class="j-op">.</span><span class="j-me">setMessageConverter</span><span class="j-op">(</span><span class="j-me">jackson2MessageConverter</span><span class="j-op">());</span>
+    <span class="j-fi">tpl</span><span class="j-op">.</span><span class="j-me">setMandatory</span><span class="j-op">(</span><span class="j-kw">true</span><span class="j-op">);</span>  <span class="j-cm">// trigger returns on unroutable</span>
+
+    <span class="j-cm">// Confirm callback</span>
+    <span class="j-fi">tpl</span><span class="j-op">.</span><span class="j-me">setConfirmCallback</span><span class="j-op">((</span><span class="j-fi">cd</span><span class="j-op">,</span> <span class="j-fi">ack</span><span class="j-op">,</span> <span class="j-fi">cause</span><span class="j-op">) -&gt; {</span>
+      <span class="j-kw">if</span> <span class="j-op">(!</span><span class="j-fi">ack</span><span class="j-op">)</span> <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"Broker NACK: {}"</span><span class="j-op">,</span> <span class="j-fi">cause</span><span class="j-op">);</span>
+    <span class="j-op">});</span>
+
+    <span class="j-cm">// Return callback (unroutable messages)</span>
+    <span class="j-fi">tpl</span><span class="j-op">.</span><span class="j-me">setReturnsCallback</span><span class="j-op">(</span><span class="j-fi">msg</span> <span class="j-op">-&gt;</span>
+        <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">warn</span><span class="j-op">(</span><span class="j-st">"Returned: replyCode={} exchange={} routingKey={}"</span><span class="j-op">,</span>
+            <span class="j-fi">msg</span><span class="j-op">.</span><span class="j-me">getReplyCode</span><span class="j-op">(),</span> <span class="j-fi">msg</span><span class="j-op">.</span><span class="j-me">getExchange</span><span class="j-op">(),</span> <span class="j-fi">msg</span><span class="j-op">.</span><span class="j-me">getRoutingKey</span><span class="j-op">()));</span>
+    <span class="j-kw">return</span> <span class="j-fi">tpl</span><span class="j-op">;</span>
+  <span class="j-op">}</span>
+
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">Jackson2JsonMessageConverter</span> <span class="j-me">jackson2MessageConverter</span><span class="j-op">() {</span>
+    <span class="j-kw">return new</span> <span class="j-ty">Jackson2JsonMessageConverter</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+        </div>
+        <div class="explain">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+          <div class="exp-pill"><span class="exp-key er">QueueBuilder.quorum()</span><div class="exp-body"><strong>Raft-based HA</strong>Quorum queues replicate via Raft consensus across cluster nodes — much safer than classic mirrored queues. Always use for production workloads. Requires RabbitMQ 3.8+.</div></div>
+          <div class="exp-pill"><span class="exp-key er">alternate-exchange</span><div class="exp-body"><strong>Unroutable message safety net</strong>If a message matches no binding, it's forwarded to this exchange instead of silently dropped. Wire a logging queue to it to detect routing misconfigurations early.</div></div>
+          <div class="exp-pill"><span class="exp-key er">publisher-confirm-type</span><div class="exp-body"><strong>Delivery confirmation</strong><code>CORRELATED</code> mode lets you correlate each ACK/NACK back to the original message via a CorrelationData ID. Use for at-least-once guarantees on the publish side.</div></div>
+          <div class="exp-pill"><span class="exp-key er">x-delivery-limit</span><div class="exp-body"><strong>Poison message protection</strong>Quorum queues track redelivery count. After this limit, the message is automatically dead-lettered. Prevents a bad message from blocking consumer threads indefinitely.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Publisher -->
+    <div class="pane" id="rabbit-publisher">
+      <div class="code-grid">
+        <div class="cb">
+          <div class="cb-head">
+            <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">OrderPublisher.java</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-r">RABBITMQ</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+          </div>
+          <pre><span class="j-an">@Service</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">OrderPublisher</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">RabbitTemplate</span> <span class="j-fi">rabbitTemplate</span><span class="j-op">;</span>
+
+  <span class="j-an">@Value</span><span class="j-op">(</span><span class="j-st">"${app.rabbit.exchange}"</span><span class="j-op">)</span>
+  <span class="j-kw">private</span> <span class="j-ty">String</span> <span class="j-fi">exchange</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Fire-and-forget with publisher confirm ─────</span>
+  <span class="j-kw">public void</span> <span class="j-me">publishOrderCreated</span><span class="j-op">(</span><span class="j-ty">OrderEvent</span> <span class="j-fi">event</span><span class="j-op">) {</span>
+    <span class="j-ty">String</span> <span class="j-fi">routingKey</span> <span class="j-op">=</span> <span class="j-st">"order.created."</span> <span class="j-op">+</span> <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getRegion</span><span class="j-op">();</span>
+
+    <span class="j-ty">CorrelationData</span> <span class="j-fi">cd</span> <span class="j-op">=</span> <span class="j-kw">new</span> <span class="j-ty">CorrelationData</span><span class="j-op">(</span><span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">());</span>
+
+    <span class="j-fi">rabbitTemplate</span><span class="j-op">.</span><span class="j-me">convertAndSend</span><span class="j-op">(</span>
+        <span class="j-fi">exchange</span><span class="j-op">,</span>
+        <span class="j-fi">routingKey</span><span class="j-op">,</span>
+        <span class="j-fi">event</span><span class="j-op">,</span>
+        <span class="j-fi">cd</span>
+    <span class="j-op">);</span>
+
+    <span class="j-cm">// Async confirm result</span>
+    <span class="j-fi">cd</span><span class="j-op">.</span><span class="j-me">getFuture</span><span class="j-op">().</span><span class="j-me">thenAccept</span><span class="j-op">(</span><span class="j-fi">confirm</span> <span class="j-op">-&gt; {</span>
+      <span class="j-kw">if</span> <span class="j-op">(!</span><span class="j-fi">confirm</span><span class="j-op">.</span><span class="j-me">isAck</span><span class="j-op">())</span>
+        <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"Broker NACK for order {}"</span><span class="j-op">,</span> <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">());</span>
+      <span class="j-kw">else</span>
+        <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">debug</span><span class="j-op">(</span><span class="j-st">"ACK for order {}"</span><span class="j-op">,</span> <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">());</span>
+    <span class="j-op">});</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Message with custom properties ────────────</span>
+  <span class="j-kw">public void</span> <span class="j-me">publishWithExpiry</span><span class="j-op">(</span><span class="j-ty">OrderEvent</span> <span class="j-fi">event</span><span class="j-op">,</span> <span class="j-ty">Duration</span> <span class="j-fi">ttl</span><span class="j-op">) {</span>
+    <span class="j-fi">rabbitTemplate</span><span class="j-op">.</span><span class="j-me">convertAndSend</span><span class="j-op">(</span><span class="j-fi">exchange</span><span class="j-op">,</span> <span class="j-st">"order.created"</span><span class="j-op">,</span> <span class="j-fi">event</span><span class="j-op">,</span>
+        <span class="j-fi">msg</span> <span class="j-op">-&gt; {</span>
+          <span class="j-ty">MessageProperties</span> <span class="j-fi">props</span> <span class="j-op">=</span> <span class="j-fi">msg</span><span class="j-op">.</span><span class="j-me">getMessageProperties</span><span class="j-op">();</span>
+          <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">setExpiration</span><span class="j-op">(</span><span class="j-ty">String</span><span class="j-op">.</span><span class="j-me">valueOf</span><span class="j-op">(</span><span class="j-fi">ttl</span><span class="j-op">.</span><span class="j-me">toMillis</span><span class="j-op">()));</span>
+          <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">setDeliveryMode</span><span class="j-op">(</span><span class="j-ty">MessageDeliveryMode</span><span class="j-op">.</span><span class="j-fi">PERSISTENT</span><span class="j-op">);</span>
+          <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">setPriority</span><span class="j-op">(</span><span class="j-nu">5</span><span class="j-op">);</span>
+          <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">setCorrelationId</span><span class="j-op">(</span><span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">());</span>
+          <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">setHeader</span><span class="j-op">(</span><span class="j-st">"X-Source"</span><span class="j-op">,</span> <span class="j-st">"order-service"</span><span class="j-op">);</span>
+          <span class="j-kw">return</span> <span class="j-fi">msg</span><span class="j-op">;</span>
+        <span class="j-op">});</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+        </div>
+        <div class="explain">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+          <div class="exp-pill"><span class="exp-key er">CorrelationData</span><div class="exp-body"><strong>Track individual confirms</strong>Pass a unique ID per message. The confirm callback on <code>RabbitTemplate</code> receives it back so you can match the broker's ACK/NACK to the specific message that was published.</div></div>
+          <div class="exp-pill"><span class="exp-key er">routing key pattern</span><div class="exp-body"><strong>Dynamic routing</strong><code>"order.created." + region</code> produces keys like <code>order.created.eu</code>. Queues bound with <code>order.#</code> receive all of these; a queue bound with <code>order.created.eu</code> receives only European orders.</div></div>
+          <div class="exp-pill"><span class="exp-key er">MessageDeliveryMode.PERSISTENT</span><div class="exp-body"><strong>Survive broker restart</strong>Set on every message destined for a durable queue. Without this, messages are stored in RAM only and lost on broker restart even if the queue is durable.</div></div>
+          <div class="exp-pill"><span class="exp-key er">setExpiration()</span><div class="exp-body"><strong>Per-message TTL</strong>Override the queue-level TTL for individual messages. Useful for time-sensitive notifications that should be discarded (and dead-lettered) if not consumed within a tight window.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Consumer -->
+    <div class="pane" id="rabbit-consumer">
+      <div class="code-grid">
+        <div class="cb">
+          <div class="cb-head">
+            <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">OrderConsumer.java</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-r">RABBITMQ</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+          </div>
+          <pre><span class="j-an">@Component</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">OrderConsumer</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">EmailService</span> <span class="j-fi">emailService</span><span class="j-op">;</span>
+
+  <span class="j-cm">// ── Standard listener ─────────────────────────</span>
+  <span class="j-an">@RabbitListener</span><span class="j-op">(</span>
+      queues           <span class="j-op">=</span> <span class="j-st">"${app.rabbit.queue}"</span><span class="j-op">,</span>
+      ackMode          <span class="j-op">=</span> <span class="j-st">"MANUAL"</span><span class="j-op">,</span>
+      concurrency      <span class="j-op">=</span> <span class="j-st">"3-10"</span>         <span class="j-cm">// min-max threads</span>
+  <span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onOrderEvent</span><span class="j-op">(</span>
+      <span class="j-an">@Payload</span>  <span class="j-ty">OrderEvent</span>      <span class="j-fi">event</span><span class="j-op">,</span>
+      <span class="j-an">@Header</span><span class="j-op">(</span><span class="j-ty">AmqpHeaders</span><span class="j-op">.</span><span class="j-fi">DELIVERY_TAG</span><span class="j-op">)</span> <span class="j-ty">long</span> <span class="j-fi">deliveryTag</span><span class="j-op">,</span>
+      <span class="j-an">@Header</span><span class="j-op">(</span><span class="j-ty">AmqpHeaders</span><span class="j-op">.</span><span class="j-fi">REDELIVERED</span><span class="j-op">)</span>  <span class="j-ty">boolean</span> <span class="j-fi">redelivered</span><span class="j-op">,</span>
+      <span class="j-ty">Channel</span>                           <span class="j-fi">channel</span>
+  <span class="j-op">) throws</span> <span class="j-ty">IOException</span> <span class="j-op">{</span>
+
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">info</span><span class="j-op">(</span><span class="j-st">"Processing order {} (redelivered={})"</span><span class="j-op">,</span>
+        <span class="j-fi">event</span><span class="j-op">.</span><span class="j-me">getOrderId</span><span class="j-op">(),</span> <span class="j-fi">redelivered</span><span class="j-op">);</span>
+
+    <span class="j-kw">try</span> <span class="j-op">{</span>
+      <span class="j-fi">emailService</span><span class="j-op">.</span><span class="j-me">sendConfirmation</span><span class="j-op">(</span><span class="j-fi">event</span><span class="j-op">);</span>
+      <span class="j-fi">channel</span><span class="j-op">.</span><span class="j-me">basicAck</span><span class="j-op">(</span><span class="j-fi">deliveryTag</span><span class="j-op">,</span> <span class="j-kw">false</span><span class="j-op">);</span>  <span class="j-cm">// ✅ success</span>
+
+    <span class="j-op">}</span> <span class="j-kw">catch</span> <span class="j-op">(</span><span class="j-ty">TransientException</span> <span class="j-fi">e</span><span class="j-op">) {</span>
+      <span class="j-cm">// Requeue once; if already redelivered → DLX</span>
+      <span class="j-fi">channel</span><span class="j-op">.</span><span class="j-me">basicNack</span><span class="j-op">(</span><span class="j-fi">deliveryTag</span><span class="j-op">,</span> <span class="j-kw">false</span><span class="j-op">,</span> <span class="j-op">!</span><span class="j-fi">redelivered</span><span class="j-op">);</span>
+
+    <span class="j-op">}</span> <span class="j-kw">catch</span> <span class="j-op">(</span><span class="j-ty">Exception</span> <span class="j-fi">e</span><span class="j-op">) {</span>
+      <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"Fatal error, sending to DLX"</span><span class="j-op">,</span> <span class="j-fi">e</span><span class="j-op">);</span>
+      <span class="j-fi">channel</span><span class="j-op">.</span><span class="j-me">basicNack</span><span class="j-op">(</span><span class="j-fi">deliveryTag</span><span class="j-op">,</span> <span class="j-kw">false</span><span class="j-op">,</span> <span class="j-kw">false</span><span class="j-op">);</span>  <span class="j-cm">// → DLX</span>
+    <span class="j-op">}</span>
+  <span class="j-op">}</span>
+
+  <span class="j-cm">// ── Batch listener ────────────────────────────</span>
+  <span class="j-an">@RabbitListener</span><span class="j-op">(</span>queues <span class="j-op">=</span> <span class="j-st">"orders.batch.queue"</span><span class="j-op">,</span> ackMode <span class="j-op">=</span> <span class="j-st">"MANUAL"</span><span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onBatch</span><span class="j-op">(</span>
+      <span class="j-ty">List</span><span class="j-op">&lt;</span><span class="j-ty">Message</span><span class="j-op">&gt;</span> <span class="j-fi">messages</span><span class="j-op">,</span>
+      <span class="j-ty">Channel</span> <span class="j-fi">channel</span>
+  <span class="j-op">) throws</span> <span class="j-ty">IOException</span> <span class="j-op">{</span>
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">info</span><span class="j-op">(</span><span class="j-st">"Batch of {} messages"</span><span class="j-op">,</span> <span class="j-fi">messages</span><span class="j-op">.</span><span class="j-me">size</span><span class="j-op">());</span>
+    <span class="j-cm">// process all...</span>
+    <span class="j-ty">long</span> <span class="j-fi">lastTag</span> <span class="j-op">=</span> <span class="j-ty">Long</span><span class="j-op">.</span><span class="j-me">parseLong</span><span class="j-op">(</span>
+        <span class="j-fi">messages</span><span class="j-op">.</span><span class="j-me">getLast</span><span class="j-op">().</span><span class="j-me">getMessageProperties</span><span class="j-op">().</span><span class="j-me">getDeliveryTag</span><span class="j-op">().</span><span class="j-me">toString</span><span class="j-op">());</span>
+    <span class="j-fi">channel</span><span class="j-op">.</span><span class="j-me">basicAck</span><span class="j-op">(</span><span class="j-fi">lastTag</span><span class="j-op">,</span> <span class="j-kw">true</span><span class="j-op">);</span>  <span class="j-cm">// ACK all up to lastTag</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+        </div>
+        <div class="explain">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+          <div class="exp-pill"><span class="exp-key er">basicAck / basicNack</span><div class="exp-body"><strong>Manual AMQP acknowledgment</strong>Always use MANUAL ack mode in production. ACK removes the message from the queue; NACK with requeue=true puts it back at the front; NACK with requeue=false forwards it to the DLX.</div></div>
+          <div class="exp-pill"><span class="exp-key er">redelivered flag</span><div class="exp-body"><strong>Detect retries</strong>RabbitMQ sets this to <code>true</code> on the second delivery attempt. Use it to avoid infinite requeue loops — if the message is already a redeliver and still fails, send it to DLX immediately.</div></div>
+          <div class="exp-pill"><span class="exp-key er">concurrency = "3-10"</span><div class="exp-body"><strong>Auto-scaling threads</strong>Spring AMQP starts 3 consumer threads and scales up to 10 based on queue depth. More efficient than fixed concurrency when load is bursty.</div></div>
+          <div class="exp-pill"><span class="exp-key er">basicAck(tag, multiple=true)</span><div class="exp-body"><strong>Batch ACK</strong>ACKs all unacknowledged messages up to and including the given delivery tag in a single AMQP frame. Reduces network round-trips for batch processing significantly.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DLX -->
+    <div class="pane" id="rabbit-dlx">
+      <div class="code-grid">
+        <div class="cb">
+          <div class="cb-head">
+            <div class="cb-head-l"><div class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></div><span class="cb-file">DlxConsumer.java — Dead Letter + Retry Pattern</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="cb-lang cl-r">RABBITMQ</span><button class="copy-btn" onclick="doCopy(this)">COPY</button></div>
+          </div>
+          <pre><span class="j-cm">/**
+ * Delayed retry pattern using DLX + per-message TTL.
+ * Failed messages → retry-queue (TTL=30s) → DLX → original queue
+ */</span>
+<span class="j-an">@Configuration</span>
+<span class="j-kw">public class</span> <span class="j-ty">RetryTopology</span> <span class="j-op">{</span>
+
+  <span class="j-cm">// Retry queue: hold for 30s, then re-route to main exchange</span>
+  <span class="j-an">@Bean</span>
+  <span class="j-kw">public</span> <span class="j-ty">Queue</span> <span class="j-me">retryQueue</span><span class="j-op">() {</span>
+    <span class="j-kw">return</span> <span class="j-ty">QueueBuilder</span><span class="j-op">.</span><span class="j-me">durable</span><span class="j-op">(</span><span class="j-st">"orders.retry.30s"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">ttl</span><span class="j-op">(</span><span class="j-nu">30_000</span><span class="j-op">)</span>                        <span class="j-cm">// hold for 30s</span>
+        <span class="j-op">.</span><span class="j-me">deadLetterExchange</span><span class="j-op">(</span><span class="j-st">"orders.exchange"</span><span class="j-op">)</span>  <span class="j-cm">// re-enter main exchange</span>
+        <span class="j-op">.</span><span class="j-me">deadLetterRoutingKey</span><span class="j-op">(</span><span class="j-st">"order.#"</span><span class="j-op">)</span>
+        <span class="j-op">.</span><span class="j-me">build</span><span class="j-op">();</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span>
+
+<span class="j-cm">// ─────────────────────────────────────────────────</span>
+
+<span class="j-an">@Component</span>
+<span class="j-an">@Slf4j</span>
+<span class="j-an">@RequiredArgsConstructor</span>
+<span class="j-kw">public class</span> <span class="j-ty">DlxConsumer</span> <span class="j-op">{</span>
+
+  <span class="j-kw">private final</span> <span class="j-ty">RabbitTemplate</span>   <span class="j-fi">rabbitTemplate</span><span class="j-op">;</span>
+  <span class="j-kw">private final</span> <span class="j-ty">AlertService</span>     <span class="j-fi">alertService</span><span class="j-op">;</span>
+  <span class="j-kw">private final</span> <span class="j-ty">FailedMsgRepo</span>    <span class="j-fi">failedMsgRepo</span><span class="j-op">;</span>
+
+  <span class="j-an">@RabbitListener</span><span class="j-op">(</span>queues <span class="j-op">=</span> <span class="j-st">"orders.dead-letter"</span><span class="j-op">,</span> ackMode <span class="j-op">=</span> <span class="j-st">"MANUAL"</span><span class="j-op">)</span>
+  <span class="j-kw">public void</span> <span class="j-me">onDeadLetter</span><span class="j-op">(</span>
+      <span class="j-ty">Message</span>  <span class="j-fi">message</span><span class="j-op">,</span>
+      <span class="j-ty">Channel</span>  <span class="j-fi">channel</span>
+  <span class="j-op">) throws</span> <span class="j-ty">IOException</span> <span class="j-op">{</span>
+
+    <span class="j-ty">MessageProperties</span> <span class="j-fi">props</span> <span class="j-op">=</span> <span class="j-fi">message</span><span class="j-op">.</span><span class="j-me">getMessageProperties</span><span class="j-op">();</span>
+
+    <span class="j-cm">// Extract death metadata</span>
+    <span class="j-ty">List</span><span class="j-op">&lt;</span><span class="j-ty">Map</span><span class="j-op">&lt;</span><span class="j-ty">String</span><span class="j-op">,</span><span class="j-ty">?</span><span class="j-op">&gt;&gt;</span> <span class="j-fi">xDeath</span> <span class="j-op">=</span> <span class="j-op">(</span><span class="j-ty">List</span><span class="j-op">&lt;?&gt;)</span>
+        <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">getHeaders</span><span class="j-op">().</span><span class="j-me">get</span><span class="j-op">(</span><span class="j-st">"x-death"</span><span class="j-op">);</span>
+
+    <span class="j-ty">long</span> <span class="j-fi">deathCount</span> <span class="j-op">= (</span><span class="j-ty">Long</span><span class="j-op">)</span> <span class="j-fi">xDeath</span><span class="j-op">.</span><span class="j-me">get</span><span class="j-op">(</span><span class="j-nu">0</span><span class="j-op">).</span><span class="j-me">get</span><span class="j-op">(</span><span class="j-st">"count"</span><span class="j-op">);</span>
+    <span class="j-ty">String</span> <span class="j-fi">reason</span>    <span class="j-op">= (</span><span class="j-ty">String</span><span class="j-op">)</span> <span class="j-fi">xDeath</span><span class="j-op">.</span><span class="j-me">get</span><span class="j-op">(</span><span class="j-nu">0</span><span class="j-op">).</span><span class="j-me">get</span><span class="j-op">(</span><span class="j-st">"reason"</span><span class="j-op">);</span>
+
+    <span class="j-fi">log</span><span class="j-op">.</span><span class="j-me">error</span><span class="j-op">(</span><span class="j-st">"Dead-lettered #{} reason={} correlationId={}"</span><span class="j-op">,</span>
+        <span class="j-fi">deathCount</span><span class="j-op">,</span> <span class="j-fi">reason</span><span class="j-op">,</span> <span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">getCorrelationId</span><span class="j-op">());</span>
+
+    <span class="j-cm">// Persist + alert for human review</span>
+    <span class="j-fi">failedMsgRepo</span><span class="j-op">.</span><span class="j-me">save</span><span class="j-op">(</span><span class="j-ty">FailedMessage</span><span class="j-op">.</span><span class="j-me">from</span><span class="j-op">(</span><span class="j-fi">message</span><span class="j-op">));</span>
+    <span class="j-fi">alertService</span><span class="j-op">.</span><span class="j-me">notifyOnCall</span><span class="j-op">(</span><span class="j-fi">reason</span><span class="j-op">,</span> <span class="j-fi">deathCount</span><span class="j-op">);</span>
+
+    <span class="j-fi">channel</span><span class="j-op">.</span><span class="j-me">basicAck</span><span class="j-op">(</span><span class="j-fi">props</span><span class="j-op">.</span><span class="j-me">getDeliveryTag</span><span class="j-op">(),</span> <span class="j-kw">false</span><span class="j-op">);</span>
+  <span class="j-op">}</span>
+<span class="j-op">}</span></pre>
+        </div>
+        <div class="explain">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">KEY POINTS</div>
+          <div class="exp-pill"><span class="exp-key er">Retry queue pattern</span><div class="exp-body"><strong>Delayed retry without plugins</strong>NACKed messages go to a TTL-only queue. After TTL expires, they dead-letter back to the main exchange — effectively a 30-second retry delay with no external scheduler needed.</div></div>
+          <div class="exp-pill"><span class="exp-key er">x-death header</span><div class="exp-body"><strong>Death metadata</strong>RabbitMQ automatically appends death metadata to dead-lettered messages — including the original queue, exchange, routing key, reason, and how many times the message has been dead-lettered. Use this for audit trails.</div></div>
+          <div class="exp-pill"><span class="exp-key er">failedMsgRepo.save()</span><div class="exp-body"><strong>Persist failures</strong>Always persist DLX messages to a database before ACKing them. This gives you an audit trail and enables manual reprocessing tooling without losing the message payload.</div></div>
+          <div class="exp-pill"><span class="exp-key er">ACK on DLX queue</span><div class="exp-body"><strong>Don't forget to ACK</strong>The DLX queue is just a normal queue — messages must still be ACKed by your DLX consumer. If you don't ACK, unprocessed messages pile up and block new dead-lettered arrivals.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /rabbit-section -->
+
+</div><!-- /wrap -->
+
+<footer style="position:relative;z-index:1;text-align:center;padding:36px 48px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--muted);">
+  <span style="color:var(--spring)">⬡ Spring Boot 3.x</span> &nbsp;·&nbsp; ⚡ Spring Kafka &nbsp;·&nbsp; 🐇 Spring AMQP
+</footer>
+
+<script>
+  const state = { kafka: 'yml', rabbit: 'yml' };
+
+  function tab(ns, id) {
+    // hide all panes in this namespace
+    document.querySelectorAll(`#${ns}-section .pane, .pane[id^="${ns}-"]`).forEach(p => p.classList.remove('on'));
+    document.getElementById(`${ns}-${id}`).classList.add('on');
+    state[ns] = id;
+
+    // update tab buttons in right section
+    const section = document.getElementById(ns === 'kafka' ? 'kafka-section' : 'rabbit-section') || document.querySelector('.wrap');
+    const tabs = ns === 'kafka'
+      ? document.querySelectorAll('.wrap > .tab-bar:first-of-type .tab-btn')
+      : document.querySelectorAll('#rabbit-section .tab-bar .tab-btn');
+
+    const allTabs = document.querySelectorAll('.tab-bar .tab-btn');
+    allTabs.forEach(t => {
+      t.classList.remove('tk','tr');
+    });
+
+    // Re-activate clicked tab
+    const idxMap = {
+      kafka: ['yml','prod-cfg','cons-cfg','producer','consumer','error','txn'],
+      rabbit: ['yml','config','publisher','consumer','dlx']
+    };
+    const idx = idxMap[ns].indexOf(id);
+
+    // find the right tab bar
+    const tabBars = document.querySelectorAll('.tab-bar');
+    const barIdx = ns === 'kafka' ? 0 : 1;
+    if (tabBars[barIdx]) {
+      tabBars[barIdx].querySelectorAll('.tab-btn').forEach((t, i) => {
+        t.classList.remove('tk','tr');
+        if (i === idx) t.classList.add(ns === 'kafka' ? 'tk' : 'tr');
+      });
+    }
+  }
+
+  function scrollTo2(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function doCopy(btn) {
+    const pre = btn.closest('.cb').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.textContent = 'COPIED!';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('ok'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

@@ -1735,22 +1735,26 @@ const CONCEPTS = [
     <strong>Used in:</strong> etcd (Kubernetes), CockroachDB, TiDB.`
   },
   {
-    id: "c35", icon: "⏰", title: "Vector Clocks",
-    color: "#f43f5e",
-    desc: "A mechanism for generating a partial ordering of events and detecting causality violations in distributed systems.",
-    tags: ["Distributed Systems", "Conflict Resolution", "Causality"],
-    detail: `<strong>The Problem:</strong> In a system without a global clock, determining the order of events (e.g., in Amazon Dynamo or Riak) is hard.<br><br>
-    <strong>How it works:</strong> Each node maintains a list of counters for all other nodes. When a node updates data, it increments its own counter and timestamps the data.<br><br>
-    <strong>Benefit:</strong> Allows the system to detect if two updates happened concurrently (Conflict) or if one followed the other.`
+    id: "c35", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
-    id: "c36", icon: "🧠", title: "Bloom Filters",
-    color: "#10b981",
-    desc: "A space-efficient probabilistic data structure used to test whether an element is a member of a set.",
-    tags: ["Probabilistic", "Data Intensive", "Optimization"],
-    detail: `<strong>Guarantee:</strong> It never returns a false negative (if it says 'No', the item is definitely not there). It might return a false positive.<br><br>
-    <strong>Use Cases:</strong> Reducing expensive disk lookups in databases (Cassandra, Bigtable) or checking if a URL is malicious/already crawled.<br><br>
-    <strong>Trade-off:</strong> Highly space-efficient but doesn't store the actual items or allow deletion.`
+    id: "c36", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
     id: "c37", icon: "🪵", title: "LSM-Trees",
@@ -1804,30 +1808,37 @@ const CONCEPTS = [
     <strong>Uses:</strong> Blockchain (Bitcoin/Ethereum), Git, P2P file sharing (BitTorrent), NoSQL anti-entropy (Dynamo DB/Cassandra).`
   },
   {
-    id: "c43", icon: "💾", title: "Write-Ahead Log (WAL)",
-    color: "#d946ef",
-    desc: "A family of techniques for providing atomicity and durability by logging operations before they are applied to the main database.",
-    tags: ["Persistence", "Durability", "Databases"],
-    detail: `<strong>The Benefit:</strong> In case of a crash, the database can replay the log to restore state (Redo) or undo uncommitted changes. Ensures the WAL is persisted to disk first.<br><br>
-    <strong>Standard in:</strong> PostgreSQL, MySQL (Redo log), MongoDB, Cassandra.`
+    id: "c43", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
-    id: "c44", icon: "💍", title: "Consistent Hashing",
-    color: "#0ea5e9",
-    desc: "A distributed hashing scheme that minimizes reorganization when nodes are added or removed.",
-    tags: ["Distributed Systems", "Sharding", "Load Balancing"],
-    detail: `<strong>The Problem:</strong> Traditional hashing (mod N) causes ~99% of keys to move if N changes. Consistent hashing only moves K/N keys.<br><br>
-    <strong>Virtual Nodes:</strong> To prevent 'hot spots', each physical node is mapped to multiple points on the hash ring. This ensures a more uniform data distribution.<br><br>
-    <strong>Used in:</strong> Amazon Dynamo, Apache Cassandra, Akamai CDN.`
+    id: "c44", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
-    id: "c45", icon: "🗣️", title: "Gossip Protocols",
-    color: "#f43f5e",
-    desc: "A peer-to-peer communication protocol for distributing information across a large network without a central coordinator.",
-    tags: ["Distributed Systems", "Communication", "P2P"],
-    detail: `<strong>Mechanism:</strong> Nodes periodically pick a random peer and share state ('infection-style'). Information spreads exponentially fast (O(log N) time).<br><br>
-    <strong>Anti-Entropy:</strong> Comparing state with peers to reconcile differences. Often used for cluster membership and failure detection (SWIM protocol).<br><br>
-    <strong>Used in:</strong> Cassandra (Node discovery), Consul.`
+    id: "c45", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
     id: "c46", icon: "🕰️", title: "Clock Synchronization",
@@ -1858,14 +1869,15 @@ const CONCEPTS = [
     <strong>Benefit:</strong> Decouples infrastructure logic from business code. The application doesn't need to know the Service Mesh exists.`
   },
   {
-    id: "c49", icon: "🔌", title: "Circuit Breaker",
-    color: "#ef4444",
-    desc: "A design pattern used to detect failures and encapsulate the logic of preventing a failure from constantly recurring.",
-    tags: ["Microservices", "Resilience", "Fault Tolerance"],
-    detail: `<strong>States:</strong><br>
-    • <strong>Closed:</strong> Everything is fine, traffic passes.<br>
-    • <strong>Open:</strong> Failures exceeded threshold. Traffic is blocked immediately to prevent cascading failures.<br>
-    • <strong>Half-Open:</strong> Tests to see if the downstream service has recovered. If yes, it closes again.`
+    id: "c49", icon: "💎", title: "S3 Select / Pushdown",
+    color: "#3b82f6",
+    desc: "Retrieving only the subset of data from an object by using simple SQL expressions at the storage layer.",
+    tags: ["Storage", "Optimization", "SQL", "Big Data"],
+    detail: `<strong>The Problem:</strong> Fetching a 1GB CSV just to read 2 rows wastes bandwidth and CPU. S3 Select lets you query the object <em>in-place</em>.<br><br>
+    <strong>Benefits:</strong><br>
+    • <strong>Efficiency:</strong> Up to 400% improvement in query performance.<br>
+    • <strong>Cost:</strong> Dramatically reduces data transfer costs by only sending necessary bytes over the network.<br><br>
+    <strong>Common use:</strong> Big Data analytics on Parquet/JSON files in S3.`
   },
   {
     id: "c50", icon: "🌳", title: "Strangler Fig Pattern",
@@ -2104,54 +2116,66 @@ const TOPICS = [
   { id: "misc", label: "🔧 Utilities", questions: [10,14] }
 ];
 
-const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47', 'c52', 'c53', 'c54', 'c58', 'c59'];
-const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48', 'c49', 'c50', 'c51', 'c55', 'c56', 'c57'];
+const DIST_SYS_IDS = ['c6', 'c7', 'c10', 'c13', 'c14', 'c22', 'c23', 'c24', 'c33', 'c34', 'c46', 'c47', 'c52', 'c53', 'c54', 'c58', 'c59'];
+const MICROSEC_IDS = ['c9', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c25', 'c26', 'c30', 'c31', 'c32', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c48', 'c50', 'c51', 'c55', 'c56', 'c57'];
 
 const DISTRIBUTED_CONCEPTS = CONCEPTS.filter(c => DIST_SYS_IDS.includes(c.id));
 const MICROSERVICES_CONCEPTS = CONCEPTS.filter(c => MICROSEC_IDS.includes(c.id));
 
 const CONCEPT_LINKS = {
-  // --- Microservices & Architecture ---
-  "c15": [{ label: "Martin Fowler: Microservices", url: "https://martinfowler.com/articles/microservices.html" }],
-  "c20": [{ label: "Rate Limiting Strategies", url: "https://stripe.com/blog/rate-limiters" }],
-  "c21": [{ label: "Nginx: What is an API Gateway?", url: "https://www.nginx.com/learn/api-gateway/" }],
-  "c22": [{ label: "Service Discovery in Microservices", url: "https://microservices.io/patterns/client-side-discovery.html" }],
-  "c30": [{ label: "Event Sourcing Pattern", url: "https://microservices.io/patterns/data/event-sourcing.html" }],
+  "c1": [{ label: "Horizontal vs Vertical Scaling", url: "https://www.cloudzero.com/blog/horizontal-vs-vertical-scaling" }],
+  "c2": [{ label: "Redis Caching Strategies", url: "https://redis.com/redis-enterprise/data-structures/caching/" }],
+  "c3": [{ label: "Database Sharding Principles", url: "https://www.digitalocean.com/community/tutorials/understanding-database-sharding" }],
+  "c4": [{ label: "Message Queues vs Pub/Sub", url: "https://aws.amazon.com/message-queue/" }],
+  "c5": [{ label: "CDN Architecture: What is a CDN?", url: "https://www.cloudflare.com/learning/cdn/what-is-a-cdn/" }],
+  "c6": [{ label: "IBM: CAP Theorem Explained", url: "https://www.ibm.com/topics/cap-theorem" }],
+  "c7": [{ label: "Consistent Hashing Algorithm", url: "https://www.toptal.com/big-data/consistent-hashing" }],
+  "c8": [{ label: "Rate Limiting Strategies", url: "https://stripe.com/blog/rate-limiters" }],
+  "c9": [{ label: "Martin Fowler: Microservices", url: "https://martinfowler.com/articles/microservices.html" }],
+  "c10": [{ label: "OWASP: System Design Security", url: "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" }],
+  "c11": [{ label: "Scaling Up vs Scaling Out", url: "https://www.ibm.com/topics/scale-out-vs-scale-up" }],
+  "c12": [{ label: "SQL vs NoSQL: High-level differences", url: "https://www.mongodb.com/nosql-explained/nosql-vs-sql" }],
+  "c13": [{ label: "OLTP vs OLAP", url: "https://aws.amazon.com/compare/the-difference-between-olap-and-oltp/" }],
+  "c14": [{ label: "Columnar Storage Explained", url: "https://www.snowflake.com/guides/columnar-database/" }],
+  "c15": [{ label: "Datastax: Cassandra Architecture", url: "https://docs.datastax.com/en/cassandra-oss/3.0/cassandra/architecture/archIntro.html" }],
+  "c16": [{ label: "Amazon DynamoDB Deep Dive", url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.html" }],
+  "c17": [{ label: "Apache Spark Core Concepts", url: "https://spark.apache.org/docs/latest/cluster-overview.html" }],
+  "c18": [{ label: "Apache Flink Architecture", url: "https://nightlies.apache.org/flink/flink-docs-stable/docs/concepts/flink-architecture/" }],
+  "c19": [{ label: "gRPC vs REST: Comparing APIs", url: "https://cloud.google.com/blog/products/api-management/understanding-grpc-rest-and-their-differences" }],
+  "c20": [{ label: "Kafka vs RabbitMQ: Which one to choose?", url: "https://www.cloudamqp.com/blog/when-to-use-rabbitmq-or-apache-kafka.html" }],
+  "c21": [{ label: "Bloom Filters: Space-efficient Probabilistic Sets", url: "https://en.wikipedia.org/wiki/Bloom_filter" }],
+  "c22": [{ label: "Why Vector Clocks are hard", url: "https://riak.com/posts/technical/why-vector-clocks-are-hard/" }],
+  "c23": [{ label: "Quorum-based Consistency", url: "https://en.wikipedia.org/wiki/Quorum_(distributed_computing)" }],
+  "c24": [{ label: "Gossip Protocol Guide", url: "https://en.wikipedia.org/wiki/Gossip_protocol" }],
+  "c25": [{ label: "Write-Ahead Log (WAL) Principles", url: "https://en.wikipedia.org/wiki/Write-ahead_logging" }],
+  "c26": [{ label: "Service Discovery in Microservices", url: "https://microservices.io/patterns/client-side-discovery.html" }],
+  "c27": [{ label: "Database Replication Strategies", url: "https://en.wikipedia.org/wiki/Replication_(computing)" }],
+  "c28": [{ label: "What is Edge Computing?", url: "https://www.cloudflare.com/learning/edge-computing/what-is-edge-computing/" }],
+  "c29": [{ label: "AWS S3 Select Documentation", url: "https://aws.amazon.com/s3/features/s3-select/" }],
+  "c30": [{ label: "Martin Fowler: Circuit Breaker", url: "https://martinfowler.com/bliki/CircuitBreaker.html" }],
   "c31": [{ label: "CQRS Pattern", url: "https://microservices.io/patterns/data/cqrs.html" }],
-  "c40": [{ label: "Saga Pattern", url: "https://microservices.io/patterns/data/saga.html" }],
-  "c41": [{ label: "What is a Service Mesh?", url: "https://www.redhat.com/en/topics/microservices/what-is-a-service-mesh" }],
-  "c48": [{ label: "Sidecar Pattern", url: "https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar" }],
-  "c49": [{ label: "Martin Fowler: Circuit Breaker", url: "https://martinfowler.com/bliki/CircuitBreaker.html" }],
-  "c50": [{ label: "Martin Fowler: Strangler Fig", url: "https://martinfowler.com/bliki/StranglerFigApplication.html" }],
-  "c51": [{ label: "BFF Pattern", url: "https://samnewman.io/patterns/architectural/bff/" }],
-  "c55": [{ label: "Domain-Driven Design", url: "https://martinfowler.com/bliki/DomainDrivenDesign.html" }],
-  "c56": [{ label: "Transactional Outbox", url: "https://microservices.io/patterns/data/transactional-outbox.html" }],
-  "c57": [{ label: "Bulkhead Pattern", url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead" }],
-
-  // --- Distributed Systems ---
-  "c13": [{ label: "IBM: CAP Theorem Explained", url: "https://www.ibm.com/topics/cap-theorem" }],
-  "c14": [{ label: "Understanding PACELC Theorem", url: "https://en.wikipedia.org/wiki/PACELC_theorem" }],
+  "c32": [{ label: "Backpressure in Streaming Systems", url: "https://medium.com/@jayphelps/backpressure-explained-illustrated-7fbc0a4843" }],
   "c33": [{ label: "Two-Phase Commit Protocol", url: "https://en.wikipedia.org/wiki/Two-phase_commit_protocol" }],
   "c34": [{ label: "The Secret Lives of Data (Raft)", url: "http://thesecretlivesofdata.com/raft/" }],
-  "c35": [{ label: "Why Vector Clocks are hard", url: "https://riak.com/posts/technical/why-vector-clocks-are-hard/" }],
-  "c44": [{ label: "Consistent Hashing Algorithm", url: "https://www.toptal.com/big-data/consistent-hashing" }],
-  "c45": [{ label: "Gossip Protocol Guide", url: "https://en.wikipedia.org/wiki/Gossip_protocol" }],
+  "c37": [{ label: "LSM-Trees vs B-Trees", url: "https://en.wikipedia.org/wiki/Log-structured_merge-tree" }],
+  "c38": [{ label: "gRPC: High Performance RPC", url: "https://grpc.io/docs/what-is-grpc/introduction/" }],
+  "c39": [{ label: "HTTP/3 and QUIC", url: "https://www.cloudflare.com/learning/performance/what-is-http-3/" }],
+  "c40": [{ label: "Saga Pattern: Distributed Transactions", url: "https://microservices.io/patterns/data/saga.html" }],
+  "c41": [{ label: "What is a Service Mesh?", url: "https://www.redhat.com/en/topics/microservices/what-is-a-service-mesh" }],
+  "c42": [{ label: "Merkle Trees in Distributed Systems", url: "https://en.wikipedia.org/wiki/Merkle_tree" }],
   "c46": [{ label: "Google Spanner & TrueTime", url: "https://cloud.google.com/spanner/docs/true-time-external-consistency" }],
   "c47": [{ label: "Distributed Locks with Redis", url: "https://redis.io/docs/manual/patterns/distributed-locks/" }],
+  "c48": [{ label: "Sidecar Pattern", url: "https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar" }],
+  "c50": [{ label: "Martin Fowler: Strangler Fig", url: "https://martinfowler.com/bliki/StranglerFigApplication.html" }],
+  "c51": [{ label: "BFF Pattern", url: "https://samnewman.io/patterns/architectural/bff/" }],
   "c52": [{ label: "OpenTelemetry: Distributed Tracing", url: "https://opentelemetry.io/docs/concepts/observability-primer/#distributed-traces" }],
   "c53": [{ label: "Split-Brain in Distributed Systems", url: "https://en.wikipedia.org/wiki/Split-brain_(computing)" }],
   "c54": [{ label: "AWS: Leader Election", url: "https://aws.amazon.com/builders-library/leader-election-in-distributed-systems/" }],
+  "c55": [{ label: "Domain-Driven Design", url: "https://martinfowler.com/bliki/DomainDrivenDesign.html" }],
+  "c56": [{ label: "Transactional Outbox Pattern", url: "https://microservices.io/patterns/data/transactional-outbox.html" }],
+  "c57": [{ label: "Bulkhead Pattern", url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/bulkhead" }],
   "c58": [{ label: "Principles of Chaos Engineering", url: "https://principlesofchaos.org/" }],
-  "c59": [{ label: "Interactive Intro to CRDTs", url: "https://jakelazaroff.com/words/an-interactive-intro-to-crdts/" }],
-
-  // --- General Data & Scaling ---
-  "c10": [{ label: "System Design: Load Balancing", url: "https://www.nginx.com/resources/glossary/load-balancing/" }],
-  "c1": [{ label: "Horizontal vs Vertical Scaling", url: "https://www.cloudzero.com/blog/horizontal-vs-vertical-scaling" }],
-  "c2": [{ label: "CDN Architecture", url: "https://www.cloudflare.com/learning/cdn/what-is-a-cdn/" }],
-  "c3": [{ label: "Database Sharding", url: "https://www.digitalocean.com/community/tutorials/understanding-database-sharding" }],
-  "c5": [{ label: "Redis Caching Strategies", url: "https://redis.com/redis-enterprise/data-structures/caching/" }],
-  "c11": [{ label: "Message Queues vs Pub/Sub", url: "https://aws.amazon.com/message-queue/" }],
-  "c12": [{ label: "WebSockets API", url: "https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API" }]
+  "c59": [{ label: "Interactive Intro to CRDTs", url: "https://jakelazaroff.com/words/an-interactive-intro-to-crdts/" }]
 };
 
 const TRADEOFF_LINKS = {
@@ -2267,37 +2291,41 @@ const QUESTION_LINKS = {
     { label: "Erlang in WhatsApp", url: "https://www.erlang-factory.com/upload/presentations/558/efsf2012-whatsapp-scaling.pdf" }
   ],
   5: [
-    { label: "Google Drive/Dropbox Architecture", url: "http://highscalability.com/blog/2013/10/21/the-dropbox-architecture.html" }
+    { label: "Hello Interview: Search Indexing", url: "https://www.hellointerview.com/learn/system-design/answer-keys/search-indexing" },
+    { label: "Google Search Architecture", url: "https://systemdesignhandbook.com/chapters/search-engine" }
   ],
   6: [
-    { label: "Tinder Architecture", url: "http://highscalability.com/tinder-architecture/" },
-    { label: "Geospatial Indexing with Redis", url: "https://redis.com/redis-best-practices/spatial-data/geospatial/" }
+    { label: "Instagram Architecture Update", url: "http://highscalability.com/blog/2011/12/6/instagram-architecture-update-from-5-to-30-million-users-in-9.html" },
+    { label: "Design Instagram (Photo Sharing)", url: "https://medium.com/@narengowda/system-design-interview-instagram-photo-sharing-app-3ade35cecadee" }
   ],
   7: [
-    { label: "Designing a URL Shortener", url: "https://www.geeksforgeeks.org/system-design-url-shortening-service/" }
+    { label: "Amazon Inventory Policy", url: "https://www.amazon.science/tag/supply-chain-optimization" },
+    { label: "ByteByteGo: E-Commerce System", url: "https://bytebytego.com/courses/system-design-interview/design-an-ecommerce-system" }
   ],
   8: [
-    { label: "Design a Rate Limiter", url: "https://www.figma.com/blog/an-alternative-approach-to-rate-limiting/" },
-    { label: "Stripe's Guide to Rate Limiting", url: "https://stripe.com/blog/rate-limiters" }
+    { label: "The Dropbox Architecture", url: "http://highscalability.com/blog/2013/10/21/the-dropbox-architecture.html" },
+    { label: "Design Google Drive/Dropbox", url: "https://medium.com/@narengowda/system-design-google-drive-dropbox-88834cadee" }
   ],
   9: [
-    { label: "Distributed Web Crawler", url: "https://www.geeksforgeeks.org/design-a-web-crawler/" }
+    { label: "ByteByteGo: Notification System", url: "https://bytebytego.com/courses/system-design-interview/design-a-notification-system" }
   ],
   10: [
-    { label: "Ticketmaster Architecture", url: "http://highscalability.com/ticketmaster-architecture/" }
+    { label: "System Design: URL Shortener", url: "https://www.geeksforgeeks.org/system-design-url-shortening-service/" },
+    { label: "TinyURL Architecture", url: "http://highscalability.com/blog/2009/4/27/tinyurl-architecture.html" }
   ],
   11: [
-    { label: "Unique ID Generation in Distributed Systems", url: "https://blog.twitter.com/engineering/en_us/a/2010/announcing-snowflake" }
+    { label: "Design Autocomplete / Typeahead", url: "https://bytebytego.com/courses/system-design-interview/design-search-autocomplete" }
   ],
   12: [
     { label: "Stripe Architecture", url: "https://stripe.com/blog/engineering" },
     { label: "Idempotency Keys", url: "https://stripe.com/docs/api/idempotent_requests" }
   ],
   13: [
-    { label: "Yelp Architecture (Geo-spatial)", url: "http://highscalability.com/blog/2015/7/27/yelp-architecture-search-at-scale.html" }
+    { label: "Yelp Architecture (Search at Scale)", url: "http://highscalability.com/blog/2015/7/27/yelp-architecture-search-at-scale.html" }
   ],
   14: [
-    { label: "Designing a Distributed Key-Value Store", url: "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf" }
+    { label: "Snowflake Architecture Deep Dive", url: "https://www.snowflake.com/blog/snowflake-architecture-deep-dive/" },
+    { label: "Twitter Snowflake ID Generation", url: "https://blog.twitter.com/engineering/en_us/a/2010/announcing-snowflake" }
   ]
 };
 

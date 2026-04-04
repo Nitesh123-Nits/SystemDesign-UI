@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URL Journey — DNS & Beyond</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --surface: #0d1117;
+    --border: #1e2d3d;
+    --text: #c9d1d9;
+    --muted: #4a5568;
+    --cyan: #00f5ff;
+    --green: #39ff14;
+    --orange: #ff6b35;
+    --purple: #bd93f9;
+    --yellow: #ffd93d;
+    --red: #ff5555;
+    --glow-cyan: 0 0 20px rgba(0,245,255,0.4);
+    --glow-green: 0 0 20px rgba(57,255,20,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  header .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  header h1 span { color: var(--cyan); }
+
+  header p {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.8;
+  }
+
+  /* URL Input Bar */
+  .browser-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .browser-bar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--purple), var(--green));
+  }
+
+  .browser-dots {
+    display: flex;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+
+  .browser-dots span {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    display: block;
+  }
+  .browser-dots span:nth-child(1) { background: var(--red); }
+  .browser-dots span:nth-child(2) { background: var(--yellow); }
+  .browser-dots span:nth-child(3) { background: var(--green); }
+
+  .url-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lock-icon { color: var(--green); font-size: 14px; }
+
+  #urlInput {
+    flex: 1;
+    background: rgba(0,245,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  #urlInput:focus {
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan);
+  }
+
+  #goBtn {
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  #goBtn:active { transform: translateY(0); }
+
+  /* Steps */
+  .steps-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.35;
+    transform: translateX(-8px);
+  }
+
+  .step.active {
+    opacity: 1;
+    transform: translateX(0);
+    border-color: var(--step-color, var(--cyan));
+    box-shadow: 0 0 30px var(--step-glow, rgba(0,245,255,0.15));
+  }
+
+  .step.done {
+    opacity: 0.7;
+    transform: translateX(0);
+    border-color: rgba(57,255,20,0.3);
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .step-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(0,245,255,0.1);
+    border: 1px solid var(--step-color, var(--cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--step-color, var(--cyan));
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .step.active .step-num {
+    background: var(--step-color, var(--cyan));
+    color: var(--bg);
+    animation: pulse-ring 1.5s infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 var(--step-color, rgba(0,245,255,0.6)); }
+    70% { box-shadow: 0 0 0 8px rgba(0,245,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,245,255,0); }
+  }
+
+  .step.done .step-num {
+    background: rgba(57,255,20,0.2);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .step-title {
+    flex: 1;
+  }
+
+  .step-title .tag {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .step-title h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+  }
+
+  .step-status {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .status-pending { color: var(--muted); }
+  .status-running { color: var(--cyan); animation: blink 1s infinite; }
+  .status-done { color: var(--green); }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .step-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .step.active .step-body,
+  .step.done .step-body {
+    max-height: 400px;
+  }
+
+  .step-content {
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  .step-content p {
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .code-block .line { display: block; }
+  .code-block .comment { color: var(--muted); }
+  .code-block .key { color: var(--purple); }
+  .code-block .val { color: var(--green); }
+  .code-block .hl { color: var(--cyan); }
+  .code-block .warn { color: var(--orange); }
+
+  /* Diagram visualizer */
+  .diagram {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .diag-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .diag-box {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    border: 1px solid;
+  }
+
+  .diag-arrow {
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    animation: arrow-flow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes arrow-flow {
+    0%, 100% { opacity: 0.3; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(3px); }
+  }
+
+  .diag-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 80px;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 30px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    box-shadow: var(--glow-cyan);
+    width: 0%;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 30px;
+  }
+
+  .btn {
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    letter-spacing: 1px;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: var(--bg);
+    border-color: var(--cyan);
+    font-weight: 700;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--border);
+  }
+
+  /* Result panel */
+  #resultPanel {
+    margin-top: 24px;
+    padding: 20px 24px;
+    background: rgba(57,255,20,0.05);
+    border: 1px solid rgba(57,255,20,0.3);
+    border-radius: 12px;
+    display: none;
+  }
+
+  #resultPanel.show { display: block; animation: fadeIn 0.5s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #resultPanel h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .result-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .result-card .rc-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .result-card .rc-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--cyan);
+  }
+
+  /* Tooltip */
+  .tooltip-term {
+    border-bottom: 1px dashed var(--muted);
+    cursor: help;
+    color: var(--yellow);
+  }
+
+  /* Packet animation */
+  .packet-flow {
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+
+  .packet-track {
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+    width: 100%;
+    position: absolute;
+  }
+
+  .packet {
+    width: 10px; height: 10px;
+    background: var(--cyan);
+    border-radius: 50%;
+    position: absolute;
+    left: -20px;
+    box-shadow: var(--glow-cyan);
+    animation: travel 2s linear infinite;
+  }
+
+  @keyframes travel {
+    0% { left: -20px; opacity: 1; }
+    80% { opacity: 1; }
+    100% { left: calc(100% + 20px); opacity: 0; }
+  }
+
+  .step[data-index="1"] { --step-color: #00f5ff; --step-glow: rgba(0,245,255,0.15); }
+  .step[data-index="2"] { --step-color: #bd93f9; --step-glow: rgba(189,147,249,0.15); }
+  .step[data-index="3"] { --step-color: #ff6b35; --step-glow: rgba(255,107,53,0.15); }
+  .step[data-index="4"] { --step-color: #ffd93d; --step-glow: rgba(255,217,61,0.15); }
+  .step[data-index="5"] { --step-color: #ff5555; --step-glow: rgba(255,85,85,0.15); }
+  .step[data-index="6"] { --step-color: #50fa7b; --step-glow: rgba(80,250,123,0.15); }
+  .step[data-index="7"] { --step-color: #8be9fd; --step-glow: rgba(139,233,253,0.15); }
+  .step[data-index="8"] { --step-color: #39ff14; --step-glow: rgba(57,255,20,0.25); }
+
+  footer {
+    text-align: center;
+    margin-top: 50px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+
+<div class="container">
+  <header>
+    <div class="label">// network internals</div>
+    <h1>What happens when you<br>type a <span>URL</span> in a browser?</h1>
+    <p>An interactive walkthrough of DNS resolution, TCP handshakes, and HTTP — from keypress to pixel.</p>
+  </header>
+
+  <!-- Browser Address Bar -->
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="url-input-row">
+      <span class="lock-icon">🔒</span>
+      <input type="text" id="urlInput" value="https://www.example.com" placeholder="Type a URL…" />
+      <button id="goBtn" onclick="startJourney()">GO →</button>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <div class="steps-grid" id="stepsGrid">
+
+    <!-- Step 1 -->
+    <div class="step" data-index="1" id="step1">
+      <div class="step-header" onclick="toggleStep(1)">
+        <div class="step-num">1</div>
+        <div class="step-title">
+          <div class="tag">Browser</div>
+          <h3>Parse the URL</h3>
+        </div>
+        <span class="step-status status-pending" id="status1">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Before making any network request, the browser <strong>parses the URL</strong> into its components. It identifies the <span class="tooltip-term" title="The protocol defines how data is transferred — HTTP or HTTPS">protocol</span>, <span class="tooltip-term" title="The domain name identifies the server you want to reach">domain</span>, port, path, and query string.</p>
+          <div class="code-block" id="parsedUrl">
+            <span class="line"><span class="key">protocol</span>  → <span class="val" id="p-protocol">https</span></span>
+            <span class="line"><span class="key">host     </span>  → <span class="val" id="p-host">www.example.com</span></span>
+            <span class="line"><span class="key">port     </span>  → <span class="val" id="p-port">443</span> <span class="comment">(default for HTTPS)</span></span>
+            <span class="line"><span class="key">path     </span>  → <span class="val" id="p-path">/</span></span>
+            <span class="line"><span class="key">query    </span>  → <span class="val" id="p-query">(none)</span></span>
+          </div>
+          <div class="code-block" style="margin-top:10px;">
+            <span class="line comment">// Browser also checks if this is a valid URL or a search query</span>
+            <span class="line"><span class="hl">HSTS check</span>: Is this domain on the preload list? → Force HTTPS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step" data-index="2" id="step2">
+      <div class="step-header" onclick="toggleStep(2)">
+        <div class="step-num">2</div>
+        <div class="step-title">
+          <div class="tag">DNS Cache Lookup</div>
+          <h3>Check Local Caches</h3>
+        </div>
+        <span class="step-status status-pending" id="status2">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Before querying any DNS server, the system checks several layers of cache to avoid slow network lookups. This is the fastest possible resolution.</p>
+          <div class="code-block">
+            <span class="line hl">Cache lookup order:</span>
+            <span class="line"></span>
+            <span class="line"><span class="warn">①</span> Browser DNS cache     <span class="comment">← fastest, in-memory</span></span>
+            <span class="line"><span class="warn">②</span> OS DNS cache          <span class="comment">← system-level</span></span>
+            <span class="line"><span class="warn">③</span> /etc/hosts file       <span class="comment">← static overrides</span></span>
+            <span class="line"><span class="warn">④</span> Router/LAN cache      <span class="comment">← local network</span></span>
+            <span class="line"></span>
+            <span class="line comment">// Each entry has a TTL (Time To Live)</span>
+            <span class="line"><span class="key">TTL expired</span> → <span class="val">proceed to DNS query</span></span>
+            <span class="line"><span class="key">Cache hit   </span> → <span class="val">skip DNS entirely ⚡</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step" data-index="3" id="step3">
+      <div class="step-header" onclick="toggleStep(3)">
+        <div class="step-num">3</div>
+        <div class="step-title">
+          <div class="tag">DNS Resolution</div>
+          <h3>Recursive DNS Resolver</h3>
+        </div>
+        <span class="step-status status-pending" id="status3">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Cache miss! The OS asks the <strong>Recursive Resolver</strong> (usually your ISP's DNS, or a public one like <code>8.8.8.8</code>) to find the IP address. This resolver does all the heavy lifting on your behalf.</p>
+          <div class="diagram">
+            <div class="diag-node">
+              <div class="diag-box" style="border-color:var(--orange);color:var(--orange)">Your PC</div>
+              <div class="diag-label">asks resolver</div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-node">
+              <div class="diag-box" style="border-color:var(--orange);color:var(--orange)">Recursive Resolver</div>
+              <div class="diag-label">8.8.8.8 or ISP</div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-node">
+              <div class="diag-box" style="border-color:var(--muted);color:var(--muted)">Root Nameserver</div>
+              <div class="diag-label">next step →</div>
+            </div>
+          </div>
+          <div class="code-block" style="margin-top:14px">
+            <span class="line comment">// UDP packet sent to resolver</span>
+            <span class="line"><span class="key">Query </span>: <span class="val" id="dns-query">www.example.com</span> type=A</span>
+            <span class="line"><span class="key">Port  </span>: <span class="hl">53</span> <span class="comment">(standard DNS port)</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step" data-index="4" id="step4">
+      <div class="step-header" onclick="toggleStep(4)">
+        <div class="step-num">4</div>
+        <div class="step-title">
+          <div class="tag">DNS Hierarchy</div>
+          <h3>Root → TLD → Authoritative</h3>
+        </div>
+        <span class="step-status status-pending" id="status4">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>DNS uses a <strong>hierarchical tree</strong>. The resolver climbs down this tree to find who is authoritative for your domain. There are 13 root server clusters that know where every TLD lives.</p>
+          <div class="diagram" style="justify-content:space-around; flex-wrap: wrap; gap: 12px;">
+            <div class="diag-node" style="text-align:center">
+              <div class="diag-box" style="border-color:var(--red);color:var(--red)">Root Server</div>
+              <div class="diag-label">". (dot)" — knows all TLDs</div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-node" style="text-align:center">
+              <div class="diag-box" style="border-color:var(--yellow);color:var(--yellow)">TLD Server</div>
+              <div class="diag-label">.com / .org / .io etc.</div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-node" style="text-align:center">
+              <div class="diag-box" style="border-color:var(--green);color:var(--green)">Authoritative NS</div>
+              <div class="diag-label">owns example.com</div>
+            </div>
+          </div>
+          <div class="code-block" style="margin-top:14px">
+            <span class="line hl">Resolver asks Root Server:</span>
+            <span class="line">  "Who handles .com?" → <span class="val">a.gtld-servers.net</span></span>
+            <span class="line hl">Resolver asks TLD Server:</span>
+            <span class="line">  "Who handles example.com?" → <span class="val">ns1.example.com</span></span>
+            <span class="line hl">Resolver asks Authoritative NS:</span>
+            <span class="line">  "IP for www.example.com?" → <span class="val">93.184.216.34</span> ✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step" data-index="5" id="step5">
+      <div class="step-header" onclick="toggleStep(5)">
+        <div class="step-num">5</div>
+        <div class="step-title">
+          <div class="tag">Network</div>
+          <h3>TCP Three-Way Handshake</h3>
+        </div>
+        <span class="step-status status-pending" id="status5">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Now we have an IP! The browser opens a <strong>TCP connection</strong> to port 443 (HTTPS). TCP requires a three-step handshake before any data flows, ensuring both sides are ready.</p>
+          <div class="packet-flow">
+            <div class="packet-track"></div>
+            <div class="packet" style="animation-delay: 0s"></div>
+            <div class="packet" style="animation-delay: 0.7s"></div>
+            <div class="packet" style="animation-delay: 1.4s"></div>
+          </div>
+          <div class="code-block">
+            <span class="line"><span class="warn">SYN</span>      Browser → Server  <span class="comment">"Can we talk?"</span></span>
+            <span class="line"><span class="warn">SYN-ACK</span>  Server → Browser  <span class="comment">"Yes! Ready."</span></span>
+            <span class="line"><span class="warn">ACK</span>      Browser → Server  <span class="comment">"Great, starting now."</span></span>
+            <span class="line"></span>
+            <span class="line comment">// RTT (round trip time) adds latency here</span>
+            <span class="line"><span class="key">Typical latency</span>: <span class="val">1–100ms</span> depending on distance</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step" data-index="6" id="step6">
+      <div class="step-header" onclick="toggleStep(6)">
+        <div class="step-num">6</div>
+        <div class="step-title">
+          <div class="tag">Security</div>
+          <h3>TLS Handshake (HTTPS)</h3>
+        </div>
+        <span class="step-status status-pending" id="status6">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>For HTTPS, a <strong>TLS handshake</strong> happens on top of TCP. The server presents its certificate, the browser verifies it with a Certificate Authority, and they negotiate an <span class="tooltip-term" title="Encryption keys used only for this session, then discarded">ephemeral session key</span> for encrypted communication.</p>
+          <div class="code-block">
+            <span class="line hl">TLS 1.3 Handshake:</span>
+            <span class="line"><span class="warn">ClientHello</span>   → ciphers, TLS version, random nonce</span>
+            <span class="line"><span class="warn">ServerHello</span>   → chosen cipher, certificate</span>
+            <span class="line"><span class="warn">Cert verify</span>   → browser checks CA signature</span>
+            <span class="line"><span class="warn">Key exchange</span>  → ECDHE → shared secret derived</span>
+            <span class="line"><span class="warn">Finished</span>      → 🔒 encrypted channel open</span>
+            <span class="line"></span>
+            <span class="line comment">// TLS 1.3 does this in 1-RTT (vs 2-RTT in TLS 1.2)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step" data-index="7" id="step7">
+      <div class="step-header" onclick="toggleStep(7)">
+        <div class="step-num">7</div>
+        <div class="step-title">
+          <div class="tag">HTTP</div>
+          <h3>HTTP Request & Response</h3>
+        </div>
+        <span class="step-status status-pending" id="status7">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>The browser sends an <strong>HTTP GET request</strong> over the encrypted tunnel. The server processes it and responds with headers and the HTML body. Modern connections use <span class="tooltip-term" title="HTTP/2 allows multiple requests to be in-flight at once over one connection">HTTP/2 multiplexing</span>.</p>
+          <div class="code-block">
+            <span class="line hl">REQUEST →</span>
+            <span class="line"><span class="key">GET</span> <span class="val" id="http-path">/</span> HTTP/2</span>
+            <span class="line"><span class="key">Host</span>: <span class="val" id="http-host">www.example.com</span></span>
+            <span class="line"><span class="key">Accept</span>: text/html</span>
+            <span class="line"><span class="key">Accept-Encoding</span>: gzip, br</span>
+            <span class="line"></span>
+            <span class="line hl">RESPONSE ←</span>
+            <span class="line"><span class="val">HTTP/2 200 OK</span></span>
+            <span class="line"><span class="key">Content-Type</span>: text/html; charset=utf-8</span>
+            <span class="line"><span class="key">Content-Encoding</span>: br</span>
+            <span class="line"><span class="key">Cache-Control</span>: max-age=3600</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="step" data-index="8" id="step8">
+      <div class="step-header" onclick="toggleStep(8)">
+        <div class="step-num">8</div>
+        <div class="step-title">
+          <div class="tag">Browser Engine</div>
+          <h3>Render the Page</h3>
+        </div>
+        <span class="step-status status-pending" id="status8">● waiting</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>The browser's engine parses HTML into a <strong>DOM tree</strong>, CSS into a <strong>CSSOM</strong>, combines them into a <strong>Render Tree</strong>, runs <strong>Layout</strong>, then <strong>Paint</strong>. JavaScript may block or defer this pipeline.</p>
+          <div class="code-block">
+            <span class="line hl">Critical Rendering Path:</span>
+            <span class="line"></span>
+            <span class="line"><span class="val">HTML</span> → <span class="key">DOM</span>   (parse tags, build tree)</span>
+            <span class="line"><span class="val">CSS</span>  → <span class="key">CSSOM</span> (parse styles)</span>
+            <span class="line"><span class="key">DOM</span> + <span class="key">CSSOM</span> → <span class="warn">Render Tree</span></span>
+            <span class="line"><span class="warn">Render Tree</span> → <span class="hl">Layout</span>  (compute positions)</span>
+            <span class="line"><span class="hl">Layout</span>      → <span class="hl">Paint</span>   (pixels on screen)</span>
+            <span class="line"><span class="hl">Paint</span>       → <span class="val">Composite</span> (GPU layers)</span>
+            <span class="line"></span>
+            <span class="line comment">// First Contentful Paint (FCP) ← user sees something</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /steps-grid -->
+
+  <!-- Result panel -->
+  <div id="resultPanel">
+    <h3>✓ Page Loaded Successfully</h3>
+    <p style="font-size:13px; color: var(--text); line-height:1.8; margin-bottom:0">
+      In under a second, your browser parsed a URL, resolved a domain name through a global hierarchy of servers, established an encrypted connection, and turned raw HTML bytes into a rendered page.
+    </p>
+    <div class="result-grid" id="resultGrid">
+      <div class="result-card">
+        <div class="rc-label">Resolved IP</div>
+        <div class="rc-val" id="res-ip">93.184.216.34</div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">Protocol</div>
+        <div class="rc-val" id="res-proto">HTTPS / TLS 1.3</div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">DNS Steps</div>
+        <div class="rc-val">3 queries</div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">Total time</div>
+        <div class="rc-val">~250ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" onclick="startJourney()">▶ Run Again</button>
+    <button class="btn btn-secondary" onclick="resetAll()">↺ Reset</button>
+  </div>
+
+  <footer>
+    <p>// URL Journey — DNS Resolution Interactive Explorer</p>
+  </footer>
+</div>
+
+<script>
+  let currentStep = 0;
+  let animationTimer = null;
+  const totalSteps = 8;
+
+  function parseUrl(raw) {
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+      return {
+        protocol: url.protocol.replace(':', ''),
+        host: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? '443' : '80'),
+        path: url.pathname || '/',
+        query: url.search || '(none)'
+      };
+    } catch {
+      return { protocol: 'https', host: raw, port: '443', path: '/', query: '(none)' };
+    }
+  }
+
+  function updateParsedUrl(u) {
+    document.getElementById('p-protocol').textContent = u.protocol;
+    document.getElementById('p-host').textContent = u.host;
+    document.getElementById('p-port').textContent = u.port + (u.port === '443' ? ' (default for HTTPS)' : u.port === '80' ? ' (default for HTTP)' : '');
+    document.getElementById('p-path').textContent = u.path;
+    document.getElementById('p-query').textContent = u.query;
+    document.getElementById('dns-query').textContent = u.host;
+    document.getElementById('http-path').textContent = u.path;
+    document.getElementById('http-host').textContent = u.host;
+    document.getElementById('res-proto').textContent = u.protocol.toUpperCase() + ' / TLS 1.3';
+  }
+
+  function resetAll() {
+    clearTimeout(animationTimer);
+    currentStep = 0;
+    for (let i = 1; i <= totalSteps; i++) {
+      const el = document.getElementById('step' + i);
+      el.classList.remove('active', 'done');
+      document.getElementById('status' + i).textContent = '● waiting';
+      document.getElementById('status' + i).className = 'step-status status-pending';
+    }
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('resultPanel').classList.remove('show');
+  }
+
+  function activateStep(n) {
+    for (let i = 1; i < n; i++) {
+      const el = document.getElementById('step' + i);
+      el.classList.remove('active');
+      el.classList.add('done');
+      document.getElementById('status' + i).textContent = '✓ done';
+      document.getElementById('status' + i).className = 'step-status status-done';
+    }
+    const el = document.getElementById('step' + n);
+    el.classList.add('active');
+    el.classList.remove('done');
+    document.getElementById('status' + n).textContent = '◉ running…';
+    document.getElementById('status' + n).className = 'step-status status-running';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('progressFill').style.width = ((n / totalSteps) * 100) + '%';
+  }
+
+  function toggleStep(n) {
+    // allow manual expand/collapse
+  }
+
+  function startJourney() {
+    resetAll();
+    const raw = document.getElementById('urlInput').value.trim() || 'https://www.example.com';
+    const u = parseUrl(raw);
+    updateParsedUrl(u);
+
+    const delays = [300, 1000, 1900, 3000, 4200, 5500, 6800, 8100];
+
+    delays.forEach((delay, i) => {
+      setTimeout(() => {
+        activateStep(i + 1);
+        if (i === totalSteps - 1) {
+          setTimeout(() => {
+            const el = document.getElementById('step' + totalSteps);
+            el.classList.remove('active');
+            el.classList.add('done');
+            document.getElementById('status' + totalSteps).textContent = '✓ done';
+            document.getElementById('status' + totalSteps).className = 'step-status status-done';
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('resultPanel').classList.add('show');
+          }, 900);
+        }
+      }, delay);
+    });
+  }
+
+  // Auto-start on load
+  window.addEventListener('load', () => {
+    setTimeout(startJourney, 600);
+  });
+</script>
+</body>
+</html>

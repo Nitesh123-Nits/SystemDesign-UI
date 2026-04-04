@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kafka vs RabbitMQ — Deep Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --kafka: #00e5a0;
+    --kafka-dim: rgba(0,229,160,0.12);
+    --kafka-border: rgba(0,229,160,0.3);
+    --rabbit: #ff6b35;
+    --rabbit-dim: rgba(255,107,53,0.12);
+    --rabbit-border: rgba(255,107,53,0.3);
+    --bg: #06080f;
+    --surface: #0c1120;
+    --surface2: #101828;
+    --surface3: #151f30;
+    --border: rgba(255,255,255,0.07);
+    --text: #e2e8f4;
+    --muted: #4a5a7a;
+    --muted2: #6a7a9a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* GRID BG */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 48px;
+    background: rgba(6,8,15,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: var(--mono); font-size: 12px; color: var(--muted2);
+    letter-spacing: 2px;
+  }
+  .logo b { color: var(--text); }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link {
+    padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    letter-spacing: .5px; cursor: pointer; border: none; background: transparent;
+    color: var(--muted2); transition: all .2s; font-family: var(--sans);
+  }
+  .nav-link.active-k { background: var(--kafka-dim); color: var(--kafka); border: 1px solid var(--kafka-border); }
+  .nav-link.active-r { background: var(--rabbit-dim); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+  .nav-link.active-w { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  /* HERO */
+  .hero {
+    position: relative; z-index: 1;
+    padding: 80px 48px 56px; text-align: center;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--muted2);
+    border: 1px solid var(--border); padding: 5px 16px; border-radius: 100px;
+  }
+  .hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--kafka); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 80px); font-weight: 900;
+    line-height: 1; letter-spacing: -3px; margin-bottom: 18px;
+  }
+  .hero h1 .k { color: var(--kafka); }
+  .hero h1 .r { color: var(--rabbit); }
+  .hero p { color: var(--muted2); font-size: 16px; max-width: 560px; margin: 0 auto; font-weight: 300; }
+
+  /* WRAPPER */
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 48px 80px; position: relative; z-index: 1; }
+
+  /* SECTION LABEL */
+  .sec-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--muted);
+    margin-bottom: 36px; display: flex; align-items: center; gap: 14px;
+    text-transform: uppercase;
+  }
+  .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .sec-label .tag { padding: 3px 10px; border-radius: 4px; font-size: 9px; }
+  .tag-k { background: var(--kafka-dim); color: var(--kafka); border: 1px solid var(--kafka-border); }
+  .tag-r { background: var(--rabbit-dim); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+
+  /* ARCH GRID */
+  .arch-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 80px; }
+
+  .arch-panel {
+    border-radius: 18px; border: 1px solid var(--border);
+    background: var(--surface); overflow: hidden;
+    transition: border-color .3s;
+  }
+  .arch-panel.k { border-top: 3px solid var(--kafka); }
+  .arch-panel.r { border-top: 3px solid var(--rabbit); }
+
+  .arch-head {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .arch-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .arch-icon.k { background: var(--kafka-dim); border: 1px solid var(--kafka-border); }
+  .arch-icon.r { background: var(--rabbit-dim); border: 1px solid var(--rabbit-border); }
+  .arch-head h2 { font-size: 22px; font-weight: 800; }
+  .arch-head small { font-family: var(--mono); font-size: 10px; color: var(--muted2); display: block; margin-top: 2px; }
+
+  .arch-body { padding: 28px; }
+
+  /* COMPONENT CARDS */
+  .comp-list { display: flex; flex-direction: column; gap: 12px; }
+  .comp {
+    background: var(--surface2); border-radius: 10px;
+    border: 1px solid var(--border); padding: 16px 18px;
+    display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+    transition: border-color .2s, transform .2s;
+    cursor: default;
+  }
+  .comp-icon { font-size: 20px; margin-top: 1px; }
+  .comp-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .comp-name.k { color: var(--kafka); }
+  .comp-name.r { color: var(--rabbit); }
+  .comp-desc { font-size: 12px; color: var(--muted2); line-height: 1.6; }
+  .comp-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .comp-tag {
+    font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 4px;
+    background: var(--surface3); border: 1px solid var(--border); color: var(--muted2);
+    letter-spacing: .5px;
+  }
+
+  /* VISUAL DIAGRAM */
+  .arch-diagram {
+    background: var(--surface3); border-radius: 12px;
+    border: 1px solid var(--border); padding: 20px; margin-bottom: 20px;
+    font-family: var(--mono); font-size: 11px;
+  }
+  .diag-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .diag-box {
+    padding: 6px 12px; border-radius: 6px; font-size: 10px; white-space: nowrap;
+    border: 1px solid;
+  }
+  .diag-box.k { background: var(--kafka-dim); border-color: var(--kafka-border); color: var(--kafka); }
+  .diag-box.r { background: var(--rabbit-dim); border-color: var(--rabbit-border); color: var(--rabbit); }
+  .diag-box.n { background: var(--surface2); border-color: var(--border); color: var(--muted2); }
+  .diag-arrow { color: var(--muted); font-size: 12px; }
+  .diag-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+  .diag-group {
+    border: 1px dashed; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .diag-group.k { border-color: var(--kafka-border); }
+  .diag-group.r { border-color: var(--rabbit-border); }
+
+  /* ===== CONFIG SECTION ===== */
+  .config-section { margin-bottom: 80px; }
+  .config-tabs { display: flex; gap: 6px; margin-bottom: 24px; }
+  .cfg-tab {
+    padding: 9px 20px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted2); transition: all .2s; font-family: var(--sans);
+  }
+  .cfg-tab.active-k { background: var(--kafka-dim); border-color: var(--kafka-border); color: var(--kafka); }
+  .cfg-tab.active-r { background: var(--rabbit-dim); border-color: var(--rabbit-border); color: var(--rabbit); }
+
+  .cfg-pane { display: none; }
+  .cfg-pane.active { display: block; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .cfg-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #070b12; border-radius: 12px; border: 1px solid var(--border);
+    overflow: hidden; position: relative;
+  }
+  .code-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .code-header-left { display: flex; align-items: center; gap: 10px; }
+  .code-dots { display: flex; gap: 5px; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .code-dots .d1 { background: #ff5f56; }
+  .code-dots .d2 { background: #ffbd2e; }
+  .code-dots .d3 { background: #27c93f; }
+  .code-filename { font-family: var(--mono); font-size: 11px; color: var(--muted2); }
+  .code-lang {
+    font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 4px;
+    letter-spacing: 1px;
+  }
+  .code-lang.k { background: var(--kafka-dim); color: var(--kafka); border: 1px solid var(--kafka-border); }
+  .code-lang.r { background: var(--rabbit-dim); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+  .copy-btn {
+    font-family: var(--mono); font-size: 10px; color: var(--muted); cursor: pointer;
+    background: none; border: 1px solid var(--border); border-radius: 5px;
+    padding: 3px 10px; transition: all .2s; letter-spacing: 1px;
+  }
+  .copy-btn.copied { color: var(--kafka); border-color: var(--kafka-border); }
+
+  pre {
+    padding: 20px; overflow-x: auto; font-family: var(--mono);
+    font-size: 12px; line-height: 1.75; color: #a8b8d0; margin: 0;
+    scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  pre::-webkit-scrollbar { height: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+  pre::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* Syntax highlighting */
+  .cm { color: #4a5a7a; font-style: italic; } /* comment */
+  .ck { color: #00e5a0; } /* kafka key */
+  .rk { color: #ff6b35; } /* rabbit key */
+  .cv { color: #7dd3fc; } /* value */
+  .cn { color: #fbbf24; } /* number */
+  .cs { color: #86efac; } /* string */
+  .cc { color: #c084fc; } /* class/type */
+  .co { color: #94a3b8; } /* operator */
+
+  /* CONFIG EXPLANATION PILLS */
+  .cfg-explain { display: flex; flex-direction: column; gap: 10px; }
+  .cfg-pill {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .cfg-pill-key {
+    font-family: var(--mono); font-size: 10px; color: var(--kafka);
+    background: var(--kafka-dim); padding: 2px 8px; border-radius: 4px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 1px; border: 1px solid var(--kafka-border);
+  }
+  .cfg-pill-key.r { color: var(--rabbit); background: var(--rabbit-dim); border-color: var(--rabbit-border); }
+  .cfg-pill-val { font-size: 12px; color: var(--muted2); line-height: 1.5; }
+  .cfg-pill-val strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 12px; }
+
+  /* DIFF TABLE */
+  .diff-table { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 80px; }
+  .diff-row { display: grid; grid-template-columns: 180px 1fr 1fr; border-bottom: 1px solid var(--border); transition: background .2s; }
+  .diff-row:last-child { border-bottom: none; }
+  .diff-row.hdr { background: var(--surface2); }
+  .dc { padding: 15px 20px; font-size: 13px; border-right: 1px solid var(--border); line-height: 1.5; }
+  .dc:last-child { border-right: none; }
+  .diff-row.hdr .dc { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 1px; color: var(--muted2); }
+  .diff-row.hdr .dc:nth-child(2) { color: var(--kafka); }
+  .diff-row.hdr .dc:nth-child(3) { color: var(--rabbit); }
+  .dl { color: var(--muted2); font-size: 11px; font-weight: 700; font-family: var(--mono); }
+  .dk { border-left: 2px solid rgba(0,229,160,0.2); }
+  .dr { border-left: 2px solid rgba(255,107,53,0.2); }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 100px; font-size: 9px; font-family: var(--mono); font-weight: 700; }
+  .bk { background: var(--kafka-dim); color: var(--kafka); border: 1px solid var(--kafka-border); }
+  .br { background: var(--rabbit-dim); color: var(--rabbit); border: 1px solid var(--rabbit-border); }
+  .bn { background: var(--surface3); color: var(--muted2); border: 1px solid var(--border); }
+
+  /* FOOTER */
+  footer { position: relative; z-index: 1; text-align: center; padding: 36px 48px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* RESPONSIVE */
+  @media(max-width:1000px) {
+    nav { padding: 12px 24px; }
+    .wrap { padding: 0 24px 60px; }
+    .hero { padding: 56px 24px 40px; }
+    .arch-cols { grid-template-columns: 1fr; }
+    .cfg-grid, .cfg-grid.three { grid-template-columns: 1fr; }
+    .diff-row { grid-template-columns: 110px 1fr 1fr; }
+    .dc { padding: 12px 14px; font-size: 12px; }
+  }
+  @media(max-width:640px) {
+    .nav-links { display: none; }
+    .diff-row { grid-template-columns: 1fr; }
+    .diff-row.hdr { display: none; }
+    .dc { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+
+  /* Unified SystemDesign.Pro Theme Injection */
+  :root {
+    --bg: #050512 !important;
+    --surface: #0a0a20 !important;
+    --border: rgba(255,255,255,0.1) !important;
+    --text: #e0e0e0 !important;
+    --text-muted: #a0a0b0 !important;
+    --accent: #7c5cfc !important;
+    --neon-cyan: #00f0ff !important;
+  }
+  body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .back-to-dashboard {
+    position: fixed; top: 20px; left: 20px; z-index: 9999;
+    background: var(--accent); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
+    font-family: sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.2s;
+  }
+
+</style>
+</head>
+<body>
+<a href="index.html" class="back-to-dashboard">← Back to Dashboard</a>
+
+
+<nav>
+  <div class="logo">msg/<b>systems</b> — deep reference</div>
+  <div class="nav-links">
+    <button class="nav-link active-k" onclick="goto('arch')">Architecture</button>
+    <button class="nav-link" onclick="goto('config')">Configuration</button>
+    <button class="nav-link" onclick="goto('diff')">Comparison</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">DISTRIBUTED MESSAGING DEEP DIVE</div>
+  <h1><span class="k">Apache Kafka</span><br>vs <span class="r">RabbitMQ</span></h1>
+  <p>Architecture internals, configuration reference, and a side-by-side comparison for distributed systems engineers.</p>
+</div>
+
+<!-- ═══════════════════════════════════ ARCHITECTURE ═══════════════════════════════════ -->
+<div class="wrap" id="arch">
+  <div class="sec-label">01 — ARCHITECTURE INTERNALS <span class="tag tag-k">KAFKA</span> <span class="tag tag-r">RABBITMQ</span></div>
+
+  <div class="arch-cols">
+
+    <!-- KAFKA PANEL -->
+    <div class="arch-panel k">
+      <div class="arch-head">
+        <div class="arch-icon k">⚡</div>
+        <div>
+          <h2 style="color:var(--kafka)">Apache Kafka</h2>
+          <small>DISTRIBUTED COMMIT LOG / EVENT STREAMING PLATFORM</small>
+        </div>
+      </div>
+      <div class="arch-body">
+
+        <!-- Diagram -->
+        <div class="arch-diagram">
+          <div class="diag-label">producers → broker cluster → consumer groups</div>
+          <div class="diag-row">
+            <div class="diag-box n">App</div>
+            <div class="diag-box n">IoT</div>
+            <div class="diag-box n">Service</div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-group k" style="flex:1">
+              <div class="diag-label" style="margin-bottom:5px">BROKER — Topic: orders (RF=3)</div>
+              <div class="diag-row" style="margin-bottom:0">
+                <div class="diag-box k">P-0 offset 0…N</div>
+                <div class="diag-box k">P-1 offset 0…N</div>
+                <div class="diag-box k">P-2 offset 0…N</div>
+              </div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div>
+              <div class="diag-box k" style="margin-bottom:4px">Group: analytics</div>
+              <div class="diag-box n">Group: billing</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="comp-list">
+          <div class="comp kc">
+            <div class="comp-icon">📨</div>
+            <div>
+              <div class="comp-name k">Producer</div>
+              <div class="comp-desc">Publishes records to a named <b>topic</b>. Uses a partitioner (default: round-robin or key hash) to decide which partition gets the record. Batches records for throughput via <code>linger.ms</code> and <code>batch.size</code>. Can use transactions for exactly-once semantics.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">acks=all</span>
+                <span class="comp-tag">idempotent</span>
+                <span class="comp-tag">linger.ms</span>
+                <span class="comp-tag">batch.size</span>
+                <span class="comp-tag">compression.type</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">📋</div>
+            <div>
+              <div class="comp-name k">Topic</div>
+              <div class="comp-desc">Logical feed name. A topic is split into <b>partitions</b> — ordered, immutable sequences of records. Each record gets a monotonically increasing <b>offset</b> within its partition. Topics have a configurable <b>retention policy</b> (time or size-based).</div>
+              <div class="comp-tags">
+                <span class="comp-tag">num.partitions</span>
+                <span class="comp-tag">replication.factor</span>
+                <span class="comp-tag">retention.ms</span>
+                <span class="comp-tag">cleanup.policy</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">🗂️</div>
+            <div>
+              <div class="comp-name k">Partition + Offset</div>
+              <div class="comp-desc">The atomic unit of parallelism. Each partition is an append-only log stored on disk. <b>Offset</b> = position of a record within a partition. Consumers commit offsets to <code>__consumer_offsets</code> topic, enabling independent replay by different groups at any time.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">append-only</span>
+                <span class="comp-tag">sequential I/O</span>
+                <span class="comp-tag">replayable</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">💾</div>
+            <div>
+              <div class="comp-name k">Broker</div>
+              <div class="comp-desc">A Kafka server process. Brokers form a <b>cluster</b>; each partition has one <b>leader</b> broker and N-1 <b>follower</b> replicas (ISR — In-Sync Replicas). Leader handles all reads/writes; followers replicate. Cluster metadata is managed by <b>KRaft</b> (formerly ZooKeeper).</div>
+              <div class="comp-tags">
+                <span class="comp-tag">leader/follower</span>
+                <span class="comp-tag">ISR</span>
+                <span class="comp-tag">KRaft</span>
+                <span class="comp-tag">log.dirs</span>
+                <span class="comp-tag">min.insync.replicas</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">👥</div>
+            <div>
+              <div class="comp-name k">Consumer Group</div>
+              <div class="comp-desc">Each consumer group reads the topic independently. Within a group, each partition is owned by exactly one consumer — enabling <b>horizontal scaling</b>. Multiple groups can consume the same topic simultaneously at different offsets (fan-out reads). Rebalancing is triggered when consumers join/leave.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">group.id</span>
+                <span class="comp-tag">auto.offset.reset</span>
+                <span class="comp-tag">max.poll.records</span>
+                <span class="comp-tag">session.timeout.ms</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">🔗</div>
+            <div>
+              <div class="comp-name k">Kafka Connect + Schema Registry</div>
+              <div class="comp-desc"><b>Connect</b> is a framework for streaming data between Kafka and external systems (DBs, S3, Elasticsearch) using <b>source</b> and <b>sink</b> connectors — no custom code needed. <b>Schema Registry</b> enforces Avro/JSON/Protobuf schema contracts so producers and consumers stay compatible.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">CDC</span>
+                <span class="comp-tag">Debezium</span>
+                <span class="comp-tag">Avro</span>
+                <span class="comp-tag">schema evolution</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp kc">
+            <div class="comp-icon">🌊</div>
+            <div>
+              <div class="comp-name k">Kafka Streams / ksqlDB</div>
+              <div class="comp-desc"><b>Streams</b> is an embedded Java library for stateful stream processing (joins, aggregations, windowing) that runs inside your app — no separate cluster needed. <b>ksqlDB</b> lets you write SQL queries directly on topics, materializing results as new topics or queryable tables.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">KTable</span>
+                <span class="comp-tag">KStream</span>
+                <span class="comp-tag">windowing</span>
+                <span class="comp-tag">ksqlDB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RABBITMQ PANEL -->
+    <div class="arch-panel r">
+      <div class="arch-head">
+        <div class="arch-icon r">🐇</div>
+        <div>
+          <h2 style="color:var(--rabbit)">RabbitMQ</h2>
+          <small>AMQP 0.9.1 MESSAGE BROKER</small>
+        </div>
+      </div>
+      <div class="arch-body">
+
+        <!-- Diagram -->
+        <div class="arch-diagram">
+          <div class="diag-label">publisher → exchange → bindings → queues → consumers</div>
+          <div class="diag-row">
+            <div class="diag-box n">Svc A</div>
+            <div class="diag-box n">Svc B</div>
+            <div class="diag-arrow">→</div>
+            <div class="diag-group r" style="flex:1">
+              <div class="diag-label" style="margin-bottom:5px">EXCHANGE (topic type)</div>
+              <div class="diag-row" style="margin-bottom:0">
+                <div class="diag-box r">order.created</div>
+                <div class="diag-box r">order.*</div>
+              </div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div>
+              <div class="diag-box r" style="margin-bottom:4px">📬 email-q</div>
+              <div class="diag-box r">📬 sms-q</div>
+            </div>
+            <div class="diag-arrow">→</div>
+            <div>
+              <div class="diag-box n">W1 ACK</div>
+              <div class="diag-box n" style="margin-top:4px">W2 ACK</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="comp-list">
+          <div class="comp rc">
+            <div class="comp-icon">📤</div>
+            <div>
+              <div class="comp-name r">Publisher</div>
+              <div class="comp-desc">Sends messages to an <b>Exchange</b> (never directly to a queue). Each message includes a <b>routing key</b> — a dot-separated string (e.g., <code>order.created.eu</code>). Publishers can declare messages as <b>persistent</b> (survives broker restart) or transient. Confirms delivery via <b>publisher confirms</b>.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">routing key</span>
+                <span class="comp-tag">persistent</span>
+                <span class="comp-tag">publisher confirms</span>
+                <span class="comp-tag">mandatory flag</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">🔀</div>
+            <div>
+              <div class="comp-name r">Exchange</div>
+              <div class="comp-desc">The routing brain of RabbitMQ. Four types: <b>Direct</b> (exact key match → one queue), <b>Fanout</b> (ignores key → all bound queues), <b>Topic</b> (<code>*</code> = one word, <code>#</code> = zero or more words), <b>Headers</b> (matches on message header attributes, not the key). Each Exchange has a list of <b>bindings</b>.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">direct</span>
+                <span class="comp-tag">fanout</span>
+                <span class="comp-tag">topic</span>
+                <span class="comp-tag">headers</span>
+                <span class="comp-tag">bindings</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">📬</div>
+            <div>
+              <div class="comp-name r">Queue</div>
+              <div class="comp-desc">Ordered buffer holding messages until consumed. Key properties: <b>durable</b> (survives restart), <b>exclusive</b> (tied to one connection), <b>auto-delete</b> (removed when last consumer leaves), <b>TTL</b> (message/queue expiry), <b>max-length</b> (overflow policy: drop-head or reject-publish), <b>priority levels</b> (0–255).</div>
+              <div class="comp-tags">
+                <span class="comp-tag">durable</span>
+                <span class="comp-tag">TTL</span>
+                <span class="comp-tag">priority</span>
+                <span class="comp-tag">max-length</span>
+                <span class="comp-tag">quorum queue</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">🔗</div>
+            <div>
+              <div class="comp-name r">Binding</div>
+              <div class="comp-desc">A rule linking an Exchange to a Queue. For Topic exchanges, the binding key uses wildcards: <code>order.*</code> matches <code>order.created</code> but not <code>order.created.eu</code>. A single queue can have multiple bindings from multiple exchanges — enabling complex routing topologies.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">binding key</span>
+                <span class="comp-tag">wildcard *</span>
+                <span class="comp-tag">wildcard #</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">👷</div>
+            <div>
+              <div class="comp-name r">Consumer + ACK/NACK</div>
+              <div class="comp-desc">Consumers register on a queue and receive messages via <b>push</b> (broker delivers). Must explicitly <b>ACK</b> each message after processing — unacknowledged messages are redelivered on consumer crash. <b>NACK</b> with requeue=false routes to the <b>Dead Letter Exchange (DLX)</b>. <b>prefetch_count</b> limits unacked messages per consumer.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">ack</span>
+                <span class="comp-tag">nack</span>
+                <span class="comp-tag">prefetch_count</span>
+                <span class="comp-tag">DLX</span>
+                <span class="comp-tag">requeue</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">☠️</div>
+            <div>
+              <div class="comp-name r">Dead Letter Exchange (DLX)</div>
+              <div class="comp-desc">Messages are dead-lettered when: NACK'd with requeue=false, TTL expires, or queue is full. Dead-lettered messages are forwarded to the <b>DLX</b> with their original routing key (or a new one via <code>x-dead-letter-routing-key</code>). Used for retry queues, error audits, and poison message handling.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">x-dead-letter-exchange</span>
+                <span class="comp-tag">retry queue</span>
+                <span class="comp-tag">poison message</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp rc">
+            <div class="comp-icon">🏛️</div>
+            <div>
+              <div class="comp-name r">Virtual Hosts (vhosts) + Quorum Queues</div>
+              <div class="comp-desc"><b>Vhosts</b> are isolated namespaces within one broker — separate exchanges, queues, and permissions. Ideal for multi-tenant environments. <b>Quorum Queues</b> (Raft-based, replicated) replace classic mirrored queues and provide strong durability and consistency guarantees across a cluster.</div>
+              <div class="comp-tags">
+                <span class="comp-tag">vhost</span>
+                <span class="comp-tag">Raft</span>
+                <span class="comp-tag">quorum queue</span>
+                <span class="comp-tag">ha-policy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════ CONFIGURATION ═══════════════════════════════════ -->
+  <div id="config" class="config-section">
+    <div class="sec-label">02 — CONFIGURATION REFERENCE <span class="tag tag-k">PROPERTIES</span> <span class="tag tag-r">YAML / CONF</span></div>
+
+    <div class="config-tabs">
+      <button class="cfg-tab active-k" onclick="switchCfg('k-broker')">⚡ Kafka Broker</button>
+      <button class="cfg-tab" onclick="switchCfg('k-producer')">⚡ Kafka Producer</button>
+      <button class="cfg-tab" onclick="switchCfg('k-consumer')">⚡ Kafka Consumer</button>
+      <button class="cfg-tab" onclick="switchCfg('r-broker')">🐇 RabbitMQ Broker</button>
+      <button class="cfg-tab" onclick="switchCfg('r-client')">🐇 RabbitMQ Client</button>
+    </div>
+
+    <!-- KAFKA BROKER -->
+    <div class="cfg-pane active" id="pane-k-broker">
+      <div class="cfg-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-header-left">
+              <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+              <span class="code-filename">server.properties</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="code-lang k">KAFKA</span>
+              <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+            </div>
+          </div>
+          <pre><span class="cm"># ── Broker Identity ──────────────────────</span>
+<span class="ck">broker.id</span><span class="co">=</span><span class="cn">1</span>
+<span class="ck">node.id</span><span class="co">=</span><span class="cn">1</span>                   <span class="cm"># KRaft mode</span>
+<span class="ck">process.roles</span><span class="co">=</span><span class="cs">broker,controller</span>
+
+<span class="cm"># ── Listeners ────────────────────────────</span>
+<span class="ck">listeners</span><span class="co">=</span><span class="cs">PLAINTEXT://:9092,CONTROLLER://:9093</span>
+<span class="ck">advertised.listeners</span><span class="co">=</span><span class="cs">PLAINTEXT://kafka-1:9092</span>
+<span class="ck">inter.broker.listener.name</span><span class="co">=</span><span class="cs">PLAINTEXT</span>
+
+<span class="cm"># ── Storage ──────────────────────────────</span>
+<span class="ck">log.dirs</span><span class="co">=</span><span class="cs">/var/kafka/data</span>
+<span class="ck">log.retention.hours</span><span class="co">=</span><span class="cn">168</span>        <span class="cm"># 7 days</span>
+<span class="ck">log.retention.bytes</span><span class="co">=</span><span class="cn">-1</span>         <span class="cm"># unlimited</span>
+<span class="ck">log.segment.bytes</span><span class="co">=</span><span class="cn">1073741824</span>   <span class="cm"># 1 GB</span>
+<span class="ck">log.cleanup.policy</span><span class="co">=</span><span class="cs">delete</span>     <span class="cm"># or compact</span>
+
+<span class="cm"># ── Replication ──────────────────────────</span>
+<span class="ck">default.replication.factor</span><span class="co">=</span><span class="cn">3</span>
+<span class="ck">min.insync.replicas</span><span class="co">=</span><span class="cn">2</span>
+<span class="ck">offsets.topic.replication.factor</span><span class="co">=</span><span class="cn">3</span>
+<span class="ck">transaction.state.log.replication.factor</span><span class="co">=</span><span class="cn">3</span>
+<span class="ck">transaction.state.log.min.isr</span><span class="co">=</span><span class="cn">2</span>
+
+<span class="cm"># ── Performance ──────────────────────────</span>
+<span class="ck">num.network.threads</span><span class="co">=</span><span class="cn">8</span>
+<span class="ck">num.io.threads</span><span class="co">=</span><span class="cn">16</span>
+<span class="ck">socket.send.buffer.bytes</span><span class="co">=</span><span class="cn">102400</span>
+<span class="ck">socket.receive.buffer.bytes</span><span class="co">=</span><span class="cn">102400</span>
+<span class="ck">socket.request.max.bytes</span><span class="co">=</span><span class="cn">104857600</span>
+<span class="ck">num.partitions</span><span class="co">=</span><span class="cn">6</span>              <span class="cm"># default partitions</span>
+
+<span class="cm"># ── KRaft Controller Quorum ──────────────</span>
+<span class="ck">controller.quorum.voters</span><span class="co">=</span><span class="cs">1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093</span></pre>
+        </div>
+
+        <div class="cfg-explain">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px">KEY SETTINGS EXPLAINED</div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">min.insync.replicas</span>
+            <div class="cfg-pill-val"><strong>Durability guarantee</strong>Minimum ISR brokers that must ACK a write before the producer gets success. Set to 2 with RF=3 for strong durability without sacrificing too much throughput.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">log.retention.hours</span>
+            <div class="cfg-pill-val"><strong>Message lifetime</strong>How long Kafka keeps records regardless of consumption. Set to -1 (unlimited) for event sourcing / audit log patterns. Use <code>log.cleanup.policy=compact</code> for changelog topics.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">process.roles</span>
+            <div class="cfg-pill-val"><strong>KRaft mode</strong>In KRaft (Kafka 3.3+), brokers can act as both <code>broker</code> and <code>controller</code>, eliminating the ZooKeeper dependency entirely. Always use KRaft for new deployments.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">num.partitions</span>
+            <div class="cfg-pill-val"><strong>Parallelism ceiling</strong>Default partition count for auto-created topics. Rule of thumb: partitions ≥ (target throughput MB/s) ÷ (throughput per partition). Over-partitioning wastes resources; under-partitioning limits scale.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">log.cleanup.policy</span>
+            <div class="cfg-pill-val"><strong>Retention strategy</strong><code>delete</code> = remove old segments after time/size limit. <code>compact</code> = keep only the latest record per key (ideal for state/changelog topics like a DB table mirror).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KAFKA PRODUCER -->
+    <div class="cfg-pane" id="pane-k-producer">
+      <div class="cfg-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-header-left">
+              <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+              <span class="code-filename">producer.properties / Java config</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="code-lang k">KAFKA</span>
+              <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+            </div>
+          </div>
+          <pre><span class="cm"># ── Connection ───────────────────────────</span>
+<span class="ck">bootstrap.servers</span><span class="co">=</span><span class="cs">kafka-1:9092,kafka-2:9092,kafka-3:9092</span>
+<span class="ck">client.id</span><span class="co">=</span><span class="cs">order-service-producer</span>
+
+<span class="cm"># ── Serialization ────────────────────────</span>
+<span class="ck">key.serializer</span><span class="co">=</span><span class="cc">org.apache.kafka.common.serialization.StringSerializer</span>
+<span class="ck">value.serializer</span><span class="co">=</span><span class="cc">io.confluent.kafka.serializers.KafkaAvroSerializer</span>
+<span class="ck">schema.registry.url</span><span class="co">=</span><span class="cs">http://schema-registry:8081</span>
+
+<span class="cm"># ── Reliability ──────────────────────────</span>
+<span class="ck">acks</span><span class="co">=</span><span class="cs">all</span>            <span class="cm"># wait for all ISR to ACK</span>
+<span class="ck">retries</span><span class="co">=</span><span class="cn">2147483647</span>  <span class="cm"># effectively infinite</span>
+<span class="ck">delivery.timeout.ms</span><span class="co">=</span><span class="cn">120000</span>
+<span class="ck">enable.idempotence</span><span class="co">=</span><span class="cs">true</span>  <span class="cm"># exactly-once per partition</span>
+
+<span class="cm"># ── Transactions (exactly-once) ──────────</span>
+<span class="ck">transactional.id</span><span class="co">=</span><span class="cs">order-producer-txn-1</span>
+<span class="ck">transaction.timeout.ms</span><span class="co">=</span><span class="cn">60000</span>
+
+<span class="cm"># ── Throughput / Batching ────────────────</span>
+<span class="ck">batch.size</span><span class="co">=</span><span class="cn">65536</span>        <span class="cm"># 64KB batch</span>
+<span class="ck">linger.ms</span><span class="co">=</span><span class="cn">10</span>            <span class="cm"># wait up to 10ms to fill batch</span>
+<span class="ck">buffer.memory</span><span class="co">=</span><span class="cn">67108864</span>  <span class="cm"># 64MB send buffer</span>
+<span class="ck">max.block.ms</span><span class="co">=</span><span class="cn">60000</span>      <span class="cm"># block if buffer full</span>
+
+<span class="cm"># ── Compression ──────────────────────────</span>
+<span class="ck">compression.type</span><span class="co">=</span><span class="cs">lz4</span>    <span class="cm"># lz4 | snappy | gzip | zstd</span>
+
+<span class="cm"># ── Security (TLS + SASL) ────────────────</span>
+<span class="ck">security.protocol</span><span class="co">=</span><span class="cs">SASL_SSL</span>
+<span class="ck">sasl.mechanism</span><span class="co">=</span><span class="cs">SCRAM-SHA-512</span>
+<span class="ck">ssl.truststore.location</span><span class="co">=</span><span class="cs">/certs/kafka.truststore.jks</span></pre>
+        </div>
+
+        <div class="cfg-explain">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px">KEY SETTINGS EXPLAINED</div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">acks=all</span>
+            <div class="cfg-pill-val"><strong>Strongest durability</strong>Waits for ALL in-sync replicas to write the record. Required when <code>enable.idempotence=true</code>. <code>acks=1</code> is faster but risks data loss on leader failure. <code>acks=0</code> is fire-and-forget.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">enable.idempotence</span>
+            <div class="cfg-pill-val"><strong>Exactly-once per partition</strong>Producer gets a PID + sequence number; broker deduplicates retries. Add <code>transactional.id</code> to extend this across partitions and topics (full EOS).</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">linger.ms + batch.size</span>
+            <div class="cfg-pill-val"><strong>Throughput vs latency tradeoff</strong>Higher <code>linger.ms</code> = more records per batch = better compression + fewer requests. For low-latency systems use <code>linger.ms=0</code>. For high-throughput pipelines use 5–20ms.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">compression.type</span>
+            <div class="cfg-pill-val"><strong>Bandwidth savings</strong><code>lz4</code> is the best balance of CPU vs ratio. <code>zstd</code> gives the highest ratio. <code>snappy</code> has the lowest CPU overhead. Compression is applied per batch, so larger batches compress better.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">transactional.id</span>
+            <div class="cfg-pill-val"><strong>Atomic multi-partition writes</strong>Enables read-process-write loops with exactly-once semantics across topics. Each producer instance must have a unique ID. Broker uses this to fence zombie producers.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KAFKA CONSUMER -->
+    <div class="cfg-pane" id="pane-k-consumer">
+      <div class="cfg-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-header-left">
+              <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+              <span class="code-filename">consumer.properties / Java config</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="code-lang k">KAFKA</span>
+              <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+            </div>
+          </div>
+          <pre><span class="cm"># ── Connection + Group ───────────────────</span>
+<span class="ck">bootstrap.servers</span><span class="co">=</span><span class="cs">kafka-1:9092,kafka-2:9092,kafka-3:9092</span>
+<span class="ck">group.id</span><span class="co">=</span><span class="cs">order-processor-v2</span>
+<span class="ck">client.id</span><span class="co">=</span><span class="cs">order-consumer-1</span>
+
+<span class="cm"># ── Deserialization ──────────────────────</span>
+<span class="ck">key.deserializer</span><span class="co">=</span><span class="cc">org.apache.kafka.common.serialization.StringDeserializer</span>
+<span class="ck">value.deserializer</span><span class="co">=</span><span class="cc">io.confluent.kafka.serializers.KafkaAvroDeserializer</span>
+<span class="ck">specific.avro.reader</span><span class="co">=</span><span class="cs">true</span>
+<span class="ck">schema.registry.url</span><span class="co">=</span><span class="cs">http://schema-registry:8081</span>
+
+<span class="cm"># ── Offset Management ────────────────────</span>
+<span class="ck">auto.offset.reset</span><span class="co">=</span><span class="cs">earliest</span>   <span class="cm"># earliest | latest | none</span>
+<span class="ck">enable.auto.commit</span><span class="co">=</span><span class="cs">false</span>     <span class="cm"># manual commit for safety</span>
+<span class="ck">auto.commit.interval.ms</span><span class="co">=</span><span class="cn">5000</span>
+
+<span class="cm"># ── Polling ──────────────────────────────</span>
+<span class="ck">max.poll.records</span><span class="co">=</span><span class="cn">500</span>         <span class="cm"># records per poll()</span>
+<span class="ck">max.poll.interval.ms</span><span class="co">=</span><span class="cn">300000</span>  <span class="cm"># max time between polls</span>
+<span class="ck">fetch.min.bytes</span><span class="co">=</span><span class="cn">1</span>            <span class="cm"># min data for fetch response</span>
+<span class="ck">fetch.max.wait.ms</span><span class="co">=</span><span class="cn">500</span>        <span class="cm"># max wait if fetch.min.bytes not met</span>
+
+<span class="cm"># ── Session / Heartbeat ──────────────────</span>
+<span class="ck">session.timeout.ms</span><span class="co">=</span><span class="cn">45000</span>    <span class="cm"># consumer considered dead after</span>
+<span class="ck">heartbeat.interval.ms</span><span class="co">=</span><span class="cn">15000</span> <span class="cm"># must be &lt; session.timeout/3</span>
+
+<span class="cm"># ── Isolation (exactly-once reads) ───────</span>
+<span class="ck">isolation.level</span><span class="co">=</span><span class="cs">read_committed</span>  <span class="cm"># skip uncommitted txn records</span>
+
+<span class="cm"># ── Partition Assignment ─────────────────</span>
+<span class="ck">partition.assignment.strategy</span><span class="co">=</span><span class="cc">org.apache.kafka.clients.consumer.CooperativeStickyAssignor</span></pre>
+        </div>
+
+        <div class="cfg-explain">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px">KEY SETTINGS EXPLAINED</div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">enable.auto.commit=false</span>
+            <div class="cfg-pill-val"><strong>Manual offset control</strong>Always disable in production. Commit offsets only after successful processing to avoid data loss (crash before commit) or duplication (crash after process but before commit).</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">auto.offset.reset</span>
+            <div class="cfg-pill-val"><strong>New group starting point</strong><code>earliest</code> = replay from beginning (use for new consumers). <code>latest</code> = start from now (use for real-time-only pipelines). <code>none</code> = throw exception if no offset found.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">max.poll.interval.ms</span>
+            <div class="cfg-pill-val"><strong>Rebalance protection</strong>If <code>poll()</code> isn't called within this window, the consumer is kicked from the group and rebalance triggers. Must be longer than your processing time per batch. Common cause of unexpected rebalances.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">isolation.level</span>
+            <div class="cfg-pill-val"><strong>Transactional reads</strong><code>read_committed</code> ensures consumers only see records from committed transactions. Required on the consumer side to complete an end-to-end exactly-once pipeline.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key">CooperativeStickyAssignor</span>
+            <div class="cfg-pill-val"><strong>Incremental rebalancing</strong>Only moves partitions that need to move during rebalance — existing assignments stay active. Eliminates the "stop-the-world" rebalance of the default Eager assignor. Use this in production.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RABBITMQ BROKER -->
+    <div class="cfg-pane" id="pane-r-broker">
+      <div class="cfg-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-header-left">
+              <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+              <span class="code-filename">rabbitmq.conf</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="code-lang r">RABBITMQ</span>
+              <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+            </div>
+          </div>
+          <pre><span class="cm">## ── Networking ──────────────────────────</span>
+<span class="rk">listeners.tcp.default</span> <span class="co">=</span> <span class="cn">5672</span>
+<span class="rk">listeners.ssl.default</span> <span class="co">=</span> <span class="cn">5671</span>
+<span class="rk">management.tcp.port</span>   <span class="co">=</span> <span class="cn">15672</span>     <span class="cm">## Web UI + HTTP API</span>
+
+<span class="cm">## ── Authentication ───────────────────────</span>
+<span class="rk">auth_backends.1</span>  <span class="co">=</span> <span class="cs">rabbit_auth_backend_internal</span>
+<span class="rk">auth_backends.2</span>  <span class="co">=</span> <span class="cs">rabbit_auth_backend_ldap</span>
+<span class="rk">default_user</span>     <span class="co">=</span> <span class="cs">guest</span>
+<span class="rk">default_pass</span>     <span class="co">=</span> <span class="cs">CHANGEME</span>
+<span class="rk">default_vhost</span>    <span class="co">=</span> <span class="cs">/production</span>
+<span class="rk">default_permissions.configure</span> <span class="co">=</span> <span class="cs">.*</span>
+<span class="rk">default_permissions.read</span>      <span class="co">=</span> <span class="cs">.*</span>
+<span class="rk">default_permissions.write</span>     <span class="co">=</span> <span class="cs">.*</span>
+
+<span class="cm">## ── Memory + Disk Alarms ─────────────────</span>
+<span class="rk">vm_memory_high_watermark.relative</span> <span class="co">=</span> <span class="cn">0.6</span>
+<span class="rk">vm_memory_high_watermark_paging_ratio</span> <span class="co">=</span> <span class="cn">0.5</span>
+<span class="rk">disk_free_limit.absolute</span> <span class="co">=</span> <span class="cs">5GB</span>
+
+<span class="cm">## ── Message Persistence ──────────────────</span>
+<span class="rk">queue_master_locator</span>  <span class="co">=</span> <span class="cs">min-masters</span>
+<span class="rk">cluster_formation.peer_discovery_backend</span> <span class="co">=</span> <span class="cs">rabbit_peer_discovery_k8s</span>
+<span class="rk">cluster_formation.k8s.host</span>     <span class="co">=</span> <span class="cs">kubernetes.default</span>
+<span class="rk">cluster_formation.k8s.service_name</span> <span class="co">=</span> <span class="cs">rabbitmq</span>
+
+<span class="cm">## ── Quorum Queues (Raft) ─────────────────</span>
+<span class="rk">quorum_queue.delivery_limit</span>  <span class="co">=</span> <span class="cn">10</span>     <span class="cm">## max redelivery before DLX</span>
+<span class="rk">quorum_queue.initial_cluster_size</span> <span class="co">=</span> <span class="cn">3</span>
+
+<span class="cm">## ── Heartbeat + Timeouts ─────────────────</span>
+<span class="rk">heartbeat</span>              <span class="co">=</span> <span class="cn">60</span>     <span class="cm">## seconds</span>
+<span class="rk">connection_max</span>         <span class="co">=</span> <span class="cn">10000</span>
+<span class="rk">channel_max</span>            <span class="co">=</span> <span class="cn">2047</span>
+
+<span class="cm">## ── TLS ─────────────────────────────────</span>
+<span class="rk">ssl_options.cacertfile</span> <span class="co">=</span> <span class="cs">/certs/ca.pem</span>
+<span class="rk">ssl_options.certfile</span>   <span class="co">=</span> <span class="cs">/certs/server.pem</span>
+<span class="rk">ssl_options.keyfile</span>    <span class="co">=</span> <span class="cs">/certs/server-key.pem</span>
+<span class="rk">ssl_options.verify</span>     <span class="co">=</span> <span class="cs">verify_peer</span></pre>
+        </div>
+
+        <div class="cfg-explain">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px">KEY SETTINGS EXPLAINED</div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">vm_memory_high_watermark</span>
+            <div class="cfg-pill-val"><strong>Flow control threshold</strong>When memory usage exceeds this fraction of total RAM, RabbitMQ blocks publishers (backpressure). Set 0.4–0.7 depending on your server. Too low = unnecessary blocking; too high = OOM kills.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">disk_free_limit</span>
+            <div class="cfg-pill-val"><strong>Disk alarm</strong>If free disk space drops below this, all publishing is blocked to protect message durability. Should be at least as large as your largest expected message backlog.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">quorum_queue.delivery_limit</span>
+            <div class="cfg-pill-val"><strong>Poison message protection</strong>After this many redeliveries, the message is dead-lettered instead of retried indefinitely. Prevents a single bad message from blocking a queue worker loop forever.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">heartbeat</span>
+            <div class="cfg-pill-val"><strong>Connection health</strong>Broker and client exchange heartbeats at this interval. If 2 consecutive heartbeats are missed, the connection is considered dead. Critical for detecting silent TCP disconnects.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">channel_max</span>
+            <div class="cfg-pill-val"><strong>Multiplexing limit</strong>AMQP multiplexes multiple channels on one TCP connection. Each channel is an independent flow. Keep this reasonable — too many channels per connection increases broker memory usage.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RABBITMQ CLIENT -->
+    <div class="cfg-pane" id="pane-r-client">
+      <div class="cfg-grid">
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-header-left">
+              <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+              <span class="code-filename">topology-declaration.js (amqplib)</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="code-lang r">RABBITMQ</span>
+              <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+            </div>
+          </div>
+          <pre><span class="cm">// ── Connection ────────────────────────────</span>
+<span class="cc">const</span> conn <span class="co">=</span> <span class="cs">await</span> amqp.<span class="ck">connect</span>({
+  protocol: <span class="cs">'amqps'</span>,
+  hostname: <span class="cs">'rabbitmq.prod.internal'</span>,
+  port: <span class="cn">5671</span>,
+  vhost: <span class="cs">'/production'</span>,
+  username: <span class="cs">'order-service'</span>,
+  password: process.env.<span class="ck">RABBIT_PASS</span>,
+  heartbeat: <span class="cn">60</span>,
+});
+<span class="cc">const</span> ch <span class="co">=</span> <span class="cs">await</span> conn.<span class="ck">createConfirmChannel</span>();
+
+<span class="cm">// ── Exchange Declaration ───────────────────</span>
+<span class="cs">await</span> ch.<span class="ck">assertExchange</span>(<span class="cs">'orders'</span>, <span class="cs">'topic'</span>, {
+  durable: <span class="cn">true</span>,       <span class="cm">// survives broker restart</span>
+  autoDelete: <span class="cn">false</span>,
+  alternateExchange: <span class="cs">'orders.unrouted'</span>, <span class="cm">// catch unrouted msgs</span>
+});
+
+<span class="cm">// ── Queue Declaration ─────────────────────</span>
+<span class="cs">await</span> ch.<span class="ck">assertQueue</span>(<span class="cs">'order.email.notifications'</span>, {
+  durable: <span class="cn">true</span>,
+  arguments: {
+    <span class="cs">'x-queue-type'</span>:            <span class="cs">'quorum'</span>,   <span class="cm">// Raft-based HA</span>
+    <span class="cs">'x-dead-letter-exchange'</span>:  <span class="cs">'orders.dlx'</span>,
+    <span class="cs">'x-dead-letter-routing-key'</span>: <span class="cs">'failed.email'</span>,
+    <span class="cs">'x-message-ttl'</span>:           <span class="cn">86400000</span>,  <span class="cm">// 24h TTL</span>
+    <span class="cs">'x-max-length'</span>:            <span class="cn">100000</span>,    <span class="cm">// max 100K msgs</span>
+    <span class="cs">'x-overflow'</span>:              <span class="cs">'reject-publish-dlx'</span>,
+  },
+});
+
+<span class="cm">// ── Binding ───────────────────────────────</span>
+<span class="cs">await</span> ch.<span class="ck">bindQueue</span>(
+  <span class="cs">'order.email.notifications'</span>,
+  <span class="cs">'orders'</span>,
+  <span class="cs">'order.#'</span>   <span class="cm">// matches order.created, order.shipped.eu, etc</span>
+);
+
+<span class="cm">// ── Consumer with prefetch ────────────────</span>
+<span class="cs">await</span> ch.<span class="ck">prefetch</span>(<span class="cn">20</span>); <span class="cm">// max 20 unacked msgs per consumer</span>
+ch.<span class="ck">consume</span>(<span class="cs">'order.email.notifications'</span>, <span class="cs">async</span> (msg) <span class="co">=></span> {
+  <span class="cc">try</span> {
+    <span class="cs">await</span> <span class="ck">sendEmail</span>(msg.content);
+    ch.<span class="ck">ack</span>(msg);                  <span class="cm">// success → delete</span>
+  } <span class="cc">catch</span> (err) {
+    <span class="cc">const</span> requeue <span class="co">=</span> !msg.fields.redelivered;
+    ch.<span class="ck">nack</span>(msg, <span class="cn">false</span>, requeue); <span class="cm">// retry once, then DLX</span>
+  }
+}, { noAck: <span class="cn">false</span> });          <span class="cm">// always use manual ACK</span></pre>
+        </div>
+
+        <div class="cfg-explain">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px">KEY SETTINGS EXPLAINED</div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">x-queue-type: quorum</span>
+            <div class="cfg-pill-val"><strong>Replicated durability</strong>Quorum queues use Raft consensus across cluster nodes. Data is only confirmed written when a majority of nodes have it. Use instead of classic mirrored queues for all new deployments.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">x-dead-letter-exchange</span>
+            <div class="cfg-pill-val"><strong>Failure handling</strong>When a message is NACK'd, expired, or the queue overflows, it's forwarded here. Essential for retry queues, poison message inspection, and audit trails of failed processing.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">prefetch(20)</span>
+            <div class="cfg-pill-val"><strong>Fair dispatch</strong>Limits unacknowledged messages per consumer. Without this, RabbitMQ sends all queued messages to the first available consumer, causing imbalance. Start at 5–20 and tune based on processing time.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">order.#</span>
+            <div class="cfg-pill-val"><strong>Topic wildcard binding</strong><code>#</code> matches zero or more dot-separated words. <code>order.#</code> matches <code>order.created</code>, <code>order.shipped.eu</code>, and <code>order</code> itself. Use <code>*</code> for exactly one word segment.</div>
+          </div>
+          <div class="cfg-pill">
+            <span class="cfg-pill-key r">alternateExchange</span>
+            <div class="cfg-pill-val"><strong>Catch unroutable messages</strong>If a published message matches no binding, it goes here instead of being silently dropped. Set up a logging queue bound to this exchange to detect misconfigured routing keys.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ COMPARISON ═══════════════════════════════════ -->
+  <div id="diff">
+    <div class="sec-label">03 — SIDE-BY-SIDE COMPARISON</div>
+    <div class="diff-table">
+      <div class="diff-row hdr">
+        <div class="dc">DIMENSION</div>
+        <div class="dc">⚡ APACHE KAFKA</div>
+        <div class="dc">🐇 RABBITMQ</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Model</div>
+        <div class="dc dk"><span class="badge bk">Pull</span> Consumer pulls from log by offset</div>
+        <div class="dc dr"><span class="badge br">Push</span> Broker pushes to consumer via AMQP</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Retention</div>
+        <div class="dc dk">Persisted on disk for days/forever. Fully replayable ♻️</div>
+        <div class="dc dr">Deleted on ACK. No replay (Streams plugin adds it)</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Throughput</div>
+        <div class="dc dk"><span class="badge bk">1M+ msg/sec</span> Sequential disk I/O + batching</div>
+        <div class="dc dr"><span class="badge br">~50K msg/sec</span> Per queue; cluster scales this</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Latency</div>
+        <div class="dc dk"><span class="badge bn">5–15ms</span> Optimised for throughput</div>
+        <div class="dc dr"><span class="badge bn">&lt;1ms</span> Optimised for latency</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Ordering</div>
+        <div class="dc dk">Strict within a partition; none across</div>
+        <div class="dc dr">FIFO per queue; priority queues available</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Routing</div>
+        <div class="dc dk">Topic + partition key. No complex logic</div>
+        <div class="dc dr">Direct, Fanout, Topic (wildcards), Headers</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Multi-consumer</div>
+        <div class="dc dk">Multiple groups read same data independently</div>
+        <div class="dc dr">Competing consumers — one gets each msg (Fanout = all)</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Delivery</div>
+        <div class="dc dk">At-least-once / Exactly-once (transactions)</div>
+        <div class="dc dr">At-most-once / At-least-once (ACK)</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Protocol</div>
+        <div class="dc dk"><span class="badge bk">Kafka Binary</span> custom TCP</div>
+        <div class="dc dr"><span class="badge br">AMQP 0.9.1</span> + MQTT, STOMP</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">HA / Cluster</div>
+        <div class="dc dk">Partition replication across brokers (ISR)</div>
+        <div class="dc dr">Quorum Queues (Raft) across cluster nodes</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Scalability</div>
+        <div class="dc dk">Horizontal via partitions. Near-linear scale</div>
+        <div class="dc dr">Federation / Shovel for cross-cluster</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Ops Complexity</div>
+        <div class="dc dk">Higher — KRaft, Schema Registry, Connect cluster</div>
+        <div class="dc dr">Simpler — built-in management UI, fewer moving parts</div>
+      </div>
+      <div class="diff-row">
+        <div class="dc dl">Best For</div>
+        <div class="dc dk">Event streaming, analytics, audit logs, CDC, CQRS</div>
+        <div class="dc dr">Task queues, RPC, complex routing, job scheduling</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>⚡ Apache Kafka &nbsp;·&nbsp; 🐇 RabbitMQ &nbsp;·&nbsp; Distributed Messaging Reference</footer>
+
+<script>
+  // Tab switching for config
+  function switchCfg(id) {
+    document.querySelectorAll('.cfg-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('pane-' + id).classList.add('active');
+    document.querySelectorAll('.cfg-tab').forEach((t, i) => {
+      t.classList.remove('active-k', 'active-r');
+    });
+    const tabs = document.querySelectorAll('.cfg-tab');
+    const map = { 'k-broker': 0, 'k-producer': 1, 'k-consumer': 2, 'r-broker': 3, 'r-client': 4 };
+    const idx = map[id];
+    const cls = id.startsWith('k') ? 'active-k' : 'active-r';
+    tabs[idx].classList.add(cls);
+  }
+
+  // Nav scroll
+  function goto(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Nav active state on scroll
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = ['arch', 'config', 'diff'];
+  window.addEventListener('scroll', () => {
+    let cur = 0;
+    sections.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && window.scrollY >= el.offsetTop - 140) cur = i;
+    });
+    navLinks.forEach((l, i) => {
+      l.classList.remove('active-k', 'active-r', 'active-w');
+      if (i === cur) l.classList.add(i === 0 ? 'active-k' : i === 1 ? 'active-r' : 'active-w');
+    });
+  });
+
+  // Copy button
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'COPIED!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
