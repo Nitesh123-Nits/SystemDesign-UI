@@ -2154,3 +2154,67 @@ const CONCEPT_LINKS = {
   "c12": [{ label: "WebSockets API", url: "https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API" }]
 };
 
+const TRADEOFF_LINKS = {
+  "Latency vs Throughput": [{ label: "Understanding Latency vs Throughput", url: "https://www.scylladb.com/glossary/latency-vs-throughput/" }],
+  "Consistency vs Availability": [{ label: "CAP Theorem Revisited", url: "https://robertgreiner.com/cap-theorem-revisited/" }, { label: "PACELC Overview", url: "https://en.wikipedia.org/wiki/PACELC_theorem" }],
+  "Read vs Write Optimization": [{ label: "B-Trees vs LSM-Trees", url: "https://www.yugabyte.com/tech/lsm-tree-vs-b-tree/" }],
+  "SQL vs NoSQL": [{ label: "SQL vs NoSQL: High-level differences", url: "https://www.mongodb.com/nosql-explained/nosql-vs-sql" }],
+  "Sync vs Async Communication": [{ label: "Synchronous vs Asynchronous Microservices", url: "https://tanzu.vmware.com/developer/guides/spring-microservices-sync-async/" }],
+  "Stateful vs Stateless": [{ label: "Stateless Architecture in Cloud", url: "https://aws.amazon.com/blogs/compute/building-stateless-applications/" }],
+  "Monolith vs Distributed": [{ label: "Microservices vs Monolith Architecture", url: "https://www.atlassian.com/microservices/microservices-architecture/microservices-vs-monolith" }],
+  "Vertical vs Horizontal Scaling": [{ label: "Scaling Up vs Scaling Out", url: "https://www.ibm.com/topics/scale-out-vs-scale-up" }],
+  "Sharding vs Partitioning": [{ label: "Database Sharding Principles", url: "https://www.digitalocean.com/community/tutorials/understanding-database-sharding" }]
+};
+
+const QUESTION_LINKS = {
+  1: [
+    { label: "High Scalability: Twitter Architecture", url: "http://highscalability.com/blog/2013/7/8/the-architecture-twitter-uses-to-deal-with-150m-active-users.html" },
+    { label: "Twitter's Real-Time Delivery System", url: "https://blog.twitter.com/engineering/en_us/topics/infrastructure/2017/the-infrastructure-behind-twitter-scale" }
+  ],
+  2: [
+    { label: "Netflix TechBlog: Streaming Architecture", url: "https://netflixtechblog.com/" },
+    { label: "How Netflix Scales its API with GraphQL", url: "https://netflixtechblog.com/how-netflix-scales-its-api-with-graphql-federation-part-1-ae355cecadee" }
+  ],
+  3: [
+    { label: "Uber Architecture Deep Dive", url: "http://highscalability.com/blog/2015/9/14/how-uber-scales-their-real-time-market-platform.html" }
+  ],
+  4: [
+    { label: "WhatsApp Architecture", url: "http://highscalability.com/blog/2014/2/26/the-whatsapp-architecture-facebook-bought-for-19-billion.html" },
+    { label: "Erlang in WhatsApp", url: "https://www.erlang-factory.com/upload/presentations/558/efsf2012-whatsapp-scaling.pdf" }
+  ],
+  5: [
+    { label: "Google Drive/Dropbox Architecture", url: "http://highscalability.com/blog/2013/10/21/the-dropbox-architecture.html" }
+  ],
+  6: [
+    { label: "Tinder Architecture", url: "http://highscalability.com/tinder-architecture/" },
+    { label: "Geospatial Indexing with Redis", url: "https://redis.com/redis-best-practices/spatial-data/geospatial/" }
+  ],
+  7: [
+    { label: "Designing a URL Shortener", url: "https://www.geeksforgeeks.org/system-design-url-shortening-service/" }
+  ],
+  8: [
+    { label: "Design a Rate Limiter", url: "https://www.figma.com/blog/an-alternative-approach-to-rate-limiting/" },
+    { label: "Stripe's Guide to Rate Limiting", url: "https://stripe.com/blog/rate-limiters" }
+  ],
+  9: [
+    { label: "Distributed Web Crawler", url: "https://www.geeksforgeeks.org/design-a-web-crawler/" }
+  ],
+  10: [
+    { label: "Ticketmaster Architecture", url: "http://highscalability.com/ticketmaster-architecture/" }
+  ],
+  11: [
+    { label: "Unique ID Generation in Distributed Systems", url: "https://blog.twitter.com/engineering/en_us/a/2010/announcing-snowflake" }
+  ],
+  12: [
+    { label: "Stripe Architecture", url: "https://stripe.com/blog/engineering" },
+    { label: "Idempotency Keys", url: "https://stripe.com/docs/api/idempotent_requests" }
+  ],
+  13: [
+    { label: "Yelp Architecture (Geo-spatial)", url: "http://highscalability.com/blog/2015/7/27/yelp-architecture-search-at-scale.html" }
+  ],
+  14: [
+    { label: "Designing a Distributed Key-Value Store", url: "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf" }
+  ]
+};
+
+

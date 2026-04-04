@@ -296,7 +296,7 @@ function copySection(type) {
 
 // ── OVERVIEW ───────────────────────────────────────────────
 function buildOverview(q) {
-  return `
+  let html = `
     <div class="detail-section">
       <div class="detail-section-title"><span class="icon">&#128202;</span>Capacity Estimation</div>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Scale numbers to frame design decisions. Always derive these from first principles in the interview.</p>
@@ -336,6 +336,18 @@ function buildOverview(q) {
         </div>
       </div>
     </div>`;
+
+  const resolvedLinks = typeof QUESTION_LINKS !== 'undefined' ? QUESTION_LINKS[q.id] : null;
+  if (resolvedLinks) {
+    html += `
+    <div class="detail-section" style="margin-top:24px;">
+      <div class="detail-section-title"><span class="icon">🔗</span>Further Reading</div>
+      <ul style="padding-left:20px;line-height:1.6;font-size:14px;margin-top:12px;">
+        ${resolvedLinks.map(l => `<li style="margin-bottom:8px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}
+      </ul>
+    </div>`;
+  }
+  return html;
 }
 
 // ── REQUIREMENTS ───────────────────────────────────────────
@@ -876,6 +888,14 @@ function renderUniversalTradeoffs() {
         <span class="ut-analogy-icon">💡</span>
         <span class="ut-analogy-text"><strong>Mental Model:</strong> ${t.analogy}</span>
       </div>
+      </div>
+      ${(typeof TRADEOFF_LINKS !== 'undefined' && TRADEOFF_LINKS[t.title]) ? `
+      <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;font-size:12px;">
+        <strong style="color:var(--text-muted)">Deep Dive:</strong>
+        <ul style="margin-top:6px;padding-left:16px;">
+          ${TRADEOFF_LINKS[t.title].map(l => `<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}
+        </ul>
+      </div>` : ''}
     `;
     grid.appendChild(card);
   });
