@@ -2271,6 +2271,15 @@ const GUIDES_DATA = [
     tags: ["Spring Boot", "Java", "Messaging"],
     color: "#32CD32",
     url: "springboot-kafka-rabbitmq.html"
+  },
+  {
+    id: "g10",
+    icon: "🏗️",
+    title: "Modern Data Architecture",
+    desc: "A complete visual guide to Kafka, Flink, Spark, ETL/ELT, Data Lake, Warehouse & OLAP.",
+    tags: ["Data Engineering", "Big Data", "Architecture"],
+    color: "#f59e0b",
+    url: "modern-data-architecture.html"
   }
 ];
 
