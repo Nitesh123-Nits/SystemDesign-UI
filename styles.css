@@ -121,14 +121,18 @@ body {
 .logo-icon { font-size: 24px; filter: drop-shadow(0 0 10px var(--neon-pink)); }
 .logo-text { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 800; letter-spacing: 1px; color: var(--neon-pink); }
 
-nav { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+nav { 
+  display: flex; align-items: center; gap: 8px; margin-left: auto;
+  overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+}
+nav::-webkit-scrollbar { display: none; }
 .nav-link {
   font-family: 'Share Tech Mono', monospace;
   padding: 8px 16px; border-radius: 4px;
   font-size: 14px; font-weight: 500;
   color: var(--neon-cyan); text-decoration: none;
   transition: all 0.2s; cursor: pointer;
-  text-transform: uppercase;
+  text-transform: uppercase; flex-shrink: 0;
 }
 .nav-link:hover { color: #fff; text-shadow: 0 0 10px var(--neon-cyan); }
 .nav-link.active { background: rgba(0,240,255,0.1); color: #fff; border: 1px solid var(--neon-cyan); }

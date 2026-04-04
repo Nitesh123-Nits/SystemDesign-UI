@@ -1995,3 +1995,9 @@ const TOPICS = [
   { id: "dist-sys", label: "🌐 Distributed Systems", questions: [8,5,11,12,14,2] },
   { id: "misc", label: "🔧 Utilities", questions: [10,14] }
 ];
+
+const DIST_SYS_IDS = ['c10', 'c13', 'c14', 'c33', 'c34', 'c35', 'c44', 'c45', 'c46', 'c47'];
+const MICROSEC_IDS = ['c15', 'c20', 'c21', 'c22', 'c30', 'c31', 'c40', 'c41', 'c48'];
+
+const DISTRIBUTED_CONCEPTS = CONCEPTS.filter(c => DIST_SYS_IDS.includes(c.id));
+const MICROSERVICES_CONCEPTS = CONCEPTS.filter(c => MICROSEC_IDS.includes(c.id));

@@ -618,18 +618,42 @@ function renderConcepts(filterText, filterCat) {
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      <div class="concept-detail">${c.detail}</div>
-      <div class="concept-expand-hint">&#9660; Click to expand</div>`;
+      ${c.detail ? `<div class="concept-detail" style="display:none">${c.detail}</div>` : ''}
+    `;
     card.addEventListener('click', () => {
-      card.classList.toggle('expanded');
-      const hint = card.querySelector('.concept-expand-hint');
-      hint.textContent = card.classList.contains('expanded') ? '▲ Collapse' : '▼ Click to expand';
+      const det = card.querySelector('.concept-detail');
+      if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
     });
     grid.appendChild(card);
   });
   renderDecisionLab();
 }
 
+function renderSpecialGrid(gridId, list) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  list.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'concept-card';
+    card.style.setProperty('--card-accent', c.color);
+    card.innerHTML = `
+      <div class="concept-icon">${c.icon}</div>
+      <div class="concept-title">${c.title}</div>
+      <div class="concept-desc">${c.desc}</div>
+      <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      ${c.detail ? `<div class="concept-detail" style="display:none">${c.detail}</div>` : ''}
+    `;
+    card.addEventListener('click', () => {
+      const det = card.querySelector('.concept-detail');
+      if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
+    });
+    grid.appendChild(card);
+  });
+}
+
+function renderDistSys() { renderSpecialGrid('distsysGrid', DISTRIBUTED_CONCEPTS); }
+function renderMicrosec() { renderSpecialGrid('microsecGrid', MICROSERVICES_CONCEPTS); }
 // ── Decision Lab ───────────────────────────────────────────
 const LAB_REQS = [
   { id: 'write', label: '&#128640; High Write Throughput' },
@@ -911,6 +935,8 @@ function init() {
   renderTopicChips('topicChipsQ');
   renderQuestions();
   renderConcepts();
+  renderDistSys();
+  renderMicrosec();
   renderUniversalTradeoffs();
   renderProgress();
 
@@ -921,6 +947,8 @@ function init() {
       navigateTo(view);
       if (view === 'questions') renderQuestions();
       if (view === 'tradeoffs') renderUniversalTradeoffs();
+      if (view === 'distsys') renderDistSys();
+      if (view === 'microsec') renderMicrosec();
       if (view === 'progress') renderProgress();
     });
   });
