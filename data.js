@@ -2135,11 +2135,11 @@ const CONCEPT_LINKS = {
   "c34": [{ label: "The Secret Lives of Data (Raft)", url: "http://thesecretlivesofdata.com/raft/" }],
   "c35": [{ label: "Why Vector Clocks are hard", url: "https://riak.com/posts/technical/why-vector-clocks-are-hard/" }],
   "c44": [{ label: "Consistent Hashing Algorithm", url: "https://www.toptal.com/big-data/consistent-hashing" }],
-  "c45": [{ label: "Gossip Protocol Guide", url: "https://managementfromscratch.wordpress.com/2016/04/01/introduction-to-gossip-protocol/" }],
+  "c45": [{ label: "Gossip Protocol Guide", url: "https://en.wikipedia.org/wiki/Gossip_protocol" }],
   "c46": [{ label: "Google Spanner & TrueTime", url: "https://cloud.google.com/spanner/docs/true-time-external-consistency" }],
   "c47": [{ label: "Distributed Locks with Redis", url: "https://redis.io/docs/manual/patterns/distributed-locks/" }],
   "c52": [{ label: "OpenTelemetry: Distributed Tracing", url: "https://opentelemetry.io/docs/concepts/observability-primer/#distributed-traces" }],
-  "c53": [{ label: "Split-Brain in Distributed Systems", url: "https://hazelcast.com/glossary/split-brain/" }],
+  "c53": [{ label: "Split-Brain in Distributed Systems", url: "https://en.wikipedia.org/wiki/Split-brain_(computing)" }],
   "c54": [{ label: "AWS: Leader Election", url: "https://aws.amazon.com/builders-library/leader-election-in-distributed-systems/" }],
   "c58": [{ label: "Principles of Chaos Engineering", url: "https://principlesofchaos.org/" }],
   "c59": [{ label: "Interactive Intro to CRDTs", url: "https://jakelazaroff.com/words/an-interactive-intro-to-crdts/" }],
@@ -2155,16 +2155,100 @@ const CONCEPT_LINKS = {
 };
 
 const TRADEOFF_LINKS = {
-  "Latency vs Throughput": [{ label: "Understanding Latency vs Throughput", url: "https://www.scylladb.com/glossary/latency-vs-throughput/" }],
+  "Latency vs Throughput": [{ label: "Understanding Latency vs Throughput", url: "https://aws.amazon.com/compare/the-difference-between-throughput-and-latency/" }],
   "Consistency vs Availability": [{ label: "CAP Theorem Revisited", url: "https://robertgreiner.com/cap-theorem-revisited/" }, { label: "PACELC Overview", url: "https://en.wikipedia.org/wiki/PACELC_theorem" }],
-  "Read vs Write Optimization": [{ label: "B-Trees vs LSM-Trees", url: "https://www.yugabyte.com/tech/lsm-tree-vs-b-tree/" }],
+  "Read vs Write Optimization": [{ label: "B-Trees vs LSM-Trees", url: "https://en.wikipedia.org/wiki/Log-structured_merge-tree" }],
   "SQL vs NoSQL": [{ label: "SQL vs NoSQL: High-level differences", url: "https://www.mongodb.com/nosql-explained/nosql-vs-sql" }],
   "Sync vs Async Communication": [{ label: "Synchronous vs Asynchronous Microservices", url: "https://tanzu.vmware.com/developer/guides/spring-microservices-sync-async/" }],
-  "Stateful vs Stateless": [{ label: "Stateless Architecture in Cloud", url: "https://aws.amazon.com/blogs/compute/building-stateless-applications/" }],
+  "Stateful vs Stateless": [{ label: "Stateless Architecture in Cloud", url: "https://www.redhat.com/en/topics/cloud-native-apps/stateful-vs-stateless" }],
   "Monolith vs Distributed": [{ label: "Microservices vs Monolith Architecture", url: "https://www.atlassian.com/microservices/microservices-architecture/microservices-vs-monolith" }],
   "Vertical vs Horizontal Scaling": [{ label: "Scaling Up vs Scaling Out", url: "https://www.ibm.com/topics/scale-out-vs-scale-up" }],
   "Sharding vs Partitioning": [{ label: "Database Sharding Principles", url: "https://www.digitalocean.com/community/tutorials/understanding-database-sharding" }]
 };
+
+const GUIDES_DATA = [
+  {
+    id: "g1",
+    icon: "🗄️",
+    title: "Cassandra Architecture Deep Dive",
+    desc: "A rich exploration into the fundamental mechanics of Apache Cassandra, ring topology, and tuning.",
+    tags: ["NoSQL", "Wide-Column", "Distributed DB"],
+    color: "#ff3366",
+    url: "cassandra-architecture.html"
+  },
+  {
+    id: "g2",
+    icon: "✨",
+    title: "Clean Code Principles",
+    desc: "The ultimate guide to writing maintainable, scalable, and legible code.",
+    tags: ["Best Practices", "Refactoring", "Clean Code"],
+    color: "#00d4ff",
+    url: "clean-code.html"
+  },
+  {
+    id: "g3",
+    icon: "☁️",
+    title: "Cloud Services Masterclass",
+    desc: "A sprawling overview of modern cloud infrastructure mapping native services.",
+    tags: ["AWS", "Cloud Native", "Infrastructure"],
+    color: "#ffaa00",
+    url: "cloud-services.html"
+  },
+  {
+    id: "g4",
+    icon: "🌐",
+    title: "The DNS Journey",
+    desc: "A step-by-step technical walk-through of the Domain Name System resolution process.",
+    tags: ["Networking", "DNS", "Protocols"],
+    color: "#7c5cfc",
+    url: "dns-journey.html"
+  },
+  {
+    id: "g5",
+    icon: "🎯",
+    title: "HLD Interview Guide",
+    desc: "A high-level framework and strategy manual to crush FAANG system design interviews.",
+    tags: ["Interview Prep", "HLD", "Strategy"],
+    color: "#00f0ff",
+    url: "hld-interview-guide.html"
+  },
+  {
+    id: "g6",
+    icon: "📬",
+    title: "Kafka vs RabbitMQ (Enhanced)",
+    desc: "Deep comparative mechanics between two titans of message brokering and event streaming.",
+    tags: ["Kafka", "RabbitMQ", "Message Brokers"],
+    color: "#ff3366",
+    url: "kafka-rabbitmq-enhanced.html"
+  },
+  {
+    id: "g7",
+    icon: "📨",
+    title: "Kafka vs RabbitMQ Basics",
+    desc: "The foundational introductory guide to messaging queues.",
+    tags: ["Pub-Sub", "Queues"],
+    color: "#7c5cfc",
+    url: "kafka-rabbitmq.html"
+  },
+  {
+    id: "g8",
+    icon: "🧱",
+    title: "Microservices Flow & Design",
+    desc: "A visual explanation of microservices workflows and API gateway routing.",
+    tags: ["Architecture", "Microservices", "API Gateway"],
+    color: "#00f0ff",
+    url: "microservices-flow.html"
+  },
+  {
+    id: "g9",
+    icon: "🍃",
+    title: "Spring Boot + Kafka/RabbitMQ",
+    desc: "Detailed implementation and architecture for integrating message brokers in Spring Boot.",
+    tags: ["Spring Boot", "Java", "Messaging"],
+    color: "#32CD32",
+    url: "springboot-kafka-rabbitmq.html"
+  }
+];
 
 const QUESTION_LINKS = {
   1: [

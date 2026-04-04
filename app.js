@@ -631,13 +631,8 @@ function renderConcepts(filterText, filterCat) {
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:block; margin-top:12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.concept-detail')) return;
-      const det = card.querySelector('.concept-detail');
-      if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
-    });
     grid.appendChild(card);
   });
   renderDecisionLab();
@@ -657,19 +652,41 @@ function renderSpecialGrid(gridId, list) {
       <div class="concept-title">${c.title}</div>
       <div class="concept-desc">${c.desc}</div>
       <div class="concept-tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:none">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
+      ${(c.detail || resolvedLinks) ? `<div class="concept-detail" style="display:block; margin-top:12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">${c.detail || ''}${resolvedLinks ? `<div class="concept-links" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;"><strong>Further Reading:</strong><ul style="margin-top:4px;padding-left:20px;font-size:0.9em;">${resolvedLinks.map(l=>`<li style="margin-bottom:4px;"><a href="${l.url}" target="_blank" style="color:var(--neon-cyan);text-decoration:none;">${l.label} ↗</a></li>`).join('')}</ul></div>` : ''}</div>` : ''}
     `;
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.concept-detail')) return;
-      const det = card.querySelector('.concept-detail');
-      if (det) det.style.display = det.style.display === 'block' ? 'none' : 'block';
-    });
     grid.appendChild(card);
   });
 }
 
 function renderDistSys() { renderSpecialGrid('distsysGrid', DISTRIBUTED_CONCEPTS); }
 function renderMicrosec() { renderSpecialGrid('microsecGrid', MICROSERVICES_CONCEPTS); }
+
+function renderGuidesHub() {
+  const grid = document.getElementById('guidesGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (typeof GUIDES_DATA === 'undefined') return;
+
+  GUIDES_DATA.forEach((g, idx) => {
+    const card = document.createElement('a'); 
+    card.href = g.url;
+    card.target = '_blank';
+    card.className = 'concept-card';
+    card.style.textDecoration = 'none';
+    card.style.display = 'block';
+    card.style.setProperty('--card-accent', g.color);
+    card.style.animationDelay = `${idx * 0.05}s`;
+    
+    card.innerHTML = `
+      <div class="concept-icon">${g.icon}</div>
+      <div class="concept-title">${g.title}</div>
+      <div class="concept-desc" style="margin-top:8px">${g.desc}</div>
+      <div class="concept-tags" style="margin-top:12px">${g.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div style="margin-top:16px; font-weight:600; color:var(--card-accent); font-size:13px;">Read Guide ↗</div>
+    `;
+    grid.appendChild(card);
+  });
+}
 // ── Decision Lab ───────────────────────────────────────────
 const LAB_REQS = [
   { id: 'write', label: '&#128640; High Write Throughput' },
@@ -963,6 +980,7 @@ function init() {
   renderMicrosec();
   renderUniversalTradeoffs();
   renderProgress();
+  renderGuidesHub();
 
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', e => {
@@ -974,6 +992,7 @@ function init() {
       if (view === 'distsys') renderDistSys();
       if (view === 'microsec') renderMicrosec();
       if (view === 'progress') renderProgress();
+      if (view === 'guides') renderGuidesHub();
     });
   });
 
