@@ -144,6 +144,97 @@ nav::-webkit-scrollbar { display: none; }
   cursor: pointer; color: var(--neon-cyan);
   transition: all 0.2s; font-family: 'Orbitron', sans-serif; font-weight: 900;
 }
+.search-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 10px var(--neon-cyan); }
+
+/* ── Responsive Hamburger Menu ── */
+.menu-toggle {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--neon-cyan);
+  background: rgba(0, 240, 255, 0.05);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  z-index: 101;
+  margin-left: auto;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.hamburger {
+  width: 20px;
+  height: 2px;
+  background: var(--neon-cyan);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: var(--neon-cyan);
+  transition: all 0.3s ease;
+}
+
+.hamburger::before { top: -6px; }
+.hamburger::after { top: 6px; }
+
+/* Hamburger Open Animation */
+.menu-toggle.active .hamburger { background: transparent; }
+.menu-toggle.active .hamburger::before { transform: rotate(45deg); top: 0; }
+.menu-toggle.active .hamburger::after { transform: rotate(-45deg); top: 0; }
+
+@media (max-width: 960px) {
+  .menu-toggle { display: flex; }
+  
+  .header-inner { justify-content: space-between; }
+  
+  .nav {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    right: 0;
+    height: 0;
+    background: rgba(5, 5, 18, 0.98);
+    backdrop-filter: blur(25px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-left: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 0 solid var(--neon-cyan);
+    z-index: 99;
+  }
+  
+  .nav.active {
+    height: calc(100vh - var(--header-h));
+    border-bottom: 2px solid var(--neon-cyan);
+    padding: 20px;
+  }
+  
+  .nav-link {
+    font-size: 18px;
+    padding: 12px 24px;
+    width: 80%;
+    text-align: center;
+  }
+  
+  .header-actions {
+    margin-left: 10px;
+  }
+  
+  .search-shortcut-hint {
+    display: none;
+  }
+}
 
 .streak-badge {
   font-family: 'VT323', monospace;

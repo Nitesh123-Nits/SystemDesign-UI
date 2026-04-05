@@ -1005,6 +1005,24 @@ function init() {
   document.getElementById('backBtn')?.addEventListener('click', () => { navigateTo('questions'); renderQuestions(); });
   document.getElementById('shuffleBtn')?.addEventListener('click', shuffleQuestion);
 
+  // Nav Toggle (Hamburger)
+  const menuToggle = document.getElementById('menuToggle');
+  const nav = document.getElementById('nav');
+  if (menuToggle && nav) {
+    menuToggle.addEventListener('click', () => {
+      menuToggle.classList.toggle('active');
+      nav.classList.toggle('active');
+    });
+
+    // Close menu when clicking link
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        menuToggle.classList.remove('active');
+        nav.classList.remove('active');
+      });
+    });
+  }
+
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
