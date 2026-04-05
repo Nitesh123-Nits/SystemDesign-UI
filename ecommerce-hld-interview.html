@@ -4,66 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HLD Interview — Online Delivery Platform | Amazon SDE</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0a0c10;
-  --bg2: #0f1218;
-  --bg3: #141820;
-  --surface: #1a1f2e;
-  --surface2: #212736;
-  --border: #252c3d;
-  --border2: #2e3650;
-  --accent: #f97316;
-  --accent2: #fb923c;
-  --accent3: #fde68a;
-  --blue: #60a5fa;
-  --blue2: #3b82f6;
-  --green: #34d399;
-  --green2: #10b981;
-  --purple: #a78bfa;
-  --red: #f87171;
-  --text: #e2e8f0;
-  --text2: #94a3b8;
-  --text3: #64748b;
-  --mono: 'IBM Plex Mono', monospace;
-  --display: 'Syne', sans-serif;
-  --body: 'DM Sans', sans-serif;
-}
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="assistant.js" defer></script>
+<script src="shared-guides.js" defer></script>
+</style>
+</head>
+<body>
 
-/* BACK BUTTON */
-.back-to-dashboard {
-  position: fixed;
-  top: 15px;
-  left: 20px;
-  z-index: 9999;
-  padding: 8px 16px;
-  background: var(--accent, #7c5cfc);
-  color: white;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: bold;
-  font-family: sans-serif;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-  transition: transform 0.2s, background 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-.back-to-dashboard:hover {
-  transform: translateY(-2px);
-  background: #5d45d1;
-}
 
-@media (max-width: 900px) {
-  .back-to-dashboard {
-    top: 8px;
-    left: 10px;
-    padding: 6px 12px;
-    font-size: 11px;
-  }
-}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -88,99 +37,9 @@ body::before {
   z-index: 1000;
 }
 
-/* SIDEBAR NAV */
-.sidebar {
-  position: fixed;
-  left: 0; top: 0; bottom: 0;
-  width: 240px;
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
-  z-index: 100;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
+<div class="main" style="margin-left: 0;">
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-.sidebar-header {
-  padding: 20px 16px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-logo {
-  font-family: var(--display);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-
-.sidebar-sub {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--text3);
-  letter-spacing: 0.08em;
-}
-
-.nav-section {
-  padding: 12px 8px 4px;
-}
-
-.nav-section-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text3);
-  padding: 0 8px;
-  margin-bottom: 4px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text2);
-  transition: all 0.15s;
-  text-decoration: none;
-  border: 1px solid transparent;
-}
-
-.nav-item:hover {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
-}
-
-.nav-item.active {
-  background: rgba(249,115,22,0.12);
-  color: var(--accent);
-  border-color: rgba(249,115,22,0.25);
-}
-
-.nav-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--text3);
-  flex-shrink: 0;
-}
-
-.nav-item.active .nav-dot { background: var(--accent); }
-
-/* MAIN CONTENT */
-.main {
-  margin-left: 240px;
-  min-height: 100vh;
-}
 
 /* TOP BAR */
 .topbar {

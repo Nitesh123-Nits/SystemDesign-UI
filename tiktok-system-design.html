@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>System Design: Video Streaming Platform (TikTok)</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="assistant.js" defer></script>
+<script src="shared-guides.js" defer></script>
 <style>
   :root {
     --bg: #080c10;
@@ -25,42 +28,6 @@
     --glow-green: 0 0 20px rgba(168,255,62,0.3);
   }
 
-  /* BACK BUTTON */
-  .back-to-dashboard {
-    position: fixed;
-    top: 15px;
-    left: 20px;
-    z-index: 9999;
-    padding: 8px 16px;
-    background: var(--accent, #7c5cfc);
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: bold;
-    font-family: sans-serif;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-    transition: transform 0.2s, background 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-  .back-to-dashboard:hover {
-    transform: translateY(-2px);
-    background: #5d45d1;
-  }
-  
-  @media (max-width: 900px) {
-    .back-to-dashboard {
-      top: 8px;
-      left: 10px;
-      padding: 6px 12px;
-      font-size: 11px;
-    }
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     font-family: 'Syne', sans-serif;
     background: var(--bg);
@@ -68,6 +35,10 @@
     overflow-x: hidden;
     line-height: 1.6;
   }
+</style>
+</head>
+<body>
+
 
   /* SCANLINE OVERLAY */
   body::before {

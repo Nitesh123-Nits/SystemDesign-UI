@@ -1,0 +1,119 @@
+/* ============================================================
+   SystemDesign.Pro — Shared Guide Styles
+   Unified design system for all deep-dive content
+   ============================================================ */
+
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Share+Tech+Mono&family=VT323&family=Space+Mono&family=Syne:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #060611;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #f0f0f8;
+  --text-muted: #8888aa;
+  --accent: #ff007f; /* Neon Pink */
+  --accent2: #00f0ff; /* Cyber Cyan */
+  --accent3: #7000ff; /* Cyber Purple */
+  --accent4: #39ff14; /* Neon Green */
+  --neon-pink: #ff007f;
+  --neon-cyan: #00f0ff;
+  --neon-green: #39ff14;
+  --header-h: 68px;
+}
+
+/* ── Global Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  padding-top: var(--header-h);
+}
+
+/* ── Retro Effects ── */
+.crt-scanline {
+  position: fixed; inset: 0; z-index: 1000;
+  background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.1) 50%), linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
+  background-size: 100% 3px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.bg-grid-retro {
+  position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(transparent 0%, rgba(255,0,127,0.05) 2%, transparent 3%), linear-gradient(90deg, transparent 0%, rgba(0,240,255,0.05) 2%, transparent 3%);
+  background-size: 50px 50px;
+  perspective: 500px;
+  transform: perspective(500px) rotateX(60deg) translateY(-20%);
+  transform-origin: top;
+  animation: grid-move 20s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes grid-move { from { background-position: 0 0; } to { background-position: 0 100%; } }
+
+.bg-orbs { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(120px); opacity: 0.05;
+  animation: float 18s ease-in-out infinite;
+}
+.orb-1 { width: 600px; height: 600px; top: -200px; left: -200px; background: var(--accent); }
+.orb-2 { width: 500px; height: 500px; bottom: -150px; right: -200px; background: var(--accent2); animation-delay: -6s; }
+
+@keyframes float {
+  0%,100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-40px) scale(1.05); }
+}
+
+/* ── Common Header Styles ── */
+.shared-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h);
+  background: rgba(5,5,18,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0,240,255,0.3);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+}
+
+.header-logo {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; text-decoration: none;
+}
+.logo-icon { font-size: 24px; filter: drop-shadow(0 0 10px var(--neon-pink)); }
+.logo-text { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 800; letter-spacing: 1px; color: var(--neon-pink); }
+
+.back-btn {
+  font-family: 'Share Tech Mono', monospace;
+  padding: 8px 16px; border-radius: 4px;
+  font-size: 14px; font-weight: 500;
+  color: var(--neon-cyan); text-decoration: none;
+  background: rgba(0,240,255,0.05);
+  border: 1px solid var(--neon-cyan);
+  transition: all 0.2s; cursor: pointer;
+  text-transform: uppercase;
+}
+.back-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 10px var(--neon-cyan); }
+
+/* ── Guide Container ── */
+.guide-container {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 20px;
+  position: relative; z-index: 1;
+}
+
+/* ── CRT Overlay ── */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(18, 16, 16, 0.1);
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 2000;
+}

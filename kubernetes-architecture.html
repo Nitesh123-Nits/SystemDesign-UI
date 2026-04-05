@@ -4,16 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kubernetes Architecture — Interactive HLD</title>
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="assistant.js" defer></script>
+<script src="shared-guides.js" defer></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
 
   :root {
     --bg: #060810;
-    --surface: #0d1117;
-    --surface2: #161b27;
-    --surface3: #1e2533;
-    --border: #2a3347;
-    --border-bright: #3d5080;
+    --surface: rgba(255,255,255,0.02);
+    --surface2: rgba(255,255,255,0.04);
+    --surface3: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,255,255,0.15);
     --text: #e2e8f0;
     --text-dim: #7889a8;
     --text-muted: #4a5568;
@@ -31,74 +35,20 @@
     --glow-purple: rgba(139,92,246,0.25);
   }
 
-  /* BACK BUTTON */
-  .back-to-dashboard {
-    position: fixed;
-    top: 15px;
-    left: 20px;
-    z-index: 9999;
-    padding: 8px 16px;
-    background: var(--accent-blue, #3b82f6);
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: bold;
-    font-family: sans-serif;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-    transition: transform 0.2s, background 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-  .back-to-dashboard:hover {
-    transform: translateY(-2px);
-    background: var(--accent-cyan, #06b6d4);
-  }
-  
-  @media (max-width: 900px) {
-    .back-to-dashboard {
-      top: 8px;
-      left: 10px;
-      padding: 6px 12px;
-      font-size: 11px;
-    }
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: 'JetBrains Mono', monospace;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
   }
 
-  /* ── HEADER ── */
-  .header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(6,8,16,0.92);
+  /* ── K8S SPECIFIC HEADER (Sub-nav) ── */
+  .k8s-subnav {
+    background: rgba(255,255,255,0.02);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
-    padding: 14px 32px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 32px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px;
+    position: sticky; top: var(--header-h); z-index: 10;
   }
-  .header-logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800; font-size: 18px;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.5px;
-  }
-  .header-badge {
-    font-size: 10px; padding: 3px 10px;
-    border: 1px solid var(--accent-cyan);
-    color: var(--accent-cyan);
-    border-radius: 20px; letter-spacing: 2px;
-  }
-  .header-nav { display: flex; gap: 8px; }
   .nav-btn {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px; padding: 6px 14px;
@@ -112,6 +62,7 @@
     background: rgba(59,130,246,0.08);
   }
   .nav-btn.active { background: rgba(59,130,246,0.15); }
+
 
   /* ── MAIN ── */
   .main { padding: 0; }
@@ -476,23 +427,15 @@
 </style>
 </head>
 <body>
-<a href="index.html" class="back-to-dashboard">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-  Back to Dashboard
-</a>
-
-<!-- ── HEADER ── -->
-<header class="header">
-  <div class="header-logo">⎈ K8s Architecture</div>
-  <nav class="header-nav">
-    <button class="nav-btn active" onclick="switchView('hld')">HLD Diagram</button>
-    <button class="nav-btn" onclick="switchView('components')">Components</button>
-    <button class="nav-btn" onclick="switchView('mesh')">Service Mesh</button>
-    <button class="nav-btn" onclick="switchView('storage')">Storage</button>
-    <button class="nav-btn" onclick="switchView('overview')">Overview</button>
-  </nav>
-  <div class="header-badge">v1.29</div>
+<header class="k8s-subnav">
+  <button class="nav-btn active" onclick="switchView('hld')">HLD Diagram</button>
+  <button class="nav-btn" onclick="switchView('components')">Components</button>
+  <button class="nav-btn" onclick="switchView('mesh')">Service Mesh</button>
+  <button class="nav-btn" onclick="switchView('storage')">Storage</button>
+  <button class="nav-btn" onclick="switchView('overview')">Overview</button>
+  <div class="header-badge" style="font-size: 10px; padding: 3px 10px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 20px; letter-spacing: 2px;">v1.29</div>
 </header>
+
 
 <!-- ── TOOLTIP ── -->
 <div class="tooltip" id="tooltip">
