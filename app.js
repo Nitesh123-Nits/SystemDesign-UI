@@ -195,10 +195,12 @@ function renderSidebar(q) {
       <span class="meta-chip">&#9201; ${q.readTime}</span>
     </div>`;
 
-  const tabs = ['overview','requirements','architecture','deepdive','tradeoffs','qa','tips'];
+  const tabs = ['overview','requirements','datamodel','apis','architecture','deepdive','tradeoffs','qa','tips'];
   const labels = {
     overview:'&#128203; Overview',
     requirements:'&#9989; Requirements',
+    datamodel:'&#128451;&#65039; Data Model',
+    apis:'&#128268; API Design',
     architecture:'&#127959;&#65039; HLD Diagram',
     deepdive:'&#128300; Component Deep Dive',
     tradeoffs:'&#9878;&#65039; Trade-offs',
@@ -261,6 +263,8 @@ function renderDetailContent(q, tab) {
 
   if (tab === 'overview') html += buildOverview(q);
   else if (tab === 'requirements') html += buildRequirements(q);
+  else if (tab === 'datamodel') html += buildDataModelTab(q);
+  else if (tab === 'apis') html += buildAPIsTab(q);
   else if (tab === 'architecture') html += buildArchitecture(q);
   else if (tab === 'deepdive') html += buildDeepDive(q);
   else if (tab === 'tradeoffs') html += buildTradeoffs(q);
@@ -368,8 +372,23 @@ function buildRequirements(q) {
       </ul>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title"><span class="icon">&#128451;&#65039;</span>Data Model</div>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Core entities and their relationships. Pick your DB type to match the access patterns.</p>
+      <div class="detail-section-title"><span class="icon">&#128204;</span>Clarifying Questions</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Standard questions to ask to narrow down the design space.</p>
+      <ul class="req-list">
+        <li data-icon="&#10067;">What is the expected read/write ratio?</li>
+        <li data-icon="&#10067;">Do we need strong consistency or is eventual consistency okay?</li>
+        <li data-icon="&#10067;">Is global low latency a requirement?</li>
+      </ul>
+    </div>`;
+}
+
+function buildDataModelTab(q) {
+  return `
+    <div class="detail-section">
+      <div class="detail-section-title"><span class="icon">&#128451;&#65039;</span>Data Model — Core Entities</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        Relational (SQL) vs NoSQL (Document/Wide-column) is the first decision. Define your schema to optimize for the primary access patterns.
+      </p>
       ${buildDataModel(q)}
     </div>`;
 }
@@ -430,10 +449,15 @@ function buildArchitecture(q) {
 
   html += `</div>`;
 
-  if (q.apis) {
-    html += `<div class="detail-section">
-      <div class="detail-section-title"><span class="icon">&#128268;</span>API Design</div>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Core REST or gRPC endpoints the system must expose.</p>
+  return html;
+}
+
+function buildAPIsTab(q) {
+  if (!q.apis) return '<div class="detail-section"><p style="color:var(--text-muted)">API design coming soon.</p></div>';
+  return `
+    <div class="detail-section">
+      <div class="detail-section-title"><span class="icon">&#128268;</span>API Design — System Interface</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Define clear boundaries between components. Use REST for standard web APIs and gRPC for internal service-to-service communication.</p>
       <div class="api-list">
         ${q.apis.map(a => `
           <div class="api-item">
@@ -443,9 +467,6 @@ function buildArchitecture(q) {
           </div>`).join('')}
       </div>
     </div>`;
-  }
-
-  return html;
 }
 
 // ── DEEP DIVE ──────────────────────────────────────────────

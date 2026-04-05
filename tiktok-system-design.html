@@ -949,6 +949,8 @@
   <div class="logo">SYS<span>.</span>DESIGN — <span>Video Streaming</span></div>
   <nav id="mainNav">
     <button class="nav-btn active" data-section="overview">Overview</button>
+    <button class="nav-btn" data-section="datamodel">Data Model</button>
+    <button class="nav-btn" data-section="apis">API Design</button>
     <button class="nav-btn" data-section="hld">HLD Diagram</button>
     <button class="nav-btn" data-section="components">Components</button>
     <button class="nav-btn" data-section="scalability">Scalability</button>
@@ -1033,10 +1035,150 @@
   </div>
 </section>
 
+<!-- DATA MODEL -->
+<section class="section" id="datamodel">
+  <div class="section-header">
+    <h2><span class="section-num">03</span> Data Modeling & Schema Design</h2>
+    <p class="section-desc">Choosing the right database for each access pattern is critical. SQL for relational integrity, NoSQL for high-scale engagement data.</p>
+  </div>
+
+  <div class="components-grid">
+    <div class="deepdive-block" style="grid-column: 1 / -1; background: var(--surface2);">
+      <h3 style="color:var(--accent3);">Core Database Strategy</h3>
+      <p style="font-size:0.85rem; color:var(--text2); margin-bottom:1rem;">We use a <strong>Polyglot Persistence</strong> approach: sharded RDBMS for canonical metadata and wide-column NoSQL for high-frequency user actions.</p>
+    </div>
+
+    <div class="component-card" style="--card-accent: var(--accent2);">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(0,212,255,0.1)">🐘</div>
+        <div>
+          <div class="card-title">User & Video Metadata</div>
+          <div class="card-subtitle">PostgreSQL (Sharded)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="code-block" style="font-size:0.65rem;">
+-- Users Table (Sharded by id)
+CREATE TABLE users (
+  id          UUID PRIMARY KEY,
+  username    VARCHAR(32) UNIQUE,
+  email       VARCHAR(255),
+  verified    BOOLEAN DEFAULT false,
+  created_at  TIMESTAMP WITH TIME ZONE
+);
+
+-- Videos Table (Sharded by creator_id)
+CREATE TABLE videos (
+  id          BIGINT PRIMARY KEY, -- Snowflake ID
+  creator_id  UUID REFERENCES users(id),
+  s3_path     TEXT,
+  title       TEXT,
+  duration    INT,
+  status      video_status,
+  created_at  TIMESTAMP
+);</div>
+      </div>
+    </div>
+
+    <div class="component-card" style="--card-accent: var(--accent);">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(255,45,85,0.1)">🔷</div>
+        <div>
+          <div class="card-title">Engagement Data</div>
+          <div class="card-subtitle">Cassandra / ScyllaDB</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="code-block" style="font-size:0.65rem;">
+-- Likes Table (Partitioned by video_id)
+CREATE TABLE video_likes (
+  video_id    BIGINT,
+  user_id     UUID,
+  created_at  TIMESTAMP,
+  PRIMARY KEY (video_id, user_id)
+) WITH CLUSTERING ORDER BY (user_id ASC);
+
+-- Counters Table (Atomic Counter)
+CREATE TABLE video_stats (
+  video_id    BIGINT PRIMARY KEY,
+  likes       counter,
+  views       counter,
+  shares      counter
+);</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- API DESIGN -->
+<section class="section" id="apis">
+  <div class="section-header">
+    <h2><span class="section-num">04</span> API Design (REST &amp; gRPC)</h2>
+    <p class="section-desc">Defining clear interfaces between the client and the backend mesh. Optimized for mobile network conditions.</p>
+  </div>
+
+  <div class="qa-list">
+    <div class="deepdive-block" style="margin-bottom:1rem;">
+      <h3 style="color:var(--accent4);">External Gateway APIs (JSON/REST)</h3>
+      
+      <div class="arch-table-wrap">
+        <table class="arch-table">
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Payload / Response</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="color:var(--accent3)">POST</td>
+              <td class="mono">/v1/videos/upload</td>
+              <td>Initiate multi-part upload</td>
+              <td><code>{title: string, size: long}</code> → <code>{upload_id, s3_url}</code></td>
+            </tr>
+            <tr>
+              <td style="color:var(--accent2)">GET</td>
+              <td class="mono">/v1/feed</td>
+              <td>Get personalized feed</td>
+              <td><code>?offset=0&limit=10</code> → <code>{items: Video[], next_offset}</code></td>
+            </tr>
+            <tr>
+              <td style="color:var(--accent3)">POST</td>
+              <td class="mono">/v1/videos/{id}/like</td>
+              <td>Like/Unlike a video</td>
+              <td><code>{action: 'like' | 'unlike'}</code> → <code>200 OK</code></td>
+            </tr>
+            <tr>
+              <td style="color:var(--accent2)">GET</td>
+              <td class="mono">/v1/users/{id}/profile</td>
+              <td>Fetch user profile</td>
+              <td><code>{user_id}</code> → <code>{username, stats, last_videos[]}</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="deepdive-block">
+      <h3 style="color:var(--accent5);">Internal Microservices (gRPC)</h3>
+      <p style="font-size:0.82rem; color:var(--text2); margin-bottom:1rem;">High-performance binary communication using Protocol Buffers to reduce overhead and enforce type safety.</p>
+      <div class="code-block">
+service RecommendationService {
+  // Candidate Generation (ANN FAISS)
+  rpc GetCandidates(UserContext) returns (stream VideoID);
+  
+  // Real-time Ranking (GBDT / DNN Inference)
+  rpc RankCandidates(RankRequest) returns (RankedFeed);
+}
+
+message UserContext {
+  string user_id = 1;
+  DeviceMetadata device = 2;
+  repeated string last_n_views = 3;
+}</div>
+    </div>
+  </div>
+</section>
+
 <!-- HLD DIAGRAM -->
 <section class="section" id="hld">
   <div class="section-header">
-    <h2><span class="section-num">02</span> High-Level Architecture Diagram</h2>
+    <h2><span class="section-num">05</span> High-Level Architecture Diagram</h2>
     <p class="section-desc">End-to-end system flow from client upload through processing, storage, CDN, and feed delivery. Click on a layer to learn more.</p>
   </div>
 

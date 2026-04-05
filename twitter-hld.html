@@ -997,6 +997,12 @@
     <a href="#capacity" class="nav-item" onclick="setActive(this)">
       <div class="nav-icon">📊</div> Capacity Estimation
     </a>
+    <a href="#datamodel" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🗄️</div> Data Model
+    </a>
+    <a href="#apis" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🔌</div> API Design
+    </a>
     <a href="#planning" class="nav-item" onclick="setActive(this)">
       <div class="nav-icon">🏗</div> Capacity Planning
     </a>
@@ -1474,11 +1480,139 @@ thumbnail_egress ≈ 4× text = ~48GB/s
     </section>
 
     <!-- ══════════════════════════════════════
+         5. DATA MODELING
+    ══════════════════════════════════════ -->
+    <section class="section" id="datamodel">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">Data Modeling & Schema</h2>
+        <span class="section-icon">🗄️</span>
+      </div>
+
+      <div class="alert alert-blue">
+        <span class="alert-icon">💎</span>
+        <span>Choose databases based on access patterns. Twitter is read-heavy but has massive write throughput for tweets and engagement.</span>
+      </div>
+
+      <div class="card open" id="sql-schema">
+        <div class="card-header" onclick="toggleCard('sql-schema')">
+          <div class="card-header-icon" style="background:rgba(0,186,124,0.12)">🐘</div>
+          <div class="card-title">Relational Schema (Users & Social Graph)</div>
+          <span class="card-tag tag-design">PostgreSQL</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="code-block">
+<span class="comment">-- Users Table (Sharded by user_id)</span>
+<span class="kw">CREATE TABLE</span> users (
+  user_id    <span class="num">BIGINT PRIMARY KEY</span>,
+  username   <span class="str">VARCHAR(32) UNIQUE</span>,
+  email      <span class="str">VARCHAR(255)</span>,
+  created_at <span class="num">TIMESTAMP</span>
+);
+
+<span class="comment">-- Followers Table (The Social Graph)</span>
+<span class="kw">CREATE TABLE</span> follows (
+  follower_id <span class="num">BIGINT</span>,
+  followee_id <span class="num">BIGINT</span>,
+  created_at  <span class="num">TIMESTAMP</span>,
+  <span class="kw">PRIMARY KEY</span> (follower_id, followee_id)
+);
+<span class="comment">-- Index on followee_id to find followers quickly</span>
+<span class="kw">CREATE INDEX</span> idx_followee <span class="kw">ON</span> follows(followee_id);
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="nosql-schema">
+        <div class="card-header" onclick="toggleCard('nosql-schema')">
+          <div class="card-header-icon" style="background:rgba(244,196,48,0.12)">🔷</div>
+          <div class="card-title">NoSQL Schema (Tweets & Engagement)</div>
+          <span class="card-tag tag-design">Cassandra</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="code-block">
+<span class="comment">-- Tweets Table (Partitioned by user_id for fast timeline fetch)</span>
+<span class="kw">CREATE TABLE</span> tweets (
+  user_id    <span class="num">uuid</span>,
+  tweet_id   <span class="num">timeuuid</span>,
+  content    <span class="str">text</span>,
+  media_urls <span class="num">list&lt;text&gt;</span>,
+  <span class="kw">PRIMARY KEY</span> (user_id, tweet_id)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (tweet_id <span class="kw">DESC</span>);
+
+<span class="comment">-- Tweet Stats (Counters)</span>
+<span class="kw">CREATE TABLE</span> tweet_stats (
+  tweet_id <span class="num">uuid PRIMARY KEY</span>,
+  likes    <span class="num">counter</span>,
+  retweets <span class="num">counter</span>,
+  replies  <span class="num">counter</span>
+);
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         6. API DESIGN
+    ══════════════════════════════════════ -->
+    <section class="section" id="apis">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">API Design</h2>
+        <span class="section-icon">🔌</span>
+      </div>
+
+      <div class="card open" id="rest-api">
+        <div class="card-header" onclick="toggleCard('rest-api')">
+          <div class="card-header-icon" style="background:rgba(29,155,240,0.12)">🌐</div>
+          <div class="card-title">Public REST API (External)</div>
+          <span class="card-tag tag-design">REST / JSON</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr><th>Endpoint</th><th>Method</th><th>Description</th><th>Parameters</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">/v1/tweets</td>
+                <td class="gold">POST</td>
+                <td>Post a new tweet</td>
+                <td class="mono">{content, media_ids}</td>
+              </tr>
+              <tr>
+                <td class="mono">/v1/timeline/home</td>
+                <td class="green">GET</td>
+                <td>Fetch user's home feed</td>
+                <td class="mono">?count=20&max_id={id}</td>
+              </tr>
+              <tr>
+                <td class="mono">/v1/users/{id}/follow</td>
+                <td class="gold">POST</td>
+                <td>Follow a user</td>
+                <td class="mono">{target_user_id}</td>
+              </tr>
+              <tr>
+                <td class="mono">/v1/search</td>
+                <td class="green">GET</td>
+                <td>Search for tweets</td>
+                <td class="mono">?q=keyword&type=top</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
          5. CAPACITY PLANNING
     ══════════════════════════════════════ -->
     <section class="section" id="planning">
       <div class="section-header">
-        <span class="section-num">05</span>
+        <span class="section-num">07</span>
         <h2 class="section-title">Capacity Planning</h2>
         <span class="section-icon">🏗</span>
       </div>
@@ -1574,7 +1708,7 @@ shards_needed = 1PB / 500GB = 2000 shards (tweet data)
     ══════════════════════════════════════ -->
     <section class="section" id="hld">
       <div class="section-header">
-        <span class="section-num">06</span>
+        <span class="section-num">08</span>
         <h2 class="section-title">High-Level Design</h2>
         <span class="section-icon">🔭</span>
       </div>

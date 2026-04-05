@@ -556,6 +556,12 @@
     <div class="nav-item" data-sec="hld" onclick="nav(this,'hld')">
       <span class="nav-icon">🏗</span> High-Level Design
     </div>
+    <div class="nav-item" data-sec="datamodel" onclick="nav(this,'datamodel')">
+      <span class="nav-icon">🗄️</span> Data Modeling
+    </div>
+    <div class="nav-item" data-sec="apis" onclick="nav(this,'apis')">
+      <span class="nav-icon">🔌</span> API Design
+    </div>
     <div class="nav-item" data-sec="components" onclick="nav(this,'components')">
       <span class="nav-icon">🧩</span> Core Components
     </div>
@@ -993,10 +999,91 @@
     </div>
   </section>
 
+  </section>
+
+  <!-- ====== DATA MODELING ====== -->
+  <section id="datamodel" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 06 — DATA MODELING</div>
+      <div class="page-title">Data Modeling<br><span>& Schema</span></div>
+      <div class="page-desc">The core data structures that power global search — from the inverted index to the URL frontier.</div>
+    </div>
+
+    <div class="section-label">Core Inverted Index (Distributed)</div>
+    <div class="card card-accent">
+      <div class="card-title">📑 Inverted Index Structure</div>
+      <div class="card-body">
+        Matches terms to a list of postings (documents where the term appears).
+      </div>
+      <div class="code-block">
+<span class="cm">// Postings List Entry</span>
+{
+  <span class="kw">term</span>: <span class="str">"system"</span>,
+  <span class="kw">postings</span>: [
+    { <span class="fn">docID</span>: <span class="num">4129</span>, <span class="fn">freq</span>: <span class="num">3</span>, <span class="fn">positions</span>: [<span class="num">12, 45, 128</span>], <span class="fn">impact</span>: <span class="num">0.8</span> },
+    { <span class="fn">docID</span>: <span class="num">8821</span>, <span class="fn">freq</span>: <span class="num">1</span>, <span class="fn">positions</span>: [<span class="num">82</span>], <span class="fn">impact</span>: <span class="num">0.4</span> }
+  ]
+}
+      </div>
+    </div>
+
+    <div class="section-label">URL Frontier & Discovery</div>
+    <div class="card card-accent2">
+      <div class="card-title">🌐 URL Metadata (Frontier Store)</div>
+      <div class="code-block">
+<span class="kw">CREATE TABLE</span> url_frontier (
+  url_hash     <span class="num">BINARY(20) PRIMARY KEY</span>,
+  url_string   <span class="str">TEXT</span>,
+  priority     <span class="num">TINYINT</span>, <span class="cm">-- Based on PageRank + Freshness</span>
+  last_crawled <span class="num">TIMESTAMP</span>,
+  etag         <span class="str">VARCHAR(64)</span>,
+  status       <span class="kw">ENUM</span>(<span class="str">'discovered', 'crawling', 'indexed', 'failed'</span>)
+);
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== API DESIGN ====== -->
+  <section id="apis" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 07 — API DESIGN</div>
+      <div class="page-title">API<br><span>Design</span></div>
+      <div class="page-desc">Public and internal endpoints for query serving and index management.</div>
+    </div>
+
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="fn">/v1/search</td>
+            <td class="tag tag-green">GET</td>
+            <td>Principal search endpoint. Params: q, offset, limit, lang.</td>
+          </tr>
+          <tr>
+            <td class="fn">/v1/suggest</td>
+            <td class="tag tag-green">GET</td>
+            <td>Retrieve autocomplete suggestions for prefix q.</td>
+          </tr>
+          <tr>
+            <td class="fn">/v1/index/status</td>
+            <td class="tag tag-blue">GET</td>
+            <td>Internal: Check indexing status of a specific URL.</td>
+          </tr>
+          <tr>
+            <td class="fn">/v1/crawl/submit</td>
+            <td class="tag tag-purple">POST</td>
+            <td>Submit a new URL for prioritized crawling (e.g. Search Console).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ====== HLD ====== -->
   <section id="hld" class="section">
     <div class="page-header">
-      <div class="page-eyebrow">// 06 — ARCHITECTURE</div>
+      <div class="page-eyebrow">// 08 — ARCHITECTURE</div>
       <div class="page-title">High-Level<br><span>Design</span></div>
       <div class="page-desc">End-to-end system architecture — from user query to result serving, and from URL discovery to index building.</div>
     </div>
