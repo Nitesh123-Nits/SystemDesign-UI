@@ -3,7 +3,7 @@ $content = Get-Content $path -Raw -Encoding UTF8
 
 # The file has duplicate asset block due to mixed line endings.
 # Find first occurrence end position and remove the second block.
-$block = "<link rel=""stylesheet"" href=""shared-guides.css"">`n<script src=""data.js"" defer></script>`n<script src=""assistant.js"" defer></script>`n<script src=""shared-guides.js"" defer></script>"
+$block = "<link rel=""stylesheet"" href=""shared-guides.css"">`n<script src=""data.js"" defer></script>`n<script src=""shared-guides.js"" defer></script>"
 
 # Remove any occurrence after the first one by splitting and rejoining
 $firstIdx = $content.IndexOf('<link rel="stylesheet" href="shared-guides.css">')

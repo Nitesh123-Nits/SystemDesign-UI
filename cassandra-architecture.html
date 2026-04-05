@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
 <title>Apache Cassandra Architecture</title>
 <link rel="stylesheet" href="shared-guides.css">
 <script src="data.js" defer></script>
-<script src="assistant.js" defer></script>
+
 <script src="shared-guides.js" defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -339,10 +339,10 @@
 <div id="bg-grid"></div>
 
 <header>
-  <div class="header-icon">⬡</div>
+  <div class="header-icon">?</div>
   <div>
     <div class="header-title">Apache Cassandra</div>
-    <div class="header-sub">DISTRIBUTED ARCHITECTURE · INTERACTIVE FLOW</div>
+    <div class="header-sub">DISTRIBUTED ARCHITECTURE � INTERACTIVE FLOW</div>
   </div>
   <div class="status-dots">
     <div class="dot active" id="d0"></div>
@@ -371,7 +371,7 @@
 
   <div id="detail-panel">
     <div class="empty-state">
-      <div style="font-size:40px">⬡</div>
+      <div style="font-size:40px">?</div>
       <div>SELECT A COMPONENT</div>
     </div>
   </div>
@@ -389,58 +389,58 @@
 <script>
 const components = {
   client: {
-    id: "client", label: "Client / Driver", icon: "⬡", color: "#00D4FF",
+    id: "client", label: "Client / Driver", icon: "?", color: "#00D4FF",
     position: { x: 50, y: 8 },
-    description: "The application layer that communicates with Cassandra via official drivers (Java, Python, Node.js, etc.). Drivers are topology-aware — they maintain a local copy of the cluster metadata and route requests intelligently. They handle load balancing, retry policies, and connection pooling automatically.",
+    description: "The application layer that communicates with Cassandra via official drivers (Java, Python, Node.js, etc.). Drivers are topology-aware � they maintain a local copy of the cluster metadata and route requests intelligently. They handle load balancing, retry policies, and connection pooling automatically.",
     details: ["Maintains cluster metadata locally", "Supports multiple consistency levels", "Handles automatic failover & retries", "Connection pooling per host"],
   },
   coordinator: {
-    id: "coordinator", label: "Coordinator Node", icon: "◈", color: "#FF6B35",
+    id: "coordinator", label: "Coordinator Node", icon: "?", color: "#FF6B35",
     position: { x: 50, y: 26 },
-    description: "Any node in the cluster can act as a coordinator for a given request. When a client sends a query, the coordinator receives it first. It determines which nodes own the relevant data (using the partition key), routes the request, collects responses, and returns the result to the client — all transparently.",
+    description: "Any node in the cluster can act as a coordinator for a given request. When a client sends a query, the coordinator receives it first. It determines which nodes own the relevant data (using the partition key), routes the request, collects responses, and returns the result to the client � all transparently.",
     details: ["Any node can become coordinator", "Routes requests to replica nodes", "Enforces consistency level", "Aggregates and returns responses"],
   },
   partitioner: {
-    id: "partitioner", label: "Partitioner", icon: "⬡", color: "#A855F7",
+    id: "partitioner", label: "Partitioner", icon: "?", color: "#A855F7",
     position: { x: 20, y: 44 },
     description: "The partitioner determines which node stores a given row by hashing the partition key into a token. Cassandra uses Murmur3Partitioner by default, producing a 64-bit hash. This token maps to a position on the ring, and the node responsible for that range receives the data.",
-    details: ["Murmur3Partitioner (default)", "Hashes partition key → token", "Ensures even data distribution", "Token range per virtual node (vnode)"],
+    details: ["Murmur3Partitioner (default)", "Hashes partition key ? token", "Ensures even data distribution", "Token range per virtual node (vnode)"],
   },
   gossip: {
-    id: "gossip", label: "Gossip Protocol", icon: "⟳", color: "#22C55E",
+    id: "gossip", label: "Gossip Protocol", icon: "?", color: "#22C55E",
     position: { x: 80, y: 44 },
     description: "Gossip is Cassandra's peer-to-peer communication protocol for cluster state propagation. Every second, each node exchanges state information with up to 3 other nodes. This allows the cluster to detect failures, track node load, and propagate schema changes without a single point of failure.",
     details: ["Runs every ~1 second per node", "Detects node failures via heartbeats", "Propagates schema & topology changes", "Enables decentralized cluster awareness"],
   },
   ring: {
-    id: "ring", label: "Token Ring / Cluster", icon: "○", color: "#F59E0B",
+    id: "ring", label: "Token Ring / Cluster", icon: "?", color: "#F59E0B",
     position: { x: 50, y: 50 },
     description: "Cassandra organizes nodes in a logical ring. Each node is assigned one or more token ranges (via virtual nodes / vnodes). Data is distributed across the ring based on partition key hashes. Virtual nodes allow fine-grained load balancing and make adding/removing nodes seamless.",
     details: ["Logical ring of all cluster nodes", "Virtual nodes (vnodes) per physical node", "Default 256 vnodes per node", "No master / all nodes are equal"],
   },
   replication: {
-    id: "replication", label: "Replication", icon: "⊞", color: "#EC4899",
+    id: "replication", label: "Replication", icon: "?", color: "#EC4899",
     position: { x: 50, y: 68 },
     description: "Cassandra replicates data across multiple nodes for fault tolerance. The Replication Factor (RF) defines how many copies exist. SimpleStrategy assigns replicas to the next N nodes on the ring; NetworkTopologyStrategy places replicas rack/datacenter-aware, critical for multi-DC deployments.",
     details: ["Replication Factor (RF) = number of copies", "SimpleStrategy for single datacenter", "NetworkTopologyStrategy for multi-DC", "RF=3 is the standard recommendation"],
   },
   writepath: {
-    id: "writepath", label: "Write Path", icon: "↓", color: "#06B6D4",
+    id: "writepath", label: "Write Path", icon: "?", color: "#06B6D4",
     position: { x: 20, y: 82 },
-    description: "On a write, Cassandra first appends to the Commit Log (sequential disk write for durability), then writes to the Memtable (in-memory data structure). Once the Memtable exceeds a threshold, it's flushed to disk as an immutable SSTable. This makes Cassandra writes extremely fast — no random disk I/O.",
-    details: ["1. Write to Commit Log (durability)", "2. Write to Memtable (in-memory)", "3. Memtable → flushed to SSTable", "All writes are sequential (fast!)"],
+    description: "On a write, Cassandra first appends to the Commit Log (sequential disk write for durability), then writes to the Memtable (in-memory data structure). Once the Memtable exceeds a threshold, it's flushed to disk as an immutable SSTable. This makes Cassandra writes extremely fast � no random disk I/O.",
+    details: ["1. Write to Commit Log (durability)", "2. Write to Memtable (in-memory)", "3. Memtable ? flushed to SSTable", "All writes are sequential (fast!)"],
   },
   readpath: {
-    id: "readpath", label: "Read Path", icon: "↑", color: "#8B5CF6",
+    id: "readpath", label: "Read Path", icon: "?", color: "#8B5CF6",
     position: { x: 80, y: 82 },
     description: "Reads check the Memtable first, then a Bloom Filter (probabilistic check to skip irrelevant SSTables), then the Key Cache, and finally SSTables on disk. Since multiple SSTables may hold versions of the same row, Cassandra merges results using timestamps, returning the most recent data.",
-    details: ["1. Check Memtable", "2. Bloom Filter (skip bad SSTables)", "3. Key Cache → SSTable lookup", "4. Merge by timestamp (MVCC)"],
+    details: ["1. Check Memtable", "2. Bloom Filter (skip bad SSTables)", "3. Key Cache ? SSTable lookup", "4. Merge by timestamp (MVCC)"],
   },
   compaction: {
-    id: "compaction", label: "Compaction", icon: "⊟", color: "#EF4444",
+    id: "compaction", label: "Compaction", icon: "?", color: "#EF4444",
     position: { x: 50, y: 92 },
     description: "Over time, SSTables accumulate. Compaction merges multiple SSTables into one, removing tombstones (deletes), resolving conflicts by timestamp, and reclaiming disk space. Strategies include STCS (default), LCS (for read-heavy workloads), and TWCS (for time-series data).",
-    details: ["Merges SSTables → reduces read amplification", "Removes tombstones (logical deletes)", "STCS / LCS / TWCS strategies", "Runs in background automatically"],
+    details: ["Merges SSTables ? reduces read amplification", "Removes tombstones (logical deletes)", "STCS / LCS / TWCS strategies", "Runs in background automatically"],
   },
 };
 
@@ -448,7 +448,7 @@ const flows = [
   { from: "client",       to: "coordinator", label: "Query",       color: "#00D4FF" },
   { from: "coordinator",  to: "partitioner", label: "Hash key",    color: "#FF6B35" },
   { from: "coordinator",  to: "gossip",      label: "Node state",  color: "#22C55E" },
-  { from: "partitioner",  to: "ring",        label: "Token→Node",  color: "#A855F7" },
+  { from: "partitioner",  to: "ring",        label: "Token?Node",  color: "#A855F7" },
   { from: "gossip",       to: "ring",        label: "Topology",    color: "#22C55E" },
   { from: "ring",         to: "replication", label: "RF copies",   color: "#F59E0B" },
   { from: "replication",  to: "writepath",   label: "Write",       color: "#06B6D4" },
@@ -565,7 +565,7 @@ function updateArrows() {
 
 function renderPanel() {
   if (!selected) {
-    panel.innerHTML = `<div class="empty-state"><div style="font-size:40px">⬡</div><div>SELECT A COMPONENT</div></div>`;
+    panel.innerHTML = `<div class="empty-state"><div style="font-size:40px">?</div><div>SELECT A COMPONENT</div></div>`;
     return;
   }
   const c = components[selected];
@@ -579,7 +579,7 @@ function renderPanel() {
 
   const charItems = c.details.map(d =>
     `<div class="char-item" style="background:${c.color}09;border-color:${c.color}22">
-      <span class="char-arrow" style="color:${c.color}">▸</span>${d}
+      <span class="char-arrow" style="color:${c.color}">?</span>${d}
     </div>`
   ).join("");
 

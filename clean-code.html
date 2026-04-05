@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clean Code — Robert C. Martin</title>
+<title>Clean Code � Robert C. Martin</title>
 <link rel="stylesheet" href="shared-guides.css">
 <script src="data.js" defer></script>
-<script src="assistant.js" defer></script>
+
 <script src="shared-guides.js" defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,7 +31,7 @@
     overflow-x: hidden;
   }
 
-  /* ── HEADER ── */
+  /* -- HEADER -- */
   header {
     position: sticky;
     top: 0;
@@ -71,13 +71,13 @@
     letter-spacing: .15em;
   }
 
-  /* ── LAYOUT ── */
+  /* -- LAYOUT -- */
   .layout {
     display: flex;
     min-height: calc(100vh - 60px);
   }
 
-  /* ── SIDEBAR ── */
+  /* -- SIDEBAR -- */
   nav {
     width: 260px;
     min-width: 260px;
@@ -131,7 +131,7 @@
     margin-top: 2px;
   }
 
-  /* ── MAIN ── */
+  /* -- MAIN -- */
   main {
     flex: 1;
     padding: 48px 52px;
@@ -167,7 +167,7 @@
     text-transform: uppercase;
   }
 
-  /* ── TABS ── */
+  /* -- TABS -- */
   .tabs {
     display: flex;
     gap: 0;
@@ -193,7 +193,7 @@
   .tab-pane { display: none; }
   .tab-pane.active { display: block; }
 
-  /* ── DEFINITION ── */
+  /* -- DEFINITION -- */
   .definition-text {
     font-size: 15px;
     line-height: 1.85;
@@ -229,7 +229,7 @@
     line-height: 1.55;
   }
 
-  /* ── CODE PANES ── */
+  /* -- CODE PANES -- */
   .code-label {
     display: flex;
     align-items: center;
@@ -275,7 +275,7 @@
   .n  { color: #AAAACC; } /* name/var */
   .op { color: #DD8855; } /* operator */
 
-  /* ── BOTTOM NAV ── */
+  /* -- BOTTOM NAV -- */
   .bottom-nav {
     display: flex;
     justify-content: space-between;
@@ -336,7 +336,7 @@
 <header>
   <div class="logo">
     <span class="logo-eyebrow">Robert C. Martin</span>
-    <span style="color:#333">·</span>
+    <span style="color:#333">�</span>
     <h1 class="logo-title">Clean <span id="accent-word">Code</span></h1>
   </div>
   <span class="header-counter" id="counter">1 / 8</span>
@@ -361,7 +361,7 @@ const principles = [
     chapter: "Chapter 2",
     tagline: "Names should reveal intent",
     color: "#E8572A",
-    definition: "Names should tell you why something exists, what it does, and how it is used. If a name requires a comment, the name does not reveal its intent. Choose names that make the code read like well-written prose — clear, unambiguous, and self-documenting.",
+    definition: "Names should tell you why something exists, what it does, and how it is used. If a name requires a comment, the name does not reveal its intent. Choose names that make the code read like well-written prose � clear, unambiguous, and self-documenting.",
     rules: [
       "Use intention-revealing names",
       "Avoid disinformation",
@@ -372,7 +372,7 @@ const principles = [
       "Avoid mental mapping",
       "Class names should be nouns",
     ],
-    bad: `<span class="c">// ❌ BAD — names that hide intent</span>
+    bad: `<span class="c">// ? BAD � names that hide intent</span>
 
 <span class="k">int</span> <span class="n">d</span>; <span class="c">// elapsed time in days</span>
 <span class="k">boolean</span> <span class="n">flag</span>;
@@ -387,7 +387,7 @@ const principles = [
 
 <span class="k">class</span> <span class="n">DtaRcrd102</span> {}
 <span class="k">int</span> <span class="f">a</span>(<span class="k">int</span> <span class="n">b</span>, <span class="k">int</span> <span class="n">c</span>) { <span class="k">return</span> <span class="n">b</span> <span class="op">*</span> <span class="n">c</span>; }`,
-    good: `<span class="c">// ✅ GOOD — names that reveal intent</span>
+    good: `<span class="c">// ? GOOD � names that reveal intent</span>
 
 <span class="k">int</span> <span class="n">elapsedTimeInDays</span>;
 <span class="k">boolean</span> <span class="n">isUserLoggedIn</span>;
@@ -410,18 +410,18 @@ const principles = [
     chapter: "Chapter 3",
     tagline: "Do one thing. Do it well.",
     color: "#2A7BE8",
-    definition: "Functions should be small — rarely over 20 lines. They should do ONE thing, and do it well. If a function does more than one thing, extract those parts into separate functions. The name of a function should describe what it does completely and without surprise.",
+    definition: "Functions should be small � rarely over 20 lines. They should do ONE thing, and do it well. If a function does more than one thing, extract those parts into separate functions. The name of a function should describe what it does completely and without surprise.",
     rules: [
       "Functions should be small",
       "Do one thing only",
       "One level of abstraction per function",
       "Avoid switch statements",
       "Use descriptive names",
-      "Prefer fewer arguments (0–2)",
+      "Prefer fewer arguments (0�2)",
       "Have no side effects",
       "Command-Query Separation",
     ],
-    bad: `<span class="c">// ❌ BAD — function does too many things</span>
+    bad: `<span class="c">// ? BAD � function does too many things</span>
 
 <span class="k">function</span> <span class="f">processUserData</span>(<span class="n">user</span>) {
   <span class="c">// validate</span>
@@ -436,7 +436,7 @@ const principles = [
   <span class="c">// write log</span>
   <span class="n">logger</span>.<span class="f">info</span>(<span class="s">"User saved: "</span> <span class="op">+</span> <span class="n">user</span>.<span class="n">id</span>);
 }`,
-    good: `<span class="c">// ✅ GOOD — each function does one thing</span>
+    good: `<span class="c">// ? GOOD � each function does one thing</span>
 
 <span class="k">function</span> <span class="f">processUserData</span>(<span class="n">user</span>) {
   <span class="f">validateUser</span>(<span class="n">user</span>);
@@ -462,9 +462,9 @@ const principles = [
     chapter: "Chapter 4",
     tagline: "Code should speak for itself",
     color: "#2AE87B",
-    definition: "Every time you write a comment, ask if you could express the same intent in the code. Comments compensate for our failure to express ourselves in code — and they lie. Code changes; comments often don't. The best comment is the code that doesn't need one.",
+    definition: "Every time you write a comment, ask if you could express the same intent in the code. Comments compensate for our failure to express ourselves in code � and they lie. Code changes; comments often don't. The best comment is the code that doesn't need one.",
     rules: [
-      "Don't comment bad code — rewrite it",
+      "Don't comment bad code � rewrite it",
       "Legal comments are acceptable",
       "Informative comments can be useful",
       "Explain intent when non-obvious",
@@ -473,7 +473,7 @@ const principles = [
       "Avoid redundant / noisy comments",
       "Never leave commented-out code",
     ],
-    bad: `<span class="c">// ❌ BAD — comments that add noise</span>
+    bad: `<span class="c">// ? BAD � comments that add noise</span>
 
 <span class="c">// Check to see if the employee is eligible</span>
 <span class="c">// for full benefits</span>
@@ -482,13 +482,13 @@ const principles = [
 <span class="k">int</span> <span class="n">d</span>; <span class="c">// elapsed time in days</span>
 
 <span class="c">// Returns the day of the month.</span>
-<span class="c">// @param month — The month of the year.</span>
+<span class="c">// @param month � The month of the year.</span>
 <span class="c">// @return The day of the month.</span>
 <span class="k">int</span> <span class="f">getDayOfMonth</span>(<span class="k">int</span> <span class="n">month</span>) { ... }
 
-<span class="c">// i = i + 1 — increment i</span>
+<span class="c">// i = i + 1 � increment i</span>
 <span class="n">i</span> <span class="op">=</span> <span class="n">i</span> <span class="op">+</span> <span class="s">1</span>;`,
-    good: `<span class="c">// ✅ GOOD — code that doesn't need comments</span>
+    good: `<span class="c">// ? GOOD � code that doesn't need comments</span>
 
 <span class="k">if</span> (<span class="n">employee</span>.<span class="f">isEligibleForFullBenefits</span>()) {}
 
@@ -496,11 +496,11 @@ const principles = [
 
 <span class="k">int</span> <span class="f">getDayOfMonth</span>(<span class="k">int</span> <span class="n">month</span>) { ... }
 
-<span class="c">// FIXME: known race condition — needs mutex</span>
+<span class="c">// FIXME: known race condition � needs mutex</span>
 <span class="c">// before this ships to production.</span>
 <span class="k">void</span> <span class="f">syncUserSessions</span>() { ... }
 
-<span class="c">// Business rule: customers ≥65 get senior discount</span>
+<span class="c">// Business rule: customers =65 get senior discount</span>
 <span class="k">if</span> (<span class="n">customer</span>.<span class="n">age</span> <span class="op">>=</span> <span class="n">SENIOR_DISCOUNT_THRESHOLD</span>) { ... }`,
   },
   {
@@ -516,18 +516,18 @@ const principles = [
       "Vertical density for related code",
       "Dependent functions should be close",
       "Similar concepts stay together",
-      "Keep lines short (80–120 chars)",
+      "Keep lines short (80�120 chars)",
       "Use horizontal whitespace intentionally",
       "Team rules override personal preference",
       "Use automated formatters (Prettier, etc.)",
     ],
-    bad: `<span class="c">// ❌ BAD — cramped, unreadable</span>
+    bad: `<span class="c">// ? BAD � cramped, unreadable</span>
 
 <span class="k">function</span> <span class="f">buildHtml</span>(<span class="n">tag</span>,<span class="n">text</span>,<span class="n">attrs</span>){<span class="k">const</span> <span class="n">a</span><span class="op">=</span><span class="n">Object</span>.<span class="f">entries</span>(<span class="n">attrs</span>).<span class="f">map</span>(([<span class="n">k</span>,<span class="n">v</span>])<span class="op">=></span><span class="s">\`\${k}="\${v}"\`</span>).<span class="f">join</span>(<span class="s">' '</span>);<span class="k">return</span> <span class="s">\`&lt;\${tag} \${a}&gt;\${text}&lt;/\${tag}&gt;\`</span>;}
 <span class="k">class</span> <span class="n">UserService</span>{<span class="f">constructor</span>(<span class="n">db</span>,<span class="n">mailer</span>){<span class="k">this</span>.<span class="n">db</span><span class="op">=</span><span class="n">db</span>;<span class="k">this</span>.<span class="n">mailer</span><span class="op">=</span><span class="n">mailer</span>;}
 <span class="f">save</span>(<span class="n">u</span>){<span class="k">this</span>.<span class="n">db</span>.<span class="f">save</span>(<span class="n">u</span>);<span class="k">this</span>.<span class="n">mailer</span>.<span class="f">send</span>(<span class="n">u</span>.<span class="n">email</span>);}
 <span class="f">delete</span>(<span class="n">id</span>){<span class="k">this</span>.<span class="n">db</span>.<span class="f">delete</span>(<span class="n">id</span>);}}`,
-    good: `<span class="c">// ✅ GOOD — breathable, intentional</span>
+    good: `<span class="c">// ? GOOD � breathable, intentional</span>
 
 <span class="k">function</span> <span class="f">buildHtml</span>(<span class="n">tag</span>, <span class="n">text</span>, <span class="n">attrs</span>) {
   <span class="k">const</span> <span class="n">attrString</span> <span class="op">=</span> <span class="n">Object</span>.<span class="f">entries</span>(<span class="n">attrs</span>)
@@ -554,7 +554,7 @@ const principles = [
     chapter: "Chapter 7",
     tagline: "Don't obscure logic with errors",
     color: "#E82A7B",
-    definition: "Error handling is important, but if it obscures logic, it's wrong. Use exceptions rather than return codes. Write your try-catch-finally statement first. Don't return null — it creates null-pointer landmines. Don't pass null to methods either.",
+    definition: "Error handling is important, but if it obscures logic, it's wrong. Use exceptions rather than return codes. Write your try-catch-finally statement first. Don't return null � it creates null-pointer landmines. Don't pass null to methods either.",
     rules: [
       "Use exceptions, not return codes",
       "Write try-catch-finally first",
@@ -565,7 +565,7 @@ const principles = [
       "Use Optional / Result types",
       "Fail fast and loudly",
     ],
-    bad: `<span class="c">// ❌ BAD — null returns & error codes</span>
+    bad: `<span class="c">// ? BAD � null returns & error codes</span>
 
 <span class="k">function</span> <span class="f">getUser</span>(<span class="n">id</span>) {
   <span class="k">const</span> <span class="n">user</span> <span class="op">=</span> <span class="n">db</span>.<span class="f">find</span>(<span class="n">id</span>);
@@ -579,7 +579,7 @@ const principles = [
 <span class="k">else if</span> (<span class="n">result</span> <span class="op">===</span> <span class="op">-</span><span class="s">2</span>) { <span class="c">/* card expired */</span>     }
 <span class="k">else if</span> (<span class="n">result</span> <span class="op">===</span> <span class="op">-</span><span class="s">3</span>) { <span class="c">/* network error */</span>    }
 <span class="k">else</span>                  { <span class="c">/* success? maybe? */</span>  }`,
-    good: `<span class="c">// ✅ GOOD — meaningful exceptions, no nulls</span>
+    good: `<span class="c">// ? GOOD � meaningful exceptions, no nulls</span>
 
 <span class="k">function</span> <span class="f">getUser</span>(<span class="n">id</span>) {
   <span class="k">const</span> <span class="n">user</span> <span class="op">=</span> <span class="n">db</span>.<span class="f">find</span>(<span class="n">id</span>);
@@ -616,7 +616,7 @@ const principles = [
       "Prefer composition over inheritance",
       "Avoid God objects",
     ],
-    bad: `<span class="c">// ❌ BAD — God class with too many jobs</span>
+    bad: `<span class="c">// ? BAD � God class with too many jobs</span>
 
 <span class="k">class</span> <span class="n">User</span> {
   <span class="c">// User data concerns</span>
@@ -637,7 +637,7 @@ const principles = [
   <span class="f">logout</span>()       {}
   <span class="f">hashPassword</span>() {}
 }`,
-    good: `<span class="c">// ✅ GOOD — each class has one responsibility</span>
+    good: `<span class="c">// ? GOOD � each class has one responsibility</span>
 
 <span class="k">class</span> <span class="n">User</span> {
   <span class="f">constructor</span>(<span class="n">name</span>, <span class="n">email</span>) { ... }
@@ -667,7 +667,7 @@ const principles = [
     chapter: "Chapters 3 & 17",
     tagline: "Don't Repeat Yourself",
     color: "#2AE8D4",
-    definition: "Duplication is the primary enemy of a well-designed system. Every piece of knowledge must have a single, unambiguous, authoritative representation. When you find duplication in your code, extract and name the concept — don't copy-paste it.",
+    definition: "Duplication is the primary enemy of a well-designed system. Every piece of knowledge must have a single, unambiguous, authoritative representation. When you find duplication in your code, extract and name the concept � don't copy-paste it.",
     rules: [
       "Extract repeated code into functions",
       "Centralise business logic",
@@ -678,7 +678,7 @@ const principles = [
       "Name the abstraction well",
       "DRY applies to data, docs & tests too",
     ],
-    bad: `<span class="c">// ❌ BAD — duplicated validation logic</span>
+    bad: `<span class="c">// ? BAD � duplicated validation logic</span>
 
 <span class="k">function</span> <span class="f">createUser</span>(<span class="n">name</span>, <span class="n">email</span>, <span class="n">age</span>) {
   <span class="k">if</span> (<span class="op">!</span><span class="n">name</span>  <span class="op">||</span> <span class="n">name</span>.<span class="n">length</span> <span class="op">&lt;</span> <span class="s">2</span>) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid name"</span>);
@@ -692,7 +692,7 @@ const principles = [
   <span class="k">if</span> (<span class="op">!</span><span class="n">email</span> <span class="op">||</span> <span class="op">!</span><span class="n">email</span>.<span class="f">includes</span>(<span class="s">"@"</span>)) <span class="k">throw</span> <span class="k">new</span> <span class="n">Error</span>(<span class="s">"Invalid email"</span>); <span class="c">// duplicate!</span>
   <span class="c">// update...</span>
 }`,
-    good: `<span class="c">// ✅ GOOD — single source of truth</span>
+    good: `<span class="c">// ? GOOD � single source of truth</span>
 
 <span class="k">const</span> <span class="n">validators</span> <span class="op">=</span> {
   <span class="f">name</span>:  (<span class="n">v</span>) <span class="op">=></span> <span class="n">v</span> <span class="op">&&</span> <span class="n">v</span>.<span class="n">length</span> <span class="op">>=</span> <span class="s">2</span>,
@@ -714,18 +714,18 @@ const principles = [
     id: "solid",
     num: "08",
     title: "SOLID Principles",
-    chapter: "Chapters 8–12",
+    chapter: "Chapters 8�12",
     tagline: "The five pillars of OOP design",
     color: "#E87B2A",
     definition: "SOLID is an acronym for five design principles: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, and Dependency Inversion. Together they guide you toward flexible, maintainable, and testable systems.",
     rules: [
-      "S — Single Responsibility Principle",
-      "O — Open/Closed Principle",
-      "L — Liskov Substitution Principle",
-      "I — Interface Segregation Principle",
-      "D — Dependency Inversion Principle",
+      "S � Single Responsibility Principle",
+      "O � Open/Closed Principle",
+      "L � Liskov Substitution Principle",
+      "I � Interface Segregation Principle",
+      "D � Dependency Inversion Principle",
     ],
-    bad: `<span class="c">// ❌ BAD — violates OCP & DIP</span>
+    bad: `<span class="c">// ? BAD � violates OCP & DIP</span>
 
 <span class="k">class</span> <span class="n">PaymentProcessor</span> {
   <span class="f">process</span>(<span class="n">payment</span>, <span class="n">type</span>) {
@@ -734,11 +734,11 @@ const principles = [
     } <span class="k">else if</span> (<span class="n">type</span> <span class="op">===</span> <span class="s">"paypal"</span>) {
       <span class="f">sendToPaypal</span>(<span class="n">payment</span>);        <span class="c">// every time a new method</span>
     } <span class="k">else if</span> (<span class="n">type</span> <span class="op">===</span> <span class="s">"crypto"</span>) {
-      <span class="f">broadcastTransaction</span>(<span class="n">payment</span>); <span class="c">// is added ← bad</span>
+      <span class="f">broadcastTransaction</span>(<span class="n">payment</span>); <span class="c">// is added ? bad</span>
     }
   }
 }`,
-    good: `<span class="c">// ✅ GOOD — OCP & DIP via abstractions</span>
+    good: `<span class="c">// ? GOOD � OCP & DIP via abstractions</span>
 
 <span class="k">interface</span> <span class="n">PaymentMethod</span> {
   <span class="f">process</span>(<span class="n">payment</span>: <span class="n">Payment</span>): <span class="k">void</span>;
@@ -750,7 +750,7 @@ const principles = [
 <span class="k">class</span> <span class="n">PayPalPayment</span> <span class="k">implements</span> <span class="n">PaymentMethod</span> {
   <span class="f">process</span>(<span class="n">p</span>) { <span class="f">sendToPaypal</span>(<span class="n">p</span>); }
 }
-<span class="c">// Adding new method = new class only, no edits ✓</span>
+<span class="c">// Adding new method = new class only, no edits ?</span>
 <span class="k">class</span> <span class="n">CryptoPayment</span> <span class="k">implements</span> <span class="n">PaymentMethod</span> {
   <span class="f">process</span>(<span class="n">p</span>) { <span class="f">broadcast</span>(<span class="n">p</span>); }
 }
@@ -764,7 +764,7 @@ const principles = [
 
 let currentId = principles[0].id;
 
-// ── Build sidebar ──
+// -- Build sidebar --
 const sidebar = document.getElementById('sidebar');
 principles.forEach(p => {
   const btn = document.createElement('button');
@@ -780,7 +780,7 @@ principles.forEach(p => {
   sidebar.appendChild(btn);
 });
 
-// ── Build main panels ──
+// -- Build main panels --
 const mainEl = document.getElementById('main');
 principles.forEach(p => {
   const sec = document.createElement('section');
@@ -804,7 +804,7 @@ principles.forEach(p => {
       <div class="rules-grid">
         ${p.rules.map(r => `
           <div class="rule-card">
-            <span class="rule-bullet" style="color:${p.color}">▸</span>
+            <span class="rule-bullet" style="color:${p.color}">?</span>
             <span class="rule-text">${r}</span>
           </div>`).join('')}
       </div>
@@ -813,7 +813,7 @@ principles.forEach(p => {
     <div class="tab-pane" id="bad-${p.id}">
       <div class="code-label">
         <div class="dot red"></div>
-        <span class="code-label-text">Anti-pattern — do not use</span>
+        <span class="code-label-text">Anti-pattern � do not use</span>
       </div>
       <pre class="code-block bad">${p.bad}</pre>
     </div>
@@ -821,14 +821,14 @@ principles.forEach(p => {
     <div class="tab-pane" id="good-${p.id}">
       <div class="code-label">
         <div class="dot green"></div>
-        <span class="code-label-text">Clean — follow this pattern</span>
+        <span class="code-label-text">Clean � follow this pattern</span>
       </div>
       <pre class="code-block good">${p.good}</pre>
     </div>
 
     <div class="bottom-nav">
-      <button class="nav-arrow prev" onclick="movePrev('${p.id}')">← Prev</button>
-      <button class="nav-arrow next" onclick="moveNext('${p.id}')">Next →</button>
+      <button class="nav-arrow prev" onclick="movePrev('${p.id}')">? Prev</button>
+      <button class="nav-arrow next" onclick="moveNext('${p.id}')">Next ?</button>
     </div>`;
 
   // Tab logic

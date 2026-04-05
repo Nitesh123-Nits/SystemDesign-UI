@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>URL Journey — DNS & Beyond</title>
+<title>URL Journey � DNS & Beyond</title>
 <link rel="stylesheet" href="shared-guides.css">
 <script src="data.js" defer></script>
-<script src="assistant.js" defer></script>
+
 <script src="shared-guides.js" defer></script>
 <style>
   :root {
@@ -546,7 +546,7 @@
   <header>
     <div class="label">// network internals</div>
     <h1>What happens when you<br>type a <span>URL</span> in a browser?</h1>
-    <p>An interactive walkthrough of DNS resolution, TCP handshakes, and HTTP — from keypress to pixel.</p>
+    <p>An interactive walkthrough of DNS resolution, TCP handshakes, and HTTP � from keypress to pixel.</p>
   </header>
 
   <!-- Browser Address Bar -->
@@ -555,9 +555,9 @@
       <span></span><span></span><span></span>
     </div>
     <div class="url-input-row">
-      <span class="lock-icon">🔒</span>
-      <input type="text" id="urlInput" value="https://www.example.com" placeholder="Type a URL…" />
-      <button id="goBtn" onclick="startJourney()">GO →</button>
+      <span class="lock-icon">??</span>
+      <input type="text" id="urlInput" value="https://www.example.com" placeholder="Type a URL�" />
+      <button id="goBtn" onclick="startJourney()">GO ?</button>
     </div>
   </div>
 
@@ -575,21 +575,21 @@
           <div class="tag">Browser</div>
           <h3>Parse the URL</h3>
         </div>
-        <span class="step-status status-pending" id="status1">● waiting</span>
+        <span class="step-status status-pending" id="status1">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
-          <p>Before making any network request, the browser <strong>parses the URL</strong> into its components. It identifies the <span class="tooltip-term" title="The protocol defines how data is transferred — HTTP or HTTPS">protocol</span>, <span class="tooltip-term" title="The domain name identifies the server you want to reach">domain</span>, port, path, and query string.</p>
+          <p>Before making any network request, the browser <strong>parses the URL</strong> into its components. It identifies the <span class="tooltip-term" title="The protocol defines how data is transferred � HTTP or HTTPS">protocol</span>, <span class="tooltip-term" title="The domain name identifies the server you want to reach">domain</span>, port, path, and query string.</p>
           <div class="code-block" id="parsedUrl">
-            <span class="line"><span class="key">protocol</span>  → <span class="val" id="p-protocol">https</span></span>
-            <span class="line"><span class="key">host     </span>  → <span class="val" id="p-host">www.example.com</span></span>
-            <span class="line"><span class="key">port     </span>  → <span class="val" id="p-port">443</span> <span class="comment">(default for HTTPS)</span></span>
-            <span class="line"><span class="key">path     </span>  → <span class="val" id="p-path">/</span></span>
-            <span class="line"><span class="key">query    </span>  → <span class="val" id="p-query">(none)</span></span>
+            <span class="line"><span class="key">protocol</span>  ? <span class="val" id="p-protocol">https</span></span>
+            <span class="line"><span class="key">host     </span>  ? <span class="val" id="p-host">www.example.com</span></span>
+            <span class="line"><span class="key">port     </span>  ? <span class="val" id="p-port">443</span> <span class="comment">(default for HTTPS)</span></span>
+            <span class="line"><span class="key">path     </span>  ? <span class="val" id="p-path">/</span></span>
+            <span class="line"><span class="key">query    </span>  ? <span class="val" id="p-query">(none)</span></span>
           </div>
           <div class="code-block" style="margin-top:10px;">
             <span class="line comment">// Browser also checks if this is a valid URL or a search query</span>
-            <span class="line"><span class="hl">HSTS check</span>: Is this domain on the preload list? → Force HTTPS</span>
+            <span class="line"><span class="hl">HSTS check</span>: Is this domain on the preload list? ? Force HTTPS</span>
           </div>
         </div>
       </div>
@@ -603,7 +603,7 @@
           <div class="tag">DNS Cache Lookup</div>
           <h3>Check Local Caches</h3>
         </div>
-        <span class="step-status status-pending" id="status2">● waiting</span>
+        <span class="step-status status-pending" id="status2">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
@@ -611,14 +611,14 @@
           <div class="code-block">
             <span class="line hl">Cache lookup order:</span>
             <span class="line"></span>
-            <span class="line"><span class="warn">①</span> Browser DNS cache     <span class="comment">← fastest, in-memory</span></span>
-            <span class="line"><span class="warn">②</span> OS DNS cache          <span class="comment">← system-level</span></span>
-            <span class="line"><span class="warn">③</span> /etc/hosts file       <span class="comment">← static overrides</span></span>
-            <span class="line"><span class="warn">④</span> Router/LAN cache      <span class="comment">← local network</span></span>
+            <span class="line"><span class="warn">?</span> Browser DNS cache     <span class="comment">? fastest, in-memory</span></span>
+            <span class="line"><span class="warn">?</span> OS DNS cache          <span class="comment">? system-level</span></span>
+            <span class="line"><span class="warn">?</span> /etc/hosts file       <span class="comment">? static overrides</span></span>
+            <span class="line"><span class="warn">?</span> Router/LAN cache      <span class="comment">? local network</span></span>
             <span class="line"></span>
             <span class="line comment">// Each entry has a TTL (Time To Live)</span>
-            <span class="line"><span class="key">TTL expired</span> → <span class="val">proceed to DNS query</span></span>
-            <span class="line"><span class="key">Cache hit   </span> → <span class="val">skip DNS entirely ⚡</span></span>
+            <span class="line"><span class="key">TTL expired</span> ? <span class="val">proceed to DNS query</span></span>
+            <span class="line"><span class="key">Cache hit   </span> ? <span class="val">skip DNS entirely ?</span></span>
           </div>
         </div>
       </div>
@@ -632,7 +632,7 @@
           <div class="tag">DNS Resolution</div>
           <h3>Recursive DNS Resolver</h3>
         </div>
-        <span class="step-status status-pending" id="status3">● waiting</span>
+        <span class="step-status status-pending" id="status3">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
@@ -642,15 +642,15 @@
               <div class="diag-box" style="border-color:var(--orange);color:var(--orange)">Your PC</div>
               <div class="diag-label">asks resolver</div>
             </div>
-            <div class="diag-arrow">→</div>
+            <div class="diag-arrow">?</div>
             <div class="diag-node">
               <div class="diag-box" style="border-color:var(--orange);color:var(--orange)">Recursive Resolver</div>
               <div class="diag-label">8.8.8.8 or ISP</div>
             </div>
-            <div class="diag-arrow">→</div>
+            <div class="diag-arrow">?</div>
             <div class="diag-node">
               <div class="diag-box" style="border-color:var(--muted);color:var(--muted)">Root Nameserver</div>
-              <div class="diag-label">next step →</div>
+              <div class="diag-label">next step ?</div>
             </div>
           </div>
           <div class="code-block" style="margin-top:14px">
@@ -668,9 +668,9 @@
         <div class="step-num">4</div>
         <div class="step-title">
           <div class="tag">DNS Hierarchy</div>
-          <h3>Root → TLD → Authoritative</h3>
+          <h3>Root ? TLD ? Authoritative</h3>
         </div>
-        <span class="step-status status-pending" id="status4">● waiting</span>
+        <span class="step-status status-pending" id="status4">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
@@ -678,14 +678,14 @@
           <div class="diagram" style="justify-content:space-around; flex-wrap: wrap; gap: 12px;">
             <div class="diag-node" style="text-align:center">
               <div class="diag-box" style="border-color:var(--red);color:var(--red)">Root Server</div>
-              <div class="diag-label">". (dot)" — knows all TLDs</div>
+              <div class="diag-label">". (dot)" � knows all TLDs</div>
             </div>
-            <div class="diag-arrow">→</div>
+            <div class="diag-arrow">?</div>
             <div class="diag-node" style="text-align:center">
               <div class="diag-box" style="border-color:var(--yellow);color:var(--yellow)">TLD Server</div>
               <div class="diag-label">.com / .org / .io etc.</div>
             </div>
-            <div class="diag-arrow">→</div>
+            <div class="diag-arrow">?</div>
             <div class="diag-node" style="text-align:center">
               <div class="diag-box" style="border-color:var(--green);color:var(--green)">Authoritative NS</div>
               <div class="diag-label">owns example.com</div>
@@ -693,11 +693,11 @@
           </div>
           <div class="code-block" style="margin-top:14px">
             <span class="line hl">Resolver asks Root Server:</span>
-            <span class="line">  "Who handles .com?" → <span class="val">a.gtld-servers.net</span></span>
+            <span class="line">  "Who handles .com?" ? <span class="val">a.gtld-servers.net</span></span>
             <span class="line hl">Resolver asks TLD Server:</span>
-            <span class="line">  "Who handles example.com?" → <span class="val">ns1.example.com</span></span>
+            <span class="line">  "Who handles example.com?" ? <span class="val">ns1.example.com</span></span>
             <span class="line hl">Resolver asks Authoritative NS:</span>
-            <span class="line">  "IP for www.example.com?" → <span class="val">93.184.216.34</span> ✓</span>
+            <span class="line">  "IP for www.example.com?" ? <span class="val">93.184.216.34</span> ?</span>
           </div>
         </div>
       </div>
@@ -711,7 +711,7 @@
           <div class="tag">Network</div>
           <h3>TCP Three-Way Handshake</h3>
         </div>
-        <span class="step-status status-pending" id="status5">● waiting</span>
+        <span class="step-status status-pending" id="status5">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
@@ -723,12 +723,12 @@
             <div class="packet" style="animation-delay: 1.4s"></div>
           </div>
           <div class="code-block">
-            <span class="line"><span class="warn">SYN</span>      Browser → Server  <span class="comment">"Can we talk?"</span></span>
-            <span class="line"><span class="warn">SYN-ACK</span>  Server → Browser  <span class="comment">"Yes! Ready."</span></span>
-            <span class="line"><span class="warn">ACK</span>      Browser → Server  <span class="comment">"Great, starting now."</span></span>
+            <span class="line"><span class="warn">SYN</span>      Browser ? Server  <span class="comment">"Can we talk?"</span></span>
+            <span class="line"><span class="warn">SYN-ACK</span>  Server ? Browser  <span class="comment">"Yes! Ready."</span></span>
+            <span class="line"><span class="warn">ACK</span>      Browser ? Server  <span class="comment">"Great, starting now."</span></span>
             <span class="line"></span>
             <span class="line comment">// RTT (round trip time) adds latency here</span>
-            <span class="line"><span class="key">Typical latency</span>: <span class="val">1–100ms</span> depending on distance</span>
+            <span class="line"><span class="key">Typical latency</span>: <span class="val">1�100ms</span> depending on distance</span>
           </div>
         </div>
       </div>
@@ -742,18 +742,18 @@
           <div class="tag">Security</div>
           <h3>TLS Handshake (HTTPS)</h3>
         </div>
-        <span class="step-status status-pending" id="status6">● waiting</span>
+        <span class="step-status status-pending" id="status6">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
           <p>For HTTPS, a <strong>TLS handshake</strong> happens on top of TCP. The server presents its certificate, the browser verifies it with a Certificate Authority, and they negotiate an <span class="tooltip-term" title="Encryption keys used only for this session, then discarded">ephemeral session key</span> for encrypted communication.</p>
           <div class="code-block">
             <span class="line hl">TLS 1.3 Handshake:</span>
-            <span class="line"><span class="warn">ClientHello</span>   → ciphers, TLS version, random nonce</span>
-            <span class="line"><span class="warn">ServerHello</span>   → chosen cipher, certificate</span>
-            <span class="line"><span class="warn">Cert verify</span>   → browser checks CA signature</span>
-            <span class="line"><span class="warn">Key exchange</span>  → ECDHE → shared secret derived</span>
-            <span class="line"><span class="warn">Finished</span>      → 🔒 encrypted channel open</span>
+            <span class="line"><span class="warn">ClientHello</span>   ? ciphers, TLS version, random nonce</span>
+            <span class="line"><span class="warn">ServerHello</span>   ? chosen cipher, certificate</span>
+            <span class="line"><span class="warn">Cert verify</span>   ? browser checks CA signature</span>
+            <span class="line"><span class="warn">Key exchange</span>  ? ECDHE ? shared secret derived</span>
+            <span class="line"><span class="warn">Finished</span>      ? ?? encrypted channel open</span>
             <span class="line"></span>
             <span class="line comment">// TLS 1.3 does this in 1-RTT (vs 2-RTT in TLS 1.2)</span>
           </div>
@@ -769,19 +769,19 @@
           <div class="tag">HTTP</div>
           <h3>HTTP Request & Response</h3>
         </div>
-        <span class="step-status status-pending" id="status7">● waiting</span>
+        <span class="step-status status-pending" id="status7">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
           <p>The browser sends an <strong>HTTP GET request</strong> over the encrypted tunnel. The server processes it and responds with headers and the HTML body. Modern connections use <span class="tooltip-term" title="HTTP/2 allows multiple requests to be in-flight at once over one connection">HTTP/2 multiplexing</span>.</p>
           <div class="code-block">
-            <span class="line hl">REQUEST →</span>
+            <span class="line hl">REQUEST ?</span>
             <span class="line"><span class="key">GET</span> <span class="val" id="http-path">/</span> HTTP/2</span>
             <span class="line"><span class="key">Host</span>: <span class="val" id="http-host">www.example.com</span></span>
             <span class="line"><span class="key">Accept</span>: text/html</span>
             <span class="line"><span class="key">Accept-Encoding</span>: gzip, br</span>
             <span class="line"></span>
-            <span class="line hl">RESPONSE ←</span>
+            <span class="line hl">RESPONSE ?</span>
             <span class="line"><span class="val">HTTP/2 200 OK</span></span>
             <span class="line"><span class="key">Content-Type</span>: text/html; charset=utf-8</span>
             <span class="line"><span class="key">Content-Encoding</span>: br</span>
@@ -799,7 +799,7 @@
           <div class="tag">Browser Engine</div>
           <h3>Render the Page</h3>
         </div>
-        <span class="step-status status-pending" id="status8">● waiting</span>
+        <span class="step-status status-pending" id="status8">? waiting</span>
       </div>
       <div class="step-body">
         <div class="step-content">
@@ -807,14 +807,14 @@
           <div class="code-block">
             <span class="line hl">Critical Rendering Path:</span>
             <span class="line"></span>
-            <span class="line"><span class="val">HTML</span> → <span class="key">DOM</span>   (parse tags, build tree)</span>
-            <span class="line"><span class="val">CSS</span>  → <span class="key">CSSOM</span> (parse styles)</span>
-            <span class="line"><span class="key">DOM</span> + <span class="key">CSSOM</span> → <span class="warn">Render Tree</span></span>
-            <span class="line"><span class="warn">Render Tree</span> → <span class="hl">Layout</span>  (compute positions)</span>
-            <span class="line"><span class="hl">Layout</span>      → <span class="hl">Paint</span>   (pixels on screen)</span>
-            <span class="line"><span class="hl">Paint</span>       → <span class="val">Composite</span> (GPU layers)</span>
+            <span class="line"><span class="val">HTML</span> ? <span class="key">DOM</span>   (parse tags, build tree)</span>
+            <span class="line"><span class="val">CSS</span>  ? <span class="key">CSSOM</span> (parse styles)</span>
+            <span class="line"><span class="key">DOM</span> + <span class="key">CSSOM</span> ? <span class="warn">Render Tree</span></span>
+            <span class="line"><span class="warn">Render Tree</span> ? <span class="hl">Layout</span>  (compute positions)</span>
+            <span class="line"><span class="hl">Layout</span>      ? <span class="hl">Paint</span>   (pixels on screen)</span>
+            <span class="line"><span class="hl">Paint</span>       ? <span class="val">Composite</span> (GPU layers)</span>
             <span class="line"></span>
-            <span class="line comment">// First Contentful Paint (FCP) ← user sees something</span>
+            <span class="line comment">// First Contentful Paint (FCP) ? user sees something</span>
           </div>
         </div>
       </div>
@@ -824,7 +824,7 @@
 
   <!-- Result panel -->
   <div id="resultPanel">
-    <h3>✓ Page Loaded Successfully</h3>
+    <h3>? Page Loaded Successfully</h3>
     <p style="font-size:13px; color: var(--text); line-height:1.8; margin-bottom:0">
       In under a second, your browser parsed a URL, resolved a domain name through a global hierarchy of servers, established an encrypted connection, and turned raw HTML bytes into a rendered page.
     </p>
@@ -849,12 +849,12 @@
   </div>
 
   <div class="controls">
-    <button class="btn btn-primary" onclick="startJourney()">▶ Run Again</button>
-    <button class="btn btn-secondary" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-primary" onclick="startJourney()">? Run Again</button>
+    <button class="btn btn-secondary" onclick="resetAll()">? Reset</button>
   </div>
 
   <footer>
-    <p>// URL Journey — DNS Resolution Interactive Explorer</p>
+    <p>// URL Journey � DNS Resolution Interactive Explorer</p>
   </footer>
 </div>
 
@@ -896,7 +896,7 @@
     for (let i = 1; i <= totalSteps; i++) {
       const el = document.getElementById('step' + i);
       el.classList.remove('active', 'done');
-      document.getElementById('status' + i).textContent = '● waiting';
+      document.getElementById('status' + i).textContent = '? waiting';
       document.getElementById('status' + i).className = 'step-status status-pending';
     }
     document.getElementById('progressFill').style.width = '0%';
@@ -908,13 +908,13 @@
       const el = document.getElementById('step' + i);
       el.classList.remove('active');
       el.classList.add('done');
-      document.getElementById('status' + i).textContent = '✓ done';
+      document.getElementById('status' + i).textContent = '? done';
       document.getElementById('status' + i).className = 'step-status status-done';
     }
     const el = document.getElementById('step' + n);
     el.classList.add('active');
     el.classList.remove('done');
-    document.getElementById('status' + n).textContent = '◉ running…';
+    document.getElementById('status' + n).textContent = '? running�';
     document.getElementById('status' + n).className = 'step-status status-running';
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('progressFill').style.width = ((n / totalSteps) * 100) + '%';
@@ -940,7 +940,7 @@
             const el = document.getElementById('step' + totalSteps);
             el.classList.remove('active');
             el.classList.add('done');
-            document.getElementById('status' + totalSteps).textContent = '✓ done';
+            document.getElementById('status' + totalSteps).textContent = '? done';
             document.getElementById('status' + totalSteps).className = 'step-status status-done';
             document.getElementById('progressFill').style.width = '100%';
             document.getElementById('resultPanel').classList.add('show');

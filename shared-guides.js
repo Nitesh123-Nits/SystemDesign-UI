@@ -36,38 +36,6 @@ function initSharedUI() {
     document.body.appendChild(container);
     */
 
-    // 3. Inject AI Assistant Container (if not present)
-    if (!document.querySelector('.ai-assistant-container')) {
-        const aiContainer = document.createElement('div');
-        aiContainer.className = 'ai-assistant-container';
-        aiContainer.innerHTML = `
-            <button class="ai-trigger-btn" id="aiTriggerBtn">
-                <div class="ai-trigger-pulse"></div>
-                <span class="ai-trigger-icon">🤖</span>
-            </button>
-            <div class="ai-chat-window hidden" id="aiChatWindow">
-                <div class="ai-chat-header">
-                    <div class="ai-bot-info">
-                        <span class="ai-bot-avatar">🤖</span>
-                        <div>
-                            <div class="ai-bot-name">SystemDesign.ProBot</div>
-                            <div class="ai-bot-status">Online</div>
-                        </div>
-                    </div>
-                    <button class="ai-chat-close" id="closeChatBtn">×</button>
-                </div>
-                <div class="ai-chat-body" id="chatBody"></div>
-                <div class="ai-chat-footer">
-                    <div class="ai-suggestions" id="chatSuggestions"></div>
-                    <div class="ai-input-area">
-                        <input type="text" id="aiChatInput" placeholder="Ask your design tutor...">
-                        <button id="sendChatBtn">➲</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(aiContainer);
-    }
 }
 
 /**

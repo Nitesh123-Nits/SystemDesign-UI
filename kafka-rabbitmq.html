@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,7 +6,7 @@
 <title>Kafka vs RabbitMQ</title>
 <link rel="stylesheet" href="shared-guides.css">
 <script src="data.js" defer></script>
-<script src="assistant.js" defer></script>
+
 <script src="shared-guides.js" defer></script>
 <style>
   :root {
@@ -147,7 +147,7 @@
     position: relative; min-width: 20px;
   }
   .flow-arrow::after {
-    content: '▶'; position: absolute; right: -4px; top: 50%;
+    content: '?'; position: absolute; right: -4px; top: 50%;
     transform: translateY(-50%); font-size: 10px; color: var(--accent); opacity: .7;
   }
   .arch-card.kafka .flow-arrow { --accent: var(--kafka); }
@@ -308,7 +308,7 @@
     font-size: 13px; line-height: 1.5;
   }
   .use-cases li::before {
-    content: '→'; color: var(--accent); flex-shrink: 0; font-family: 'Space Mono', monospace;
+    content: '?'; color: var(--accent); flex-shrink: 0; font-family: 'Space Mono', monospace;
     font-size: 12px; margin-top: 2px;
   }
   .choose-footer {
@@ -379,13 +379,13 @@
 
 <!-- ARCHITECTURE -->
 <section id="arch">
-  <div class="section-title">01 — ARCHITECTURE</div>
+  <div class="section-title">01 � ARCHITECTURE</div>
   <div class="arch-grid">
 
     <!-- KAFKA -->
     <div class="arch-card kafka">
       <div class="arch-card-header">
-        <div class="arch-badge">⚡</div>
+        <div class="arch-badge">?</div>
         <div>
           <h2 style="color:var(--kafka)">Apache Kafka</h2>
           <small>Distributed Log / Event Streaming</small>
@@ -408,11 +408,11 @@
         </div>
         <!-- Broker / Topic / Partitions -->
         <div style="background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:14px;margin-bottom:12px">
-          <div style="font-size:10px;color:var(--kafka);font-family:'Space Mono',monospace;margin-bottom:8px;letter-spacing:1px">KAFKA BROKER — TOPIC: orders</div>
+          <div style="font-size:10px;color:var(--kafka);font-family:'Space Mono',monospace;margin-bottom:8px;letter-spacing:1px">KAFKA BROKER � TOPIC: orders</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <div class="flow-node kafka-node partition">Partition 0<br><span style="color:var(--muted);font-size:9px">offset 0→N</span></div>
-            <div class="flow-node kafka-node partition">Partition 1<br><span style="color:var(--muted);font-size:9px">offset 0→N</span></div>
-            <div class="flow-node kafka-node partition">Partition 2<br><span style="color:var(--muted);font-size:9px">offset 0→N</span></div>
+            <div class="flow-node kafka-node partition">Partition 0<br><span style="color:var(--muted);font-size:9px">offset 0?N</span></div>
+            <div class="flow-node kafka-node partition">Partition 1<br><span style="color:var(--muted);font-size:9px">offset 0?N</span></div>
+            <div class="flow-node kafka-node partition">Partition 2<br><span style="color:var(--muted);font-size:9px">offset 0?N</span></div>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:8px;font-family:'Space Mono',monospace">Replication Factor: 3 | Retention: 7 days</div>
         </div>
@@ -442,28 +442,28 @@
 
       <div class="concepts">
         <div class="concept-pill">
-          <div class="concept-icon">📋</div>
+          <div class="concept-icon">??</div>
           <div class="concept-text">
             <strong>Immutable Log</strong>
             <span>Messages append-only; replayable anytime</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">🔢</div>
+          <div class="concept-icon">??</div>
           <div class="concept-text">
             <strong>Offsets</strong>
             <span>Consumers track position independently</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">🗂️</div>
+          <div class="concept-icon">???</div>
           <div class="concept-text">
             <strong>Partitions</strong>
             <span>Ordered within; parallel across</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">♻️</div>
+          <div class="concept-icon">??</div>
           <div class="concept-text">
             <strong>Retention</strong>
             <span>Messages persist for configured duration</span>
@@ -475,7 +475,7 @@
     <!-- RABBITMQ -->
     <div class="arch-card rabbit">
       <div class="arch-card-header">
-        <div class="arch-badge">🐇</div>
+        <div class="arch-badge">??</div>
         <div>
           <h2 style="color:var(--rabbit)">RabbitMQ</h2>
           <small>Traditional Message Broker / AMQP</small>
@@ -504,15 +504,15 @@
             <div class="flow-node rabbit-node" style="font-size:11px;padding:6px 12px">Topic</div>
             <div class="flow-node rabbit-node" style="font-size:11px;padding:6px 12px">Headers</div>
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:8px;font-family:'Space Mono',monospace">Routing Key → Binding → Queue</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px;font-family:'Space Mono',monospace">Routing Key ? Binding ? Queue</div>
         </div>
         <!-- Queues -->
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <div class="flow-node queue" style="font-size:11px;flex:1;text-align:center">
-            📬 email-queue<br><span style="color:var(--muted);font-size:9px">durable, TTL: 30s</span>
+            ?? email-queue<br><span style="color:var(--muted);font-size:9px">durable, TTL: 30s</span>
           </div>
           <div class="flow-node queue" style="font-size:11px;flex:1;text-align:center">
-            📬 sms-queue<br><span style="color:var(--muted);font-size:9px">durable, priority</span>
+            ?? sms-queue<br><span style="color:var(--muted);font-size:9px">durable, priority</span>
           </div>
         </div>
         <!-- Arrow -->
@@ -530,28 +530,28 @@
 
       <div class="concepts">
         <div class="concept-pill">
-          <div class="concept-icon">🔀</div>
+          <div class="concept-icon">??</div>
           <div class="concept-text">
             <strong>Exchanges</strong>
             <span>Smart routing: direct, fanout, topic</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">✅</div>
+          <div class="concept-icon">?</div>
           <div class="concept-text">
             <strong>ACK / NACK</strong>
             <span>Explicit message acknowledgment</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">❌</div>
+          <div class="concept-icon">?</div>
           <div class="concept-text">
             <strong>Dead Letter</strong>
             <span>Failed msgs routed to DLX queue</span>
           </div>
         </div>
         <div class="concept-pill">
-          <div class="concept-icon">⬆️</div>
+          <div class="concept-icon">??</div>
           <div class="concept-text">
             <strong>Push Model</strong>
             <span>Broker delivers to consumers</span>
@@ -565,18 +565,18 @@
 
 <!-- DATA FLOW SIMULATION -->
 <div class="animated-section" id="flow">
-  <div class="section-title">02 — DATA FLOW</div>
+  <div class="section-title">02 � DATA FLOW</div>
   <div class="flow-sim">
     <div class="sim-tabs">
-      <button class="sim-tab k active" id="tabK" onclick="switchSim('kafka')">⚡ Kafka Flow</button>
-      <button class="sim-tab r" id="tabR" onclick="switchSim('rabbit')">🐇 RabbitMQ Flow</button>
+      <button class="sim-tab k active" id="tabK" onclick="switchSim('kafka')">? Kafka Flow</button>
+      <button class="sim-tab r" id="tabR" onclick="switchSim('rabbit')">?? RabbitMQ Flow</button>
     </div>
 
     <!-- KAFKA SIM -->
     <div class="sim-content active" id="simKafka">
       <div class="pipeline">
         <div class="pipe-node kafka-border">
-          <span class="p-icon">🖥️</span>
+          <span class="p-icon">???</span>
           <div class="p-name">Producer</div>
           <div class="p-label">publishes event</div>
         </div>
@@ -586,7 +586,7 @@
           <div class="moving-dot kafka-dot"></div>
         </div>
         <div class="pipe-node kafka-border">
-          <span class="p-icon">📋</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Topic</div>
           <div class="p-label">partitioned log</div>
         </div>
@@ -595,7 +595,7 @@
           <div class="moving-dot kafka-dot"></div>
         </div>
         <div class="pipe-node kafka-border">
-          <span class="p-icon">💾</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Broker</div>
           <div class="p-label">stores + replicates</div>
         </div>
@@ -605,7 +605,7 @@
           <div class="moving-dot kafka-dot"></div>
         </div>
         <div class="pipe-node kafka-border">
-          <span class="p-icon">👥</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Consumer Group</div>
           <div class="p-label">pulls by offset</div>
         </div>
@@ -614,7 +614,7 @@
           <div class="moving-dot kafka-dot"></div>
         </div>
         <div class="pipe-node kafka-border">
-          <span class="p-icon">⚙️</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Processor</div>
           <div class="p-label">stream or batch</div>
         </div>
@@ -647,7 +647,7 @@
     <div class="sim-content" id="simRabbit">
       <div class="pipeline">
         <div class="pipe-node rabbit-border">
-          <span class="p-icon">🖥️</span>
+          <span class="p-icon">???</span>
           <div class="p-name">Publisher</div>
           <div class="p-label">sends w/ routing key</div>
         </div>
@@ -657,7 +657,7 @@
           <div class="moving-dot rabbit-dot"></div>
         </div>
         <div class="pipe-node rabbit-border">
-          <span class="p-icon">🔀</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Exchange</div>
           <div class="p-label">routes via binding</div>
         </div>
@@ -666,7 +666,7 @@
           <div class="moving-dot rabbit-dot"></div>
         </div>
         <div class="pipe-node rabbit-border">
-          <span class="p-icon">📬</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Queue</div>
           <div class="p-label">holds until consumed</div>
         </div>
@@ -676,7 +676,7 @@
           <div class="moving-dot rabbit-dot"></div>
         </div>
         <div class="pipe-node rabbit-border">
-          <span class="p-icon">👷</span>
+          <span class="p-icon">??</span>
           <div class="p-name">Consumer</div>
           <div class="p-label">receives + ACKs</div>
         </div>
@@ -685,7 +685,7 @@
           <div class="moving-dot rabbit-dot"></div>
         </div>
         <div class="pipe-node rabbit-border">
-          <span class="p-icon">✅</span>
+          <span class="p-icon">?</span>
           <div class="p-name">ACK / DLX</div>
           <div class="p-label">confirm or dead letter</div>
         </div>
@@ -718,12 +718,12 @@
 
 <!-- DIFFERENCES TABLE -->
 <div class="diff-section" id="diff">
-  <div class="section-title">03 — COMPARISON</div>
+  <div class="section-title">03 � COMPARISON</div>
   <div class="diff-table">
     <div class="diff-row header">
       <div class="diff-cell">DIMENSION</div>
-      <div class="diff-cell">⚡ APACHE KAFKA</div>
-      <div class="diff-cell">🐇 RABBITMQ</div>
+      <div class="diff-cell">? APACHE KAFKA</div>
+      <div class="diff-cell">?? RABBITMQ</div>
     </div>
     <div class="diff-row">
       <div class="diff-cell diff-label">Model</div>
@@ -732,7 +732,7 @@
     </div>
     <div class="diff-row">
       <div class="diff-cell diff-label">Message Retention</div>
-      <div class="diff-cell diff-k">Persisted for days/forever (configurable). Replayable ♻️</div>
+      <div class="diff-cell diff-k">Persisted for days/forever (configurable). Replayable ??</div>
       <div class="diff-cell diff-r">Deleted after ACK. No replay (unless using Streams plugin)</div>
     </div>
     <div class="diff-row">
@@ -772,7 +772,7 @@
     </div>
     <div class="diff-row">
       <div class="diff-cell diff-label">Latency</div>
-      <div class="diff-cell diff-k"><span class="badge badge-n">~5–15ms</span> Optimized for throughput</div>
+      <div class="diff-cell diff-k"><span class="badge badge-n">~5�15ms</span> Optimized for throughput</div>
       <div class="diff-cell diff-r"><span class="badge badge-n">&lt;1ms</span> Optimized for low latency</div>
     </div>
     <div class="diff-row">
@@ -790,12 +790,12 @@
 
 <!-- WHEN TO CHOOSE -->
 <div class="choose-section" id="choose">
-  <div class="section-title">04 — WHEN TO CHOOSE</div>
+  <div class="section-title">04 � WHEN TO CHOOSE</div>
   <div class="choose-grid">
 
     <div class="choose-card kafka">
       <div class="choose-header">
-        <div class="choose-icon">⚡</div>
+        <div class="choose-icon">?</div>
         <div>
           <h3 style="color:var(--kafka)">Choose Kafka</h3>
           <small>Event Streaming Platform</small>
@@ -807,7 +807,7 @@
         <li>You need event replay, time-travel debugging, or reprocessing historical data</li>
         <li>Building event-driven microservices with full audit trail requirements</li>
         <li>Real-time analytics pipelines (Kafka + Flink/Spark Streaming)</li>
-        <li>CQRS / Event Sourcing — the log IS the source of truth</li>
+        <li>CQRS / Event Sourcing � the log IS the source of truth</li>
         <li>Log aggregation across distributed services (replace Logstash)</li>
         <li>Change Data Capture (CDC) from databases via Kafka Connect</li>
       </ul>
@@ -818,7 +818,7 @@
 
     <div class="choose-card rabbit">
       <div class="choose-header">
-        <div class="choose-icon">🐇</div>
+        <div class="choose-icon">??</div>
         <div>
           <h3 style="color:var(--rabbit)">Choose RabbitMQ</h3>
           <small>Traditional Message Broker</small>
@@ -826,11 +826,11 @@
       </div>
       <ul class="use-cases">
         <li>Task / job queues where each message must be processed exactly once by one worker</li>
-        <li>Complex routing logic — route by content, headers, or multiple conditions</li>
+        <li>Complex routing logic � route by content, headers, or multiple conditions</li>
         <li>RPC (Remote Procedure Call) patterns with reply-to queues</li>
         <li>You need sub-millisecond latency with push delivery to consumers</li>
         <li>Delayed / scheduled message delivery (built-in plugin)</li>
-        <li>Priority queues — process urgent tasks before normal ones</li>
+        <li>Priority queues � process urgent tasks before normal ones</li>
         <li>Transient messages that don't need to be stored long-term</li>
         <li>Teams wanting simple ops with a built-in management dashboard</li>
       </ul>
@@ -847,34 +847,34 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">Need replay?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; No → either</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; No ? either</div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">Multiple consumers, same msg?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; No → either</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; No ? either</div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">Complex routing rules?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Simple → Kafka</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Simple ? Kafka</div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">Task queue pattern?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Events → Kafka</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Events ? Kafka</div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">&gt;100K msgs/sec?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; Lower → either</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--kafka)">Kafka</strong> &nbsp;|&nbsp; Lower ? either</div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">Simple setup needed?</div>
-        <div style="font-size:13px">Yes → <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Scale later → Kafka</div>
+        <div style="font-size:13px">Yes ? <strong style="color:var(--rabbit)">RabbitMQ</strong> &nbsp;|&nbsp; Scale later ? Kafka</div>
       </div>
     </div>
   </div>
 </div>
 
 <footer>
-  ⚡ Apache Kafka &nbsp;|&nbsp; 🐇 RabbitMQ &nbsp;·&nbsp; Messaging Systems Reference
+  ? Apache Kafka &nbsp;|&nbsp; ?? RabbitMQ &nbsp;�&nbsp; Messaging Systems Reference
 </footer>
 
 <script>

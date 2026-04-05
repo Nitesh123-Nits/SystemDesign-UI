@@ -1085,10 +1085,6 @@ function init() {
   });
 }
 
-// Expose useful functions to the global window for AI Assistant
-window.app = {
-  navigateTo,
-  openQuestion
-};
+
 
 document.addEventListener('DOMContentLoaded', init);

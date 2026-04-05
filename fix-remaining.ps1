@@ -10,7 +10,7 @@ $files = @(
 
 $sharedAssets = '<link rel="stylesheet" href="shared-guides.css">
 <script src="data.js" defer></script>
-<script src="assistant.js" defer></script>
+
 <script src="shared-guides.js" defer></script>'
 
 foreach ($file in $files) {
