@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -9,8 +9,14 @@
 <script src="assistant.js" defer></script>
 <script src="shared-guides.js" defer></script>
 <style>
-  /* Local overrides for specialized colors in this guide */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
+    --bg: #09090f;
+    --bg2: #0f0f1a;
+    --bg3: #14142a;
+    --panel: #1a1a2e;
+    --border: rgba(255,255,255,0.07);
     --kafka: #f59e0b;
     --flink: #06b6d4;
     --spark: #f97316;
@@ -18,10 +24,21 @@
     --warehouse: #a78bfa;
     --olap: #34d399;
     --etl: #f472b6;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #f59e0b;
   }
-  
+
   html { scroll-behavior: smooth; }
-  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
   /* ─── HERO ─── */
   .hero {
     position: relative;
@@ -43,6 +60,16 @@
     animation: gridPan 30s linear infinite;
   }
   @keyframes gridPan { from { transform: translateY(0); } to { transform: translateY(48px); } }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
 
   .hero-tag {
     display: inline-block;
@@ -71,7 +98,7 @@
   .hero h1 span { color: var(--kafka); }
   .hero-sub {
     margin-top: 24px;
-    color: var(--text-muted);
+    color: var(--muted);
     max-width: 560px;
     font-size: 1.05rem;
     position: relative; z-index: 1;
@@ -102,7 +129,6 @@
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
 
   /* ─── SECTION ─── */
   .section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
@@ -385,7 +411,6 @@
 </style>
 </head>
 <body>
-
 
 <!-- ─── HERO ─── -->
 <div class="hero">

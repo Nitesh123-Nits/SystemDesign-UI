@@ -13,11 +13,11 @@
 
   :root {
     --bg: #060810;
-    --surface: rgba(255,255,255,0.02);
-    --surface2: rgba(255,255,255,0.04);
-    --surface3: rgba(255,255,255,0.06);
-    --border: rgba(255,255,255,0.08);
-    --border-bright: rgba(255,255,255,0.15);
+    --surface: #0d1117;
+    --surface2: #161b27;
+    --surface3: #1e2533;
+    --border: #2a3347;
+    --border-bright: #3d5080;
     --text: #e2e8f0;
     --text-dim: #7889a8;
     --text-muted: #4a5568;
@@ -35,20 +35,39 @@
     --glow-purple: rgba(139,92,246,0.25);
   }
 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
     font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  /* ── K8S SPECIFIC HEADER (Sub-nav) ── */
-  .k8s-subnav {
-    background: rgba(255,255,255,0.02);
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6,8,16,0.92);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
-    padding: 10px 32px;
-    display: flex; align-items: center; justify-content: center;
-    gap: 12px;
-    position: sticky; top: var(--header-h); z-index: 10;
+    padding: 14px 32px;
+    display: flex; align-items: center; justify-content: space-between;
   }
+  .header-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 18px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .header-badge {
+    font-size: 10px; padding: 3px 10px;
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    border-radius: 20px; letter-spacing: 2px;
+  }
+  .header-nav { display: flex; gap: 8px; }
   .nav-btn {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px; padding: 6px 14px;
@@ -62,7 +81,6 @@
     background: rgba(59,130,246,0.08);
   }
   .nav-btn.active { background: rgba(59,130,246,0.15); }
-
 
   /* ── MAIN ── */
   .main { padding: 0; }
@@ -86,9 +104,7 @@
     font-size: 28px; font-weight: 800;
     text-align: center; margin-bottom: 6px;
     background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 50%, var(--accent-purple) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   .diagram-subtitle {
     text-align: center; font-size: 11px;
@@ -427,15 +443,19 @@
 </style>
 </head>
 <body>
-<header class="k8s-subnav">
-  <button class="nav-btn active" onclick="switchView('hld')">HLD Diagram</button>
-  <button class="nav-btn" onclick="switchView('components')">Components</button>
-  <button class="nav-btn" onclick="switchView('mesh')">Service Mesh</button>
-  <button class="nav-btn" onclick="switchView('storage')">Storage</button>
-  <button class="nav-btn" onclick="switchView('overview')">Overview</button>
-  <div class="header-badge" style="font-size: 10px; padding: 3px 10px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 20px; letter-spacing: 2px;">v1.29</div>
-</header>
 
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="header-logo">⎈ K8s Architecture</div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="switchView('hld')">HLD Diagram</button>
+    <button class="nav-btn" onclick="switchView('components')">Components</button>
+    <button class="nav-btn" onclick="switchView('mesh')">Service Mesh</button>
+    <button class="nav-btn" onclick="switchView('storage')">Storage</button>
+    <button class="nav-btn" onclick="switchView('overview')">Overview</button>
+  </nav>
+  <div class="header-badge">v1.29</div>
+</header>
 
 <!-- ── TOOLTIP ── -->
 <div class="tooltip" id="tooltip">

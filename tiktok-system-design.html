@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -28,6 +28,8 @@
     --glow-green: 0 0 20px rgba(168,255,62,0.3);
   }
 
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: 'Syne', sans-serif;
     background: var(--bg);
@@ -35,10 +37,6 @@
     overflow-x: hidden;
     line-height: 1.6;
   }
-</style>
-</head>
-<body>
-
 
   /* SCANLINE OVERLAY */
   body::before {
@@ -944,10 +942,6 @@
 </style>
 </head>
 <body>
-<a href="index.html" class="back-to-dashboard">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-  Back to Dashboard
-</a>
 
 <div class="progress-bar" id="progressBar"></div>
 
