@@ -2334,6 +2334,15 @@ const GUIDES_DATA = [
     tags: ["Twitter", "HLD", "Microservices", "Fan-out"],
     color: "#1da1f2",
     url: "twitter-hld.html"
+  },
+  {
+    id: "g18",
+    icon: "🕸️",
+    title: "Distributed Systems Masterclass",
+    desc: "The ultimate architectural guide to CAP theorem, consensus (Raft/Paxos), replication, and fault tolerance at scale.",
+    tags: ["Distributed Systems", "CAP Theorem", "Consensus", "Architecture"],
+    color: "#00d4ff",
+    url: "distributed-systems.html"
   }
 ];
 

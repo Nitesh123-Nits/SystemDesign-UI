@@ -1,0 +1,3031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DISTRIBUTED SYSTEMS — The Architecture of Scale</title>
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="shared-guides.js" defer></script>
+<style>
+  :root {
+    --bg: #020408;
+    --surface: #060d14;
+    --surface2: #0a1520;
+    --border: #0f2535;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff6b;
+    --accent4: #c77dff;
+    --text: #e8f4f8;
+    --muted: #4a7a8a;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 20px rgba(255,107,53,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,212,255,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.15s ease;
+  }
+
+  /* GRID BACKGROUND HANDLED BY SHARED-GUIDES.JS */
+
+
+  /* NAV REMOVED - HANDLED BY SHARED-GUIDES.JS */
+
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--accent3);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.4; transform:scale(0.8); }
+  }
+
+  /* HERO */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 120px 40px 80px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-bg-nodes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    padding: 6px 16px;
+    border-radius: 2px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 900;
+    font-size: clamp(48px, 10vw, 120px);
+    line-height: 0.9;
+    letter-spacing: -3px;
+    margin-bottom: 24px;
+  }
+  h1 .line1 { display: block; color: var(--text); }
+  h1 .line2 { display: block; color: var(--accent); }
+  h1 .line3 { display: block; color: var(--muted); font-size: 0.55em; letter-spacing: -1px; }
+
+  .hero-desc {
+    max-width: 600px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.8;
+    margin-bottom: 48px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    margin-bottom: 64px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--accent);
+    display: block;
+  }
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ANIMATED NETWORK CANVAS */
+  #network-canvas {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+  }
+
+  /* SECTION STYLES */
+  section {
+    position: relative;
+    z-index: 1;
+    padding: 100px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+
+  .section-desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 600px;
+    margin-bottom: 64px;
+  }
+
+  /* CONCEPT CARDS GRID */
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .concept-card {
+    background: var(--bg);
+    padding: 32px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0;
+    background: var(--accent);
+    transition: height 0.3s ease;
+  }
+  .concept-card:hover::before { height: 100%; }
+  .concept-card:hover {
+    background: var(--surface);
+  }
+  .concept-card.orange::before { background: var(--accent2); }
+  .concept-card.green::before { background: var(--accent3); }
+  .concept-card.purple::before { background: var(--accent4); }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .card-subtitle {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .concept-card.orange .card-subtitle { color: var(--accent2); }
+  .concept-card.green .card-subtitle { color: var(--accent3); }
+  .concept-card.purple .card-subtitle { color: var(--accent4); }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 2px;
+  }
+
+  /* INTERACTIVE CAP THEOREM */
+  #cap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 80px 40px;
+    margin: 60px 0;
+  }
+
+  .cap-triangle {
+    display: flex;
+    justify-content: center;
+    margin: 40px 0;
+  }
+
+  .triangle-container {
+    position: relative;
+    width: 400px;
+    height: 360px;
+  }
+
+  .triangle-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .cap-vertex {
+    position: absolute;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .cap-vertex:hover .vertex-dot { transform: scale(1.5); }
+
+  .vertex-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  .vertex-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .cap-info {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-top: 24px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+    min-height: 80px;
+  }
+
+  /* CONSISTENCY MODELS */
+  .consistency-timeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin: 40px 0;
+  }
+  .consistency-item {
+    flex: 1;
+    padding: 28px 20px;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .consistency-item:last-child { border-right: none; }
+  .consistency-item:hover, .consistency-item.active {
+    background: var(--surface);
+  }
+  .consistency-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+  .ci-level {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .ci-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .ci-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .ci-strength {
+    margin-top: 12px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .ci-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* CONSENSUS ALGORITHMS VISUALIZER */
+  .algo-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .algo-tab {
+    padding: 12px 24px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .algo-tab.active, .algo-tab:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .algo-content {
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 32px;
+    display: none;
+  }
+  .algo-content.active { display: block; }
+
+  .algo-visual {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .algo-diagram {
+    flex: 0 0 280px;
+    border: 1px solid var(--border);
+    padding: 20px;
+    background: var(--surface);
+    height: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .algo-text {
+    flex: 1;
+    min-width: 260px;
+  }
+  .algo-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 12px;
+  }
+  .algo-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 16px;
+  }
+
+  .props-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .prop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .prop-check { color: var(--accent3); }
+  .prop-cross { color: var(--accent2); }
+
+  /* RAFT ANIMATION */
+  .raft-nodes {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .r-node {
+    width: 44px; height: 44px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .r-node.leader {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .r-node.follower {
+    border-color: var(--border);
+    color: var(--muted);
+  }
+  .r-node.candidate {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .raft-arrow {
+    font-size: 16px;
+    color: var(--muted);
+    animation: flow 1s ease-in-out infinite alternate;
+  }
+  @keyframes flow {
+    from { opacity: 0.2; }
+    to { opacity: 1; }
+  }
+
+  /* FAILURE PATTERNS */
+  .failure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  .failure-card {
+    background: var(--bg);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .failure-card:hover { background: var(--surface); }
+  .failure-card::after {
+    content: attr(data-severity);
+    position: absolute;
+    top: 16px; right: 16px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+  .failure-card[data-severity="CRITICAL"]::after {
+    background: rgba(255,107,53,0.2);
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+  .failure-card[data-severity="HIGH"]::after {
+    background: rgba(255,214,0,0.1);
+    color: #ffd600;
+    border: 1px solid #ffd600;
+  }
+  .failure-card[data-severity="MEDIUM"]::after {
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  .failure-icon { font-size: 24px; margin-bottom: 12px; }
+  .failure-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .failure-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .failure-solution {
+    margin-top: 12px;
+    font-size: 10px;
+    color: var(--accent3);
+  }
+
+  /* SCALABILITY PATTERNS */
+  .scale-diagram {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 40px 0;
+  }
+
+  .scale-col {
+    flex: 1;
+    min-width: 280px;
+  }
+  .scale-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .server-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .server-box {
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    cursor: default;
+  }
+  .server-box:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--surface);
+  }
+  .server-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    flex-shrink: 0;
+  }
+
+  .lb-box {
+    border: 2px solid var(--accent);
+    padding: 14px 20px;
+    text-align: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    background: rgba(0,212,255,0.05);
+    box-shadow: var(--glow);
+  }
+
+  /* REPLICATION VISUALIZER */
+  .replication-demo {
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin: 40px 0;
+    background: var(--surface);
+  }
+
+  .repl-nodes {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 24px 0;
+  }
+
+  .repl-node {
+    border: 1px solid var(--border);
+    padding: 20px;
+    text-align: center;
+    min-width: 140px;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .repl-node.primary {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .repl-node.replica {
+    border-color: var(--border);
+  }
+  .repl-node.syncing {
+    border-color: var(--accent4);
+    animation: syncPulse 1s ease-in-out infinite;
+  }
+  @keyframes syncPulse {
+    0%,100% { box-shadow: 0 0 0 rgba(199,125,255,0); }
+    50% { box-shadow: 0 0 20px rgba(199,125,255,0.4); }
+  }
+
+  .repl-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .repl-node.primary .repl-label { color: var(--accent); }
+  .repl-node.replica .repl-label { color: var(--muted); }
+  .repl-node.syncing .repl-label { color: var(--accent4); }
+
+  .repl-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .repl-data {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .repl-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn.orange {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .btn.orange:hover { background: var(--accent2); color: var(--bg); }
+  .btn.green {
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+  .btn.green:hover { background: var(--accent3); color: var(--bg); }
+
+  /* MESSAGE QUEUE DEMO */
+  .queue-demo {
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin: 40px 0;
+    background: var(--surface);
+  }
+
+  .queue-visual {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .queue-producer {
+    border: 2px solid var(--accent2);
+    padding: 16px 24px;
+    color: var(--accent2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    text-align: center;
+    min-width: 100px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(255,107,53,0.05);
+  }
+  .queue-producer:hover {
+    background: rgba(255,107,53,0.15);
+    box-shadow: var(--glow2);
+  }
+
+  .queue-channel {
+    flex: 1;
+    min-width: 200px;
+    border: 1px solid var(--border);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 4px;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+
+  .queue-msg {
+    width: 32px; height: 32px;
+    border: 1px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--accent);
+    flex-shrink: 0;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .queue-consumer {
+    border: 2px solid var(--accent3);
+    padding: 16px 24px;
+    color: var(--accent3);
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    text-align: center;
+    min-width: 100px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(127,255,107,0.05);
+  }
+  .queue-consumer:hover {
+    background: rgba(127,255,107,0.15);
+  }
+
+  /* DISTRIBUTED TRACING */
+  .trace-demo {
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin: 40px 0;
+    background: var(--surface);
+  }
+
+  .trace-timeline {
+    position: relative;
+    margin: 24px 0;
+  }
+
+  .trace-span {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .trace-service {
+    font-size: 10px;
+    color: var(--muted);
+    width: 100px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .trace-bar-container {
+    flex: 1;
+    height: 28px;
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .trace-bar {
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 10px;
+    transition: all 0.5s ease;
+  }
+  .trace-duration {
+    font-size: 10px;
+    color: var(--muted);
+    width: 60px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+    margin: 20px 0;
+    position: relative;
+  }
+  .code-block::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 0; right: 0;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    background: var(--border);
+    color: var(--muted);
+  }
+
+  .kw { color: var(--accent4); }
+  .fn { color: var(--accent); }
+  .str { color: var(--accent3); }
+  .cm { color: var(--muted); }
+  .num { color: var(--accent2); }
+
+  /* BIG-O TABLE */
+  .complexity-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 40px 0;
+  }
+  .complexity-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .complexity-table td {
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    vertical-align: top;
+  }
+  .complexity-table tr:hover td {
+    background: var(--surface);
+  }
+  .good { color: var(--accent3); font-weight: 700; }
+  .medium { color: #ffd600; font-weight: 700; }
+  .bad { color: var(--accent2); font-weight: 700; }
+
+  /* INTERACTIVE QUIZ */
+  .quiz-section {
+    border: 1px solid var(--border);
+    padding: 40px;
+    background: var(--surface);
+    margin: 60px 0;
+  }
+  .quiz-q {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    line-height: 1.3;
+  }
+  .quiz-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .quiz-opt {
+    border: 1px solid var(--border);
+    padding: 16px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.2s;
+    line-height: 1.5;
+  }
+  .quiz-opt:hover { border-color: var(--accent); color: var(--accent); background: var(--bg); }
+  .quiz-opt.correct { border-color: var(--accent3); color: var(--accent3); background: rgba(127,255,107,0.05); }
+  .quiz-opt.wrong { border-color: var(--accent2); color: var(--accent2); background: rgba(255,107,53,0.05); }
+
+  .quiz-feedback {
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 16px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    min-height: 60px;
+  }
+
+  .quiz-nav {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .quiz-progress {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .quiz-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--accent);
+  }
+
+  /* SEARCH */
+  .search-bar {
+    display: flex;
+    border: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: none;
+    padding: 14px 20px;
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-btn {
+    background: var(--accent);
+    border: none;
+    padding: 14px 24px;
+    color: var(--bg);
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  /* SEARCH RESULTS */
+  .search-results {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .search-results.visible { display: flex; }
+  .result-item {
+    border: 1px solid var(--border);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .result-item:hover { background: var(--surface); border-color: var(--accent); }
+  .result-section {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .result-title { font-family: 'Syne', sans-serif; font-weight: 800; margin-bottom: 4px; }
+  .result-desc { font-size: 11px; color: var(--muted); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 60px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 40px;
+  }
+  .footer-brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .footer-desc {
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 280px;
+    line-height: 1.7;
+  }
+  .footer-links h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .footer-links a {
+    display: block;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* PROGRESS BAR */
+  .reading-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    z-index: 200;
+    transition: width 0.1s;
+  }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+    max-width: 200px;
+    line-height: 1.5;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2,4,8,0.9);
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 48px;
+    max-width: 640px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { color: var(--text); border-color: var(--text); }
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+  }
+  .modal-body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* RESPONSIVE */
+  @media(max-width:768px) {
+    nav { padding: 12px 20px; }
+    .nav-links { display: none; }
+    section { padding: 60px 20px; }
+    .quiz-options { grid-template-columns: 1fr; }
+    .consistency-timeline { flex-direction: column; }
+    .consistency-item { border-right: none; border-bottom: 1px solid var(--border); }
+    footer { padding: 40px 20px; }
+    .hero-stats { gap: 24px; }
+  }
+
+  /* ANIMATIONS */
+  .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  .highlight { color: var(--accent); }
+  .highlight2 { color: var(--accent2); }
+  .highlight3 { color: var(--accent3); }
+  .highlight4 { color: var(--accent4); }
+
+  /* TICKER */
+  .ticker-wrap {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    background: var(--surface);
+  }
+  .ticker {
+    display: flex;
+    width: max-content;
+    animation: ticker 30s linear infinite;
+  }
+  .ticker-item {
+    padding: 0 48px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .ticker-item span { color: var(--accent); margin-right: 8px; }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* HASHING VIZ */
+  .hash-demo {
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin: 40px 0;
+    background: var(--surface);
+  }
+  .hash-ring {
+    width: 280px;
+    height: 280px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    position: relative;
+    margin: 24px auto;
+  }
+  .hash-node {
+    position: absolute;
+    width: 36px; height: 36px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--accent);
+    background: var(--bg);
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
+  }
+  .hash-node:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: var(--glow);
+  }
+  .hash-key {
+    position: absolute;
+    width: 24px; height: 24px;
+    background: var(--accent2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: var(--bg);
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- READING PROGRESS -->
+<div class="reading-progress" id="progress"></div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- NAV INJECTED BY SHARED-GUIDES.JS -->
+
+
+<!-- TICKER -->
+<div class="ticker-wrap" style="margin-top:60px;">
+  <div class="ticker">
+    <span class="ticker-item"><span>◆</span>CAP Theorem</span>
+    <span class="ticker-item"><span>◆</span>Raft Consensus</span>
+    <span class="ticker-item"><span>◆</span>Paxos Algorithm</span>
+    <span class="ticker-item"><span>◆</span>Consistent Hashing</span>
+    <span class="ticker-item"><span>◆</span>Vector Clocks</span>
+    <span class="ticker-item"><span>◆</span>Two-Phase Commit</span>
+    <span class="ticker-item"><span>◆</span>Eventual Consistency</span>
+    <span class="ticker-item"><span>◆</span>Gossip Protocol</span>
+    <span class="ticker-item"><span>◆</span>CRDT</span>
+    <span class="ticker-item"><span>◆</span>Byzantine Fault Tolerance</span>
+    <span class="ticker-item"><span>◆</span>Saga Pattern</span>
+    <span class="ticker-item"><span>◆</span>Circuit Breaker</span>
+    <span class="ticker-item"><span>◆</span>Sharding</span>
+    <span class="ticker-item"><span>◆</span>MapReduce</span>
+    <!-- repeat for seamless loop -->
+    <span class="ticker-item"><span>◆</span>CAP Theorem</span>
+    <span class="ticker-item"><span>◆</span>Raft Consensus</span>
+    <span class="ticker-item"><span>◆</span>Paxos Algorithm</span>
+    <span class="ticker-item"><span>◆</span>Consistent Hashing</span>
+    <span class="ticker-item"><span>◆</span>Vector Clocks</span>
+    <span class="ticker-item"><span>◆</span>Two-Phase Commit</span>
+    <span class="ticker-item"><span>◆</span>Eventual Consistency</span>
+    <span class="ticker-item"><span>◆</span>Gossip Protocol</span>
+    <span class="ticker-item"><span>◆</span>CRDT</span>
+    <span class="ticker-item"><span>◆</span>Byzantine Fault Tolerance</span>
+    <span class="ticker-item"><span>◆</span>Saga Pattern</span>
+    <span class="ticker-item"><span>◆</span>Circuit Breaker</span>
+    <span class="ticker-item"><span>◆</span>Sharding</span>
+    <span class="ticker-item"><span>◆</span>MapReduce</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<section id="hero" style="max-width:100%;padding:0;">
+  <canvas id="network-canvas"></canvas>
+  <div style="position:relative;z-index:1;text-align:center;padding:140px 40px 100px;">
+    <div class="hero-badge">
+      <div class="status-dot"></div>
+      Interactive Reference — Complete System Architecture
+    </div>
+    <h1>
+      <span class="line1">DISTRIBUTED</span>
+      <span class="line2">SYSTEMS</span>
+      <span class="line3">Architecture at Scale</span>
+    </h1>
+    <p class="hero-desc">
+      The complete interactive reference for distributed systems — from CAP theorem to consensus algorithms, consistency models, failure patterns, and everything that makes modern infrastructure hold together at planetary scale.
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num" id="counter1">0</span>
+        <span class="stat-label">Core Concepts</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="counter2">0</span>
+        <span class="stat-label">Algorithms</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="counter3">0</span>
+        <span class="stat-label">Patterns</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="counter4">0</span>
+        <span class="stat-label">Quiz Questions</span>
+      </div>
+    </div>
+    <a href="#fundamentals" class="btn">↓ Begin Exploration</a>
+  </div>
+</section>
+
+<!-- SEARCH -->
+<section>
+  <div class="search-bar">
+    <input class="search-input" id="searchInput" placeholder="Search concepts... e.g. 'leader election', 'sharding', 'CRDT'" onkeyup="doSearch(event)">
+    <button class="search-btn" onclick="doSearch({key:'Enter'})">Search</button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</section>
+
+<!-- FUNDAMENTALS -->
+<section id="fundamentals">
+  <div class="section-label">01 — Foundations</div>
+  <h2 class="section-title">Core <span class="highlight">Concepts</span></h2>
+  <p class="section-desc">The building blocks of every distributed system — understanding these deeply is the difference between systems that scale and systems that fail.</p>
+
+  <div class="concepts-grid">
+    <div class="concept-card" onclick="openModal('CAP Theorem', capContent)" data-tooltip="The fundamental trade-off of distributed systems">
+      <span class="card-icon">△</span>
+      <div class="card-subtitle">Foundation</div>
+      <div class="card-title">CAP Theorem</div>
+      <div class="card-desc">Any distributed data store can provide only two of three guarantees: Consistency, Availability, and Partition tolerance. Brewer's theorem shapes every architecture decision.</div>
+      <div class="card-tags">
+        <span class="tag">Brewer 2000</span>
+        <span class="tag">Proven 2002</span>
+        <span class="tag">Trade-offs</span>
+      </div>
+    </div>
+    <div class="concept-card orange" onclick="openModal('BASE vs ACID', baseAcidContent)">
+      <span class="card-icon">⊕</span>
+      <div class="card-subtitle">Data Properties</div>
+      <div class="card-title">ACID vs BASE</div>
+      <div class="card-desc">ACID provides strong guarantees at the cost of availability. BASE trades consistency for availability — Basically Available, Soft state, Eventually consistent.</div>
+      <div class="card-tags">
+        <span class="tag">Transactions</span>
+        <span class="tag">Consistency</span>
+        <span class="tag">NoSQL</span>
+      </div>
+    </div>
+    <div class="concept-card green" onclick="openModal('Fallacies of Distributed Computing', fallaciesContent)">
+      <span class="card-icon">✗</span>
+      <div class="card-subtitle">Common Mistakes</div>
+      <div class="card-title">8 Fallacies</div>
+      <div class="card-desc">The network is reliable. Latency is zero. Bandwidth is infinite. The network is secure. Topology doesn't change. Only one administrator. Transport cost is zero. The network is homogeneous.</div>
+      <div class="card-tags">
+        <span class="tag">Deutsch 1994</span>
+        <span class="tag">Mental Models</span>
+      </div>
+    </div>
+    <div class="concept-card purple" onclick="openModal('FLP Impossibility', flpContent)">
+      <span class="card-icon">∅</span>
+      <div class="card-subtitle">Impossibility Result</div>
+      <div class="card-title">FLP Impossibility</div>
+      <div class="card-desc">In an asynchronous distributed system, no deterministic consensus protocol can tolerate even one process crash failure. Fischer, Lynch, and Paterson, 1985.</div>
+      <div class="card-tags">
+        <span class="tag">1985</span>
+        <span class="tag">Turing Award</span>
+        <span class="tag">Consensus</span>
+      </div>
+    </div>
+    <div class="concept-card" onclick="openModal('Vector Clocks', vectorContent)">
+      <span class="card-icon">→</span>
+      <div class="card-subtitle">Time & Ordering</div>
+      <div class="card-title">Vector Clocks</div>
+      <div class="card-desc">Track causality in distributed systems where there's no global clock. Each node maintains a vector of logical timestamps to determine event ordering and detect conflicts.</div>
+      <div class="card-tags">
+        <span class="tag">Lamport 1978</span>
+        <span class="tag">Causality</span>
+        <span class="tag">Ordering</span>
+      </div>
+    </div>
+    <div class="concept-card orange" onclick="openModal('Gossip Protocol', gossipContent)">
+      <span class="card-icon">◉</span>
+      <div class="card-subtitle">Information Dissemination</div>
+      <div class="card-title">Gossip Protocol</div>
+      <div class="card-desc">Epidemic-style information spreading where each node periodically exchanges state with random neighbors. O(log N) dissemination with eventual consistency and fault tolerance.</div>
+      <div class="card-tags">
+        <span class="tag">Epidemic</span>
+        <span class="tag">Anti-entropy</span>
+        <span class="tag">Failure Detection</span>
+      </div>
+    </div>
+    <div class="concept-card green" onclick="openModal('CRDT', crdtContent)">
+      <span class="card-icon">⊕</span>
+      <div class="card-subtitle">Conflict-free</div>
+      <div class="card-title">CRDT</div>
+      <div class="card-desc">Conflict-free Replicated Data Types automatically resolve conflicts using mathematical properties. Counters, sets, maps that merge without coordination — used by Redis, Riak, Apple's Notes.</div>
+      <div class="card-tags">
+        <span class="tag">G-Counter</span>
+        <span class="tag">LWW-Set</span>
+        <span class="tag">OR-Set</span>
+      </div>
+    </div>
+    <div class="concept-card purple" onclick="openModal('Two Generals Problem', twoGenContent)">
+      <span class="card-icon">⚑</span>
+      <div class="card-subtitle">Classic Problem</div>
+      <div class="card-title">Two Generals</div>
+      <div class="card-desc">Two armies must coordinate an attack, but communication may fail. Proves it's impossible to achieve guaranteed consensus over an unreliable channel — the foundation of TCP's 3-way handshake.</div>
+      <div class="card-tags">
+        <span class="tag">Impossibility</span>
+        <span class="tag">Coordination</span>
+        <span class="tag">TCP</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAP INTERACTIVE -->
+<section id="cap-interactive" style="padding-top:0;">
+  <div id="cap">
+    <div class="section-label">Interactive</div>
+    <h2 class="section-title" style="font-size:clamp(24px,4vw,48px);">CAP Theorem <span class="highlight">Explorer</span></h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Click a vertex or edge to explore the trade-off. Real systems are shown at their typical position.</p>
+    <div class="cap-triangle">
+      <div class="triangle-container">
+        <svg class="triangle-svg" viewBox="0 0 400 360">
+          <!-- Triangle edges -->
+          <line x1="200" y1="20" x2="20" y2="320" stroke="#0f2535" stroke-width="1"/>
+          <line x1="200" y1="20" x2="380" y2="320" stroke="#0f2535" stroke-width="1"/>
+          <line x1="20" y1="320" x2="380" y2="320" stroke="#0f2535" stroke-width="1"/>
+          <!-- Highlight edges on hover -->
+          <line id="ca-edge" x1="20" y1="320" x2="380" y2="320" stroke="transparent" stroke-width="20" style="cursor:pointer;" onclick="showCapInfo('ca')"/>
+          <line id="cp-edge" x1="200" y1="20" x2="20" y2="320" stroke="transparent" stroke-width="20" style="cursor:pointer;" onclick="showCapInfo('cp')"/>
+          <line id="ap-edge" x1="200" y1="20" x2="380" y2="320" stroke="transparent" stroke-width="20" style="cursor:pointer;" onclick="showCapInfo('ap')"/>
+          <!-- System dots -->
+          <circle cx="200" cy="170" r="6" fill="#00d4ff" opacity="0.3"/>
+          <!-- CA systems -->
+          <circle cx="200" cy="300" r="5" fill="#00d4ff" style="cursor:pointer;" onclick="showCapInfo('mysql')" title="MySQL"/>
+          <text x="200" y="292" text-anchor="middle" font-size="8" fill="#4a7a8a" font-family="Fira Code">MySQL</text>
+          <!-- CP systems -->
+          <circle cx="120" cy="180" r="5" fill="#c77dff" style="cursor:pointer;" onclick="showCapInfo('zookeeper')"/>
+          <text x="120" y="172" text-anchor="middle" font-size="8" fill="#4a7a8a" font-family="Fira Code">ZooKeeper</text>
+          <circle cx="140" cy="210" r="5" fill="#c77dff" style="cursor:pointer;" onclick="showCapInfo('hbase')"/>
+          <text x="140" y="202" text-anchor="middle" font-size="8" fill="#4a7a8a" font-family="Fira Code">HBase</text>
+          <!-- AP systems -->
+          <circle cx="280" cy="180" r="5" fill="#ff6b35" style="cursor:pointer;" onclick="showCapInfo('cassandra')"/>
+          <text x="300" y="172" text-anchor="middle" font-size="8" fill="#4a7a8a" font-family="Fira Code">Cassandra</text>
+          <circle cx="260" cy="210" r="5" fill="#ff6b35" style="cursor:pointer;" onclick="showCapInfo('dynamo')"/>
+          <text x="260" y="202" text-anchor="middle" font-size="8" fill="#4a7a8a" font-family="Fira Code">DynamoDB</text>
+        </svg>
+        <!-- Vertex labels -->
+        <div class="cap-vertex" style="top:-10px;left:50%;transform:translateX(-50%);" onclick="showCapInfo('c')">
+          <div class="vertex-label highlight">C</div>
+          <div class="vertex-sub">Consistency</div>
+        </div>
+        <div class="cap-vertex" style="bottom:-10px;left:-20px;" onclick="showCapInfo('a')">
+          <div class="vertex-label highlight2">A</div>
+          <div class="vertex-sub">Availability</div>
+        </div>
+        <div class="cap-vertex" style="bottom:-10px;right:-20px;" onclick="showCapInfo('p')">
+          <div class="vertex-label highlight4">P</div>
+          <div class="vertex-sub">Partition Tolerance</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap-info" id="capInfo">
+      <span style="color:var(--accent)">→</span> Click a vertex, edge, or system name above to explore the CAP trade-offs and see real-world examples.
+    </div>
+  </div>
+</section>
+
+<!-- CONSISTENCY MODELS -->
+<section id="consistency">
+  <div class="section-label">02 — Data Guarantees</div>
+  <h2 class="section-title">Consistency <span class="highlight">Models</span></h2>
+  <p class="section-desc">A spectrum from strongest to weakest consistency guarantees. Choose based on your latency tolerance, availability needs, and business requirements.</p>
+
+  <div class="consistency-timeline">
+    <div class="consistency-item active" onclick="setConsistency(this,'linearizability')">
+      <div class="ci-level">Strongest</div>
+      <div class="ci-name">Linearizability</div>
+      <div class="ci-desc">Every operation appears atomic. Global total order.</div>
+      <div class="ci-strength"><div class="ci-bar" style="width:100%"></div></div>
+    </div>
+    <div class="consistency-item" onclick="setConsistency(this,'sequential')">
+      <div class="ci-level">Strong</div>
+      <div class="ci-name">Sequential</div>
+      <div class="ci-desc">All nodes see the same order of operations.</div>
+      <div class="ci-strength"><div class="ci-bar" style="width:80%"></div></div>
+    </div>
+    <div class="consistency-item" onclick="setConsistency(this,'causal')">
+      <div class="ci-level">Moderate</div>
+      <div class="ci-name">Causal</div>
+      <div class="ci-desc">Causally related ops are seen in order.</div>
+      <div class="ci-strength"><div class="ci-bar" style="width:60%"></div></div>
+    </div>
+    <div class="consistency-item" onclick="setConsistency(this,'readyourwrites')">
+      <div class="ci-level">Session</div>
+      <div class="ci-name">Read-Your-Writes</div>
+      <div class="ci-desc">Client always sees its own writes.</div>
+      <div class="ci-strength"><div class="ci-bar" style="width:45%"></div></div>
+    </div>
+    <div class="consistency-item" onclick="setConsistency(this,'eventual')">
+      <div class="ci-level">Weakest</div>
+      <div class="ci-name">Eventual</div>
+      <div class="ci-desc">Will converge given no new updates.</div>
+      <div class="ci-strength"><div class="ci-bar" style="width:20%"></div></div>
+    </div>
+  </div>
+
+  <div class="code-block" id="consistencyInfo" data-label="MODEL INFO">
+<span class="kw">model</span>: <span class="str">Linearizability</span>
+<span class="kw">guarantee</span>: <span class="str">"All operations appear instantaneous and globally ordered"</span>
+<span class="kw">use_when</span>: <span class="str">"Financial transactions, leader election, distributed locks"</span>
+<span class="kw">examples</span>: [<span class="str">"etcd"</span>, <span class="str">"ZooKeeper"</span>, <span class="str">"Spanner"</span>]
+<span class="kw">latency</span>: <span class="num">HIGH</span>  <span class="cm">// requires synchronization across all nodes</span>
+<span class="kw">availability</span>: <span class="num">LOW</span>   <span class="cm">// unavailable during network partitions</span>
+<span class="kw">throughput</span>: <span class="num">LOW</span>   <span class="cm">// coordination overhead limits ops/sec</span>
+  </div>
+</section>
+
+<!-- CONSENSUS ALGORITHMS -->
+<section id="consensus">
+  <div class="section-label">03 — Agreement Protocols</div>
+  <h2 class="section-title">Consensus <span class="highlight">Algorithms</span></h2>
+  <p class="section-desc">Getting distributed nodes to agree is the central challenge. These algorithms make it possible — each with different trade-offs in complexity, performance, and fault tolerance.</p>
+
+  <div class="algo-tabs">
+    <div class="algo-tab active" onclick="showAlgo('raft',this)">Raft</div>
+    <div class="algo-tab" onclick="showAlgo('paxos',this)">Paxos</div>
+    <div class="algo-tab" onclick="showAlgo('pbft',this)">PBFT</div>
+    <div class="algo-tab" onclick="showAlgo('2pc',this)">2PC</div>
+    <div class="algo-tab" onclick="showAlgo('3pc',this)">3PC</div>
+    <div class="algo-tab" onclick="showAlgo('zab',this)">ZAB</div>
+  </div>
+
+  <div class="algo-content active" id="algo-raft">
+    <div class="algo-visual">
+      <div class="algo-diagram">
+        <div class="raft-nodes">
+          <div class="r-node leader" id="raft-leader" onclick="triggerElection()" title="Click to trigger election">L</div>
+          <div class="raft-arrow">←→</div>
+          <div class="r-node follower" id="raft-f1">F1</div>
+          <div class="raft-arrow">←→</div>
+          <div class="r-node follower" id="raft-f2">F2</div>
+          <div class="raft-arrow">←→</div>
+          <div class="r-node follower" id="raft-f3">F3</div>
+        </div>
+      </div>
+      <div class="algo-text">
+        <div class="algo-title">Raft</div>
+        <div class="algo-desc">Designed to be understandable. Raft decomposes consensus into leader election, log replication, and safety. A leader handles all client requests and replicates entries to followers. Majority quorum required for commitment.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Strong leader — single point of coordination</div>
+          <div class="prop"><span class="prop-check">✓</span> Handles f failures with 2f+1 nodes</div>
+          <div class="prop"><span class="prop-check">✓</span> Log matching: if two logs have same index+term, all prev entries identical</div>
+          <div class="prop"><span class="prop-cross">✗</span> Leader is bottleneck for all writes</div>
+          <div class="prop"><span class="prop-cross">✗</span> Leader election can cause brief unavailability</div>
+        </div>
+        <br>
+        <button class="btn" onclick="triggerElection()">→ Simulate Leader Failure</button>
+      </div>
+    </div>
+    <div id="raft-log" style="margin-top:20px;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;border:1px solid var(--border);padding:12px;min-height:40px;"></div>
+  </div>
+
+  <div class="algo-content" id="algo-paxos">
+    <div class="algo-visual">
+      <div class="algo-diagram">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">PROPOSER → ACCEPTORS → LEARNERS</div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+            <div style="border:1px solid var(--accent4);padding:8px 16px;font-size:11px;color:var(--accent4);">PROPOSER</div>
+            <div style="color:var(--muted);font-size:18px;">↓ Prepare(n) ↓</div>
+            <div style="display:flex;gap:8px;">
+              <div style="border:1px solid var(--border);padding:6px 10px;font-size:10px;color:var(--muted);">A1</div>
+              <div style="border:1px solid var(--border);padding:6px 10px;font-size:10px;color:var(--muted);">A2</div>
+              <div style="border:1px solid var(--border);padding:6px 10px;font-size:10px;color:var(--muted);">A3</div>
+            </div>
+            <div style="color:var(--muted);font-size:18px;">↓ Promise / Accept ↓</div>
+            <div style="border:1px solid var(--accent3);padding:6px 16px;font-size:10px;color:var(--accent3);">LEARNER</div>
+          </div>
+        </div>
+      </div>
+      <div class="algo-text">
+        <div class="algo-title">Paxos</div>
+        <div class="algo-desc">The original consensus algorithm. Two-phase protocol: Prepare/Promise establishes a ballot number, Accept/Accepted commits a value. Multi-Paxos optimizes by electing a distinguished proposer for multiple rounds.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Safety: only one value can be chosen</div>
+          <div class="prop"><span class="prop-check">✓</span> Multi-Paxos: skip prepare for leader</div>
+          <div class="prop"><span class="prop-cross">✗</span> Notoriously difficult to understand & implement</div>
+          <div class="prop"><span class="prop-cross">✗</span> Livelock possible with dueling proposers</div>
+          <div class="prop"><span class="prop-cross">✗</span> Does not specify leader election</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="algo-content" id="algo-pbft">
+    <div class="algo-visual">
+      <div class="algo-diagram">
+        <div style="font-size:11px;color:var(--muted);text-align:center;">
+          <div style="margin-bottom:8px;color:var(--accent2);">Byzantine Fault Tolerant</div>
+          <div>PRE-PREPARE → PREPARE → COMMIT</div>
+          <div style="margin-top:12px;font-size:10px;">Requires 3f+1 nodes<br>to tolerate f traitors</div>
+        </div>
+      </div>
+      <div class="algo-text">
+        <div class="algo-title">PBFT</div>
+        <div class="algo-desc">Practical Byzantine Fault Tolerance handles nodes that can behave arbitrarily — sending conflicting messages, lying, or colluding. Required for blockchain and high-security systems. O(n²) message complexity.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Handles Byzantine (malicious) failures</div>
+          <div class="prop"><span class="prop-check">✓</span> Tolerates f failures with 3f+1 nodes</div>
+          <div class="prop"><span class="prop-check">✓</span> Used in Hyperledger, early blockchain systems</div>
+          <div class="prop"><span class="prop-cross">✗</span> O(n²) communication — doesn't scale beyond ~100 nodes</div>
+          <div class="prop"><span class="prop-cross">✗</span> View changes are complex</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="algo-content" id="algo-2pc">
+    <div class="algo-visual">
+      <div class="algo-diagram">
+        <div style="text-align:center;font-size:11px;color:var(--muted);">
+          <div style="border:1px solid var(--accent);padding:8px 16px;color:var(--accent);margin-bottom:12px;">COORDINATOR</div>
+          <div>Phase 1: PREPARE</div>
+          <div style="display:flex;gap:8px;justify-content:center;margin:8px 0;">
+            <div style="border:1px solid var(--border);padding:6px 10px;">P1</div>
+            <div style="border:1px solid var(--border);padding:6px 10px;">P2</div>
+            <div style="border:1px solid var(--border);padding:6px 10px;">P3</div>
+          </div>
+          <div>Phase 2: COMMIT/ABORT</div>
+        </div>
+      </div>
+      <div class="algo-text">
+        <div class="algo-title">Two-Phase Commit</div>
+        <div class="algo-desc">Coordinator asks all participants to vote on committing a transaction. If all vote yes, commit; if any votes no, abort. Simple but blocking — if coordinator crashes after prepare, participants are stuck.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Atomicity: all commit or none do</div>
+          <div class="prop"><span class="prop-check">✓</span> Simple to understand and implement</div>
+          <div class="prop"><span class="prop-cross">✗</span> Blocking: coordinator SPOF</div>
+          <div class="prop"><span class="prop-cross">✗</span> Long-held locks reduce throughput</div>
+          <div class="prop"><span class="prop-cross">✗</span> Cannot progress during coordinator failure</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="algo-content" id="algo-3pc">
+    <div class="algo-visual">
+      <div class="algo-text" style="flex:1">
+        <div class="algo-title">Three-Phase Commit</div>
+        <div class="algo-desc">Adds a pre-commit phase to 2PC to eliminate the blocking problem. CanCommit → PreCommit → DoCommit. If coordinator fails after PreCommit, participants can safely commit. However, not safe under network partitions.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Non-blocking (unlike 2PC)</div>
+          <div class="prop"><span class="prop-check">✓</span> Coordinator failure recoverable</div>
+          <div class="prop"><span class="prop-cross">✗</span> Unsafe under network partitions</div>
+          <div class="prop"><span class="prop-cross">✗</span> 3x the message rounds vs 2PC</div>
+          <div class="prop"><span class="prop-cross">✗</span> Rarely used in practice</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="algo-content" id="algo-zab">
+    <div class="algo-visual">
+      <div class="algo-text" style="flex:1">
+        <div class="algo-title">ZAB — ZooKeeper Atomic Broadcast</div>
+        <div class="algo-desc">ZooKeeper's consensus protocol. Leader broadcasts proposals to a quorum of followers. Guarantees total order delivery with epoch-based leader election. Optimized for high-throughput read-heavy workloads typical in coordination services.</div>
+        <div class="props-list">
+          <div class="prop"><span class="prop-check">✓</span> Primary-order: all writes go through leader</div>
+          <div class="prop"><span class="prop-check">✓</span> Recovery: new leader recovers all committed proposals</div>
+          <div class="prop"><span class="prop-check">✓</span> Used in production at Yahoo, Alibaba, Netflix</div>
+          <div class="prop"><span class="prop-cross">✗</span> Complex recovery protocol</div>
+          <div class="prop"><span class="prop-cross">✗</span> Write throughput limited by leader</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REPLICATION -->
+<section id="replication">
+  <div class="section-label">04 — Data Durability</div>
+  <h2 class="section-title">Replication <span class="highlight">Strategies</span></h2>
+  <p class="section-desc">Data replication is the foundation of fault tolerance and high availability. How and when data is replicated determines consistency, latency, and durability guarantees.</p>
+
+  <div class="replication-demo">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;">Live Replication Simulator</div>
+        <div style="font-size:11px;color:var(--muted);">Write to primary and watch data propagate</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="font-size:10px;color:var(--muted);">Mode:</div>
+        <button class="btn" id="replMode" onclick="toggleReplMode()">Sync</button>
+      </div>
+    </div>
+
+    <div class="repl-nodes">
+      <div class="repl-node primary">
+        <div class="repl-label">PRIMARY</div>
+        <div class="repl-name">Node-1</div>
+        <div class="repl-data" id="primary-data">v=0 | writes=0</div>
+      </div>
+      <div style="font-size:24px;color:var(--muted);align-self:center;">→</div>
+      <div class="repl-node replica" id="replica-1">
+        <div class="repl-label">REPLICA</div>
+        <div class="repl-name">Node-2</div>
+        <div class="repl-data" id="replica1-data">v=0 | lag=0ms</div>
+      </div>
+      <div style="font-size:24px;color:var(--muted);align-self:center;">→</div>
+      <div class="repl-node replica" id="replica-2">
+        <div class="repl-label">REPLICA</div>
+        <div class="repl-name">Node-3</div>
+        <div class="repl-data" id="replica2-data">v=0 | lag=0ms</div>
+      </div>
+      <div style="font-size:24px;color:var(--muted);align-self:center;">→</div>
+      <div class="repl-node replica" id="replica-3">
+        <div class="repl-label">REPLICA</div>
+        <div class="repl-name">Node-4</div>
+        <div class="repl-data" id="replica3-data">v=0 | lag=0ms</div>
+      </div>
+    </div>
+
+    <div class="repl-controls">
+      <button class="btn" onclick="writeData()">→ Write to Primary</button>
+      <button class="btn orange" onclick="failReplica()">⚡ Fail Replica</button>
+      <button class="btn green" onclick="resetReplica()">↺ Restore All</button>
+    </div>
+    <div id="repl-log" style="margin-top:16px;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;border:1px solid var(--border);padding:12px;min-height:40px;max-height:80px;overflow-y:auto;"></div>
+  </div>
+
+  <table class="complexity-table">
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>When ACK sent</th>
+        <th>Durability</th>
+        <th>Latency</th>
+        <th>Use Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="highlight">Synchronous</span></td>
+        <td>After all replicas confirm</td>
+        <td class="good">Highest</td>
+        <td class="bad">Highest</td>
+        <td>Financial, critical data</td>
+      </tr>
+      <tr>
+        <td><span class="highlight2">Semi-Sync</span></td>
+        <td>After at least one replica confirms</td>
+        <td class="medium">Medium</td>
+        <td class="medium">Medium</td>
+        <td>MySQL semi-sync replication</td>
+      </tr>
+      <tr>
+        <td><span class="highlight4">Asynchronous</span></td>
+        <td>After writing to primary only</td>
+        <td class="bad">Lowest</td>
+        <td class="good">Lowest</td>
+        <td>Analytics, caches, feeds</td>
+      </tr>
+      <tr>
+        <td><span class="highlight3">Quorum</span></td>
+        <td>After W nodes confirm (W+R > N)</td>
+        <td class="medium">Tunable</td>
+        <td class="medium">Tunable</td>
+        <td>Cassandra, DynamoDB</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SCALABILITY -->
+<section id="scalability">
+  <div class="section-label">05 — Growth Patterns</div>
+  <h2 class="section-title">Scalability <span class="highlight">Architecture</span></h2>
+  <p class="section-desc">From vertical scaling to planetary-scale distributed systems — understand when and how to scale each layer of your stack.</p>
+
+  <div class="scale-diagram">
+    <div class="scale-col">
+      <div class="scale-title">Vertical Scaling</div>
+      <div class="lb-box" style="border-color:var(--muted);color:var(--muted);background:none;box-shadow:none;">SINGLE SERVER</div>
+      <div class="server-stack">
+        <div class="server-box" style="background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent);">
+          <div class="server-dot"></div>64 vCPU | 512GB RAM | NVMe SSD
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+        Simple. No distributed overhead. Single point of failure. Limited by hardware ceiling. Database-friendly (no sharding needed). Very expensive at high-end.
+      </div>
+    </div>
+    <div style="font-size:32px;color:var(--muted);align-self:center;">vs</div>
+    <div class="scale-col">
+      <div class="scale-title">Horizontal Scaling</div>
+      <div class="lb-box">LOAD BALANCER</div>
+      <div class="server-stack">
+        <div class="server-box"><div class="server-dot"></div>App Server — us-east-1a</div>
+        <div class="server-box"><div class="server-dot"></div>App Server — us-east-1b</div>
+        <div class="server-box"><div class="server-dot"></div>App Server — us-east-1c</div>
+        <div class="server-box" style="border-style:dashed;"><div class="server-dot" style="background:var(--muted)"></div>Auto-scale target...</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+        Scales infinitely. Resilient to failures. Requires distributed architecture. Data consistency challenges. Network overhead. Cost-efficient with commodity hardware.
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARDING / CONSISTENT HASHING -->
+  <h3 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:900;margin:48px 0 12px;letter-spacing:-1px;">Consistent <span class="highlight">Hashing</span></h3>
+  <p style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:24px;">When a node joins or leaves, only K/n keys need to be remapped (K=keys, n=nodes). Click nodes to remove/add them and watch key redistribution.</p>
+
+  <div class="hash-demo">
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;justify-content:center;">
+      <div class="hash-ring" id="hashRing">
+        <!-- Nodes placed by JS -->
+      </div>
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7;" id="hashInfo">
+          The ring shows 5 nodes (circles) and 8 keys (filled dots). Each key is assigned to the first node clockwise on the ring. Click a node to remove it and see key redistribution.
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);border:1px solid var(--border);padding:16px;" id="hashLog">
+          Click nodes on the ring to explore...
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="addHashNode()">+ Add Node</button>
+          <button class="btn orange" onclick="addHashKey()">+ Add Key</button>
+          <button class="btn green" onclick="resetHash()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAILURE PATTERNS -->
+<section id="failures">
+  <div class="section-label">06 — Resilience</div>
+  <h2 class="section-title">Failure <span class="highlight">Patterns</span></h2>
+  <p class="section-desc">Systems fail in predictable ways. Understanding failure modes — and their solutions — is what separates systems that recover gracefully from those that cascade into outages.</p>
+
+  <div class="failure-grid">
+    <div class="failure-card" data-severity="CRITICAL" onclick="openModal('Split Brain','<p>When network partition causes multiple nodes to believe they are the primary/leader, both accept writes — creating divergent data that cannot be automatically reconciled.</p><br><p><strong>Prevention:</strong> Quorum-based leader election (requires majority of nodes), STONITH (Shoot The Other Node In The Head), fencing tokens, single-master with external lock service.</p><br><p><strong>Detection:</strong> Heartbeat monitoring, epoch numbers, generation counters.</p>')">
+      <div class="failure-icon">⚡</div>
+      <div class="failure-title">Split Brain</div>
+      <div class="failure-desc">Network partition causes multiple nodes to become leaders. Writes accepted by both create irreconcilable divergence.</div>
+      <div class="failure-solution">→ Fix: Quorum, STONITH, fencing tokens</div>
+    </div>
+    <div class="failure-card" data-severity="CRITICAL" onclick="openModal('Cascading Failures','<p>Failure in one service causes overload in others, which then fail, propagating outage through the system. Classic death spiral: DB slow → app retries → more load → DB slower → collapse.</p><br><p><strong>Prevention:</strong> Circuit breakers, bulkheads, exponential backoff with jitter, timeout budgets, load shedding, rate limiting.</p><br><p><strong>Netflix Hystrix Pattern:</strong> Wrap calls in circuit breakers. OPEN state fast-fails immediately. After timeout, HALF-OPEN probes recovery.</p>')">
+      <div class="failure-icon">🌊</div>
+      <div class="failure-title">Cascading Failures</div>
+      <div class="failure-desc">One failing service overloads its dependencies, causing progressive system-wide collapse.</div>
+      <div class="failure-solution">→ Fix: Circuit breakers, bulkheads, backpressure</div>
+    </div>
+    <div class="failure-card" data-severity="HIGH" onclick="openModal('Thundering Herd','<p>Many processes simultaneously awakened by the same event, all competing for the same resource. Common after cache expiry or server restart.</p><br><p><strong>Example:</strong> CDN cache miss during traffic spike. 10,000 requests all hit origin simultaneously.</p><br><p><strong>Solutions:</strong> Cache stampede prevention with mutex/locks, probabilistic early expiration (PER), stale-while-revalidate, request coalescing (only one request fetches, others wait).</p>')">
+      <div class="failure-icon">🐘</div>
+      <div class="failure-title">Thundering Herd</div>
+      <div class="failure-desc">Many processes wake simultaneously after a blocking event and overwhelm a downstream resource.</div>
+      <div class="failure-solution">→ Fix: Jitter, mutex locks, request coalescing</div>
+    </div>
+    <div class="failure-card" data-severity="HIGH" onclick="openModal('Head-of-Line Blocking','<p>A slow request at the head of a queue blocks all subsequent requests, causing latency to spike for unrelated operations.</p><br><p><strong>In HTTP/1.1:</strong> Browser limited to 6 TCP connections per domain. One slow image blocks others.</p><br><p><strong>In HTTP/2:</strong> Multiplexing solves HOL at HTTP level, but TCP-level HOL remains.</p><br><p><strong>Solutions:</strong> HTTP/3 (QUIC solves TCP HOL), priority queues, work-stealing queues, deadline-aware scheduling.</p>')">
+      <div class="failure-icon">🚧</div>
+      <div class="failure-title">Head-of-Line Blocking</div>
+      <div class="failure-desc">Slow requests block faster ones waiting behind them in a queue or connection pool.</div>
+      <div class="failure-solution">→ Fix: HTTP/2 multiplexing, QUIC, priority queues</div>
+    </div>
+    <div class="failure-card" data-severity="HIGH" onclick="openModal('Clock Skew','<p>Clocks on different machines drift apart. Distributed systems that rely on wall-clock time for ordering or TTLs can have subtle bugs.</p><br><p><strong>Example:</strong> NTP sync can cause time to jump backwards. A token with expiry=now+5min created on machine A may appear expired to machine B if B is 10 seconds ahead.</p><br><p><strong>Solutions:</strong> Logical clocks (Lamport), vector clocks, hybrid logical clocks (HLC), TrueTime (Google Spanner), bounded clock uncertainty.</p>')">
+      <div class="failure-icon">⏱</div>
+      <div class="failure-title">Clock Skew</div>
+      <div class="failure-desc">Machine clocks drift apart, causing ordering bugs, expired tokens, or causality violations.</div>
+      <div class="failure-solution">→ Fix: Logical clocks, HLC, TrueTime</div>
+    </div>
+    <div class="failure-card" data-severity="MEDIUM" onclick="openModal('Byzantine Failure','<p>A node that fails by sending incorrect or conflicting messages, rather than simply stopping. Can be caused by hardware corruption, software bugs, or malicious actors.</p><br><p><strong>Crash failure:</strong> Node stops responding (detectable).</p><p><strong>Byzantine failure:</strong> Node sends arbitrary messages (much harder to handle).</p><br><p><strong>Solutions:</strong> PBFT, BFT-SMaRt, Tendermint (blockchain), cryptographic signatures to authenticate messages, requires 3f+1 nodes to tolerate f Byzantine failures.</p>')">
+      <div class="failure-icon">👹</div>
+      <div class="failure-title">Byzantine Failure</div>
+      <div class="failure-desc">Nodes send arbitrary, conflicting, or malicious messages rather than simply crashing.</div>
+      <div class="failure-solution">→ Fix: PBFT, cryptographic signing, BFT protocols</div>
+    </div>
+    <div class="failure-card" data-severity="MEDIUM" onclick="openModal('Metastable Failures','<p>System enters a stable bad state where a positive feedback loop sustains the failure even after the initial trigger is removed.</p><br><p><strong>Example:</strong> High load → slow DB → retries → more load. Even after traffic drops, retry storms keep system in bad state.</p><br><p><strong>2021 Facebook Outage:</strong> Config change → BGP routes withdrawn → DNS failures → load on health check systems → can\'t reconnect → longer outage.</p><br><p><strong>Solutions:</strong> Exponential backoff, request hedging, retry budgets, admit-only-what-you-can-handle queues.</p>')">
+      <div class="failure-icon">🔄</div>
+      <div class="failure-title">Metastable Failures</div>
+      <div class="failure-desc">Stable bad state maintained by feedback loops even after original trigger is removed.</div>
+      <div class="failure-solution">→ Fix: Backoff, retry budgets, load shedding</div>
+    </div>
+    <div class="failure-card" data-severity="MEDIUM" onclick="openModal('Gray Failures','<p>Partial failures where a component is degraded but not completely down. The system appears healthy from some perspectives but faulty from others.</p><br><p><strong>Examples:</strong> Network link with 20% packet loss (not detected by TCP keepalive), storage node with slow reads but normal writes, CPU throttling due to thermal limits.</p><br><p><strong>Dangerous because:</strong> Health checks say node is alive, but it\'s serving degraded responses.</p><br><p><strong>Solutions:</strong> Percentile latency health checks (p99, not avg), canary analysis, red-black deployments, end-to-end synthetic monitoring.</p>')">
+      <div class="failure-icon">🌫</div>
+      <div class="failure-title">Gray Failures</div>
+      <div class="failure-desc">Partial degradations that look healthy from some vantage points but cause user-facing errors.</div>
+      <div class="failure-solution">→ Fix: p99 health checks, synthetic monitoring</div>
+    </div>
+  </div>
+</section>
+
+<!-- MESSAGING & STREAMING -->
+<section id="messaging">
+  <div class="section-label">07 — Async Communication</div>
+  <h2 class="section-title">Messaging & <span class="highlight">Streaming</span></h2>
+  <p class="section-desc">Decoupling producers from consumers through message queues and event streams is the backbone of scalable microservices architectures.</p>
+
+  <div class="queue-demo">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;">Message Queue Simulator</div>
+        <div style="font-size:11px;color:var(--muted);">Produce and consume messages. Watch backpressure in action.</div>
+      </div>
+      <div id="queue-stats" style="font-size:11px;color:var(--muted);">Queue depth: 0 | Processed: 0</div>
+    </div>
+    <div class="queue-visual">
+      <div class="queue-producer" onclick="produceMsg()">
+        PRODUCER<br>
+        <span style="font-size:10px;font-weight:400;">click to send</span>
+      </div>
+      <div style="font-size:20px;color:var(--muted);">→</div>
+      <div class="queue-channel" id="queueChannel">
+        <!-- Messages rendered here -->
+      </div>
+      <div style="font-size:20px;color:var(--muted);">→</div>
+      <div class="queue-consumer" onclick="consumeMsg()">
+        CONSUMER<br>
+        <span style="font-size:10px;font-weight:400;">click to read</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">
+      <button class="btn" onclick="autoProduceStart()">↑ Auto Produce</button>
+      <button class="btn orange" onclick="autoProduceStop()">■ Stop</button>
+      <button class="btn green" onclick="autoConsume()">↓ Auto Consume</button>
+    </div>
+  </div>
+
+  <!-- Distributed Tracing -->
+  <h3 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:900;margin:48px 0 16px;letter-spacing:-1px;">Distributed <span class="highlight">Tracing</span></h3>
+  <p style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:20px;">Following a request through a distributed system. Each service adds a span to the trace.</p>
+  <div class="trace-demo">
+    <button class="btn" onclick="runTrace()" style="margin-bottom:20px;">→ Simulate Request</button>
+    <div class="trace-timeline" id="traceTimeline">
+      <div style="font-size:11px;color:var(--muted);">Click "Simulate Request" to see a distributed trace</div>
+    </div>
+  </div>
+
+  <table class="complexity-table" style="margin-top:40px;">
+    <thead>
+      <tr>
+        <th>System</th>
+        <th>Model</th>
+        <th>Ordering</th>
+        <th>Retention</th>
+        <th>Scale</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="highlight">Kafka</span></td>
+        <td>Log-based, partitioned</td>
+        <td class="good">Per-partition</td>
+        <td class="good">Configurable (forever)</td>
+        <td class="good">Millions msg/s</td>
+      </tr>
+      <tr>
+        <td><span class="highlight2">RabbitMQ</span></td>
+        <td>AMQP, push-based</td>
+        <td class="medium">Per-queue</td>
+        <td class="bad">Until consumed</td>
+        <td class="medium">~50K msg/s</td>
+      </tr>
+      <tr>
+        <td><span class="highlight4">Pulsar</span></td>
+        <td>Unified streaming/queuing</td>
+        <td class="good">Per-topic</td>
+        <td class="good">Tiered storage</td>
+        <td class="good">High</td>
+      </tr>
+      <tr>
+        <td><span class="highlight3">SQS</span></td>
+        <td>At-least-once, managed</td>
+        <td class="bad">Not guaranteed</td>
+        <td class="bad">14 days max</td>
+        <td class="good">Unlimited (managed)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- DISTRIBUTED STORAGE -->
+<section id="storage">
+  <div class="section-label">08 — Data Architecture</div>
+  <h2 class="section-title">Distributed <span class="highlight">Storage</span></h2>
+  <p class="section-desc">Where data lives, how it's organized, and how it scales. From LSM trees powering RocksDB to the wide-column stores of Cassandra and BigTable.</p>
+
+  <div class="concepts-grid">
+    <div class="concept-card" onclick="openModal('LSM Tree', lsmContent)">
+      <span class="card-icon">◧</span>
+      <div class="card-subtitle">Write-Optimized</div>
+      <div class="card-title">LSM Tree</div>
+      <div class="card-desc">Log-Structured Merge Tree. All writes go to in-memory memtable, flushed to immutable SSTables. Compaction merges SSTables. Powers LevelDB, RocksDB, Cassandra, HBase.</div>
+      <div class="card-tags"><span class="tag">Write-heavy</span><span class="tag">Compaction</span><span class="tag">SSTables</span></div>
+    </div>
+    <div class="concept-card orange" onclick="openModal('B+ Tree', btreeContent)">
+      <span class="card-icon">🌲</span>
+      <div class="card-subtitle">Read-Optimized</div>
+      <div class="card-title">B+ Tree</div>
+      <div class="card-desc">Balanced tree with sorted keys in leaf nodes, all leaves linked for range scans. O(log n) reads and writes. Used by PostgreSQL, MySQL InnoDB, SQLite, most RDBMS.</div>
+      <div class="card-tags"><span class="tag">Read-heavy</span><span class="tag">Range Scans</span><span class="tag">RDBMS</span></div>
+    </div>
+    <div class="concept-card green" onclick="openModal('Bloom Filter', bloomContent)">
+      <span class="card-icon">◉</span>
+      <div class="card-subtitle">Probabilistic</div>
+      <div class="card-title">Bloom Filter</div>
+      <div class="card-desc">Space-efficient probabilistic structure to test set membership. False positives possible, false negatives impossible. Used to avoid expensive disk lookups in LSM stores.</div>
+      <div class="card-tags"><span class="tag">Probabilistic</span><span class="tag">O(1) lookup</span><span class="tag">No false negatives</span></div>
+    </div>
+    <div class="concept-card purple" onclick="openModal('Write-Ahead Log', walContent)">
+      <span class="card-icon">📝</span>
+      <div class="card-subtitle">Durability</div>
+      <div class="card-title">Write-Ahead Log</div>
+      <div class="card-desc">Append-only log written before applying changes to data. Enables crash recovery — replay WAL to restore state. Used in PostgreSQL, MySQL, etcd, ZooKeeper.</div>
+      <div class="card-tags"><span class="tag">Durability</span><span class="tag">Recovery</span><span class="tag">Sequential I/O</span></div>
+    </div>
+    <div class="concept-card" onclick="openModal('Saga Pattern', sagaContent)">
+      <span class="card-icon">🔗</span>
+      <div class="card-subtitle">Distributed Transactions</div>
+      <div class="card-title">Saga Pattern</div>
+      <div class="card-desc">Long-lived transactions as a sequence of local transactions. Each step publishes events. Compensating transactions undo completed steps on failure. No distributed locks needed.</div>
+      <div class="card-tags"><span class="tag">Microservices</span><span class="tag">Compensation</span><span class="tag">Choreography</span></div>
+    </div>
+    <div class="concept-card orange" onclick="openModal('Merkle Tree', merkleContent)">
+      <span class="card-icon">△</span>
+      <div class="card-subtitle">Data Integrity</div>
+      <div class="card-title">Merkle Tree</div>
+      <div class="card-desc">Hash tree where leaves are data hashes and internal nodes are hashes of children. Efficient verification of distributed data consistency. Foundational to Git, Bitcoin, AWS DynamoDB anti-entropy.</div>
+      <div class="card-tags"><span class="tag">Integrity</span><span class="tag">Anti-entropy</span><span class="tag">Git, Bitcoin</span></div>
+    </div>
+  </div>
+
+  <!-- Code Sample -->
+  <div class="code-block" data-label="CONSISTENT HASHING" style="margin-top:48px;">
+<span class="cm">// Consistent hashing ring implementation</span>
+<span class="kw">class</span> <span class="fn">ConsistentHashRing</span> {
+  <span class="kw">constructor</span>(vnodes = <span class="num">150</span>) {
+    <span class="kw">this</span>.ring = <span class="kw">new</span> <span class="fn">SortedMap</span>();
+    <span class="kw">this</span>.vnodes = vnodes; <span class="cm">// virtual nodes per server</span>
+  }
+
+  <span class="fn">addNode</span>(node) {
+    <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; <span class="kw">this</span>.vnodes; i++) {
+      <span class="kw">const</span> hash = <span class="fn">md5</span>(<span class="str">`${node}:${i}`</span>);
+      <span class="kw">this</span>.ring.<span class="fn">set</span>(hash, node);
+    }
+  }
+
+  <span class="fn">getNode</span>(key) {
+    <span class="kw">const</span> hash = <span class="fn">md5</span>(key);
+    <span class="cm">// Find first node clockwise from key's hash</span>
+    <span class="kw">return this</span>.ring.<span class="fn">firstKeyAfter</span>(hash) ?? <span class="kw">this</span>.ring.<span class="fn">first</span>();
+  }
+}
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="section-label">09 — Test Your Knowledge</div>
+  <h2 class="section-title">Knowledge <span class="highlight">Quiz</span></h2>
+  <p class="section-desc">15 questions covering everything from CAP theorem to consensus algorithms. See how deep your distributed systems knowledge goes.</p>
+
+  <div class="quiz-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div class="quiz-score" id="quizScore">0/15</div>
+      <div class="quiz-progress" id="quizProgress">Question 1 of 15</div>
+    </div>
+    <div class="quiz-q" id="quizQ">Loading question...</div>
+    <div class="quiz-options" id="quizOpts"></div>
+    <div class="quiz-feedback" id="quizFeedback" style="display:none;"></div>
+    <div class="quiz-nav">
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="nextBtn" onclick="nextQuestion()" style="display:none;">Next →</button>
+        <button class="btn green" id="restartBtn" onclick="restartQuiz()" style="display:none;">↺ Restart</button>
+      </div>
+      <div id="streakDisplay" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCE TABLE -->
+<section>
+  <div class="section-label">10 — Quick Reference</div>
+  <h2 class="section-title">Algorithm <span class="highlight">Comparison</span></h2>
+
+  <table class="complexity-table">
+    <thead>
+      <tr>
+        <th>Algorithm/Pattern</th>
+        <th>Fault Model</th>
+        <th>Nodes Required</th>
+        <th>Message Complexity</th>
+        <th>Used By</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="highlight">Raft</span></td>
+        <td>Crash-stop</td>
+        <td class="good">2f+1</td>
+        <td class="good">O(n)</td>
+        <td>etcd, CockroachDB, TiKV</td>
+      </tr>
+      <tr>
+        <td><span class="highlight">Multi-Paxos</span></td>
+        <td>Crash-stop</td>
+        <td class="good">2f+1</td>
+        <td class="good">O(n)</td>
+        <td>Google Chubby, Spanner</td>
+      </tr>
+      <tr>
+        <td><span class="highlight4">PBFT</span></td>
+        <td>Byzantine</td>
+        <td class="bad">3f+1</td>
+        <td class="bad">O(n²)</td>
+        <td>Hyperledger, research</td>
+      </tr>
+      <tr>
+        <td><span class="highlight2">2PC</span></td>
+        <td>Crash-stop</td>
+        <td class="good">Any</td>
+        <td class="good">O(n)</td>
+        <td>MySQL Cluster, XA</td>
+      </tr>
+      <tr>
+        <td><span class="highlight3">Gossip</span></td>
+        <td>Crash-stop</td>
+        <td class="good">Any</td>
+        <td class="good">O(n log n)</td>
+        <td>Cassandra, Redis Cluster</td>
+      </tr>
+      <tr>
+        <td><span class="highlight">ZAB</span></td>
+        <td>Crash-stop</td>
+        <td class="good">2f+1</td>
+        <td class="good">O(n)</td>
+        <td>ZooKeeper</td>
+      </tr>
+      <tr>
+        <td><span class="highlight4">Tendermint</span></td>
+        <td>Byzantine</td>
+        <td class="bad">3f+1</td>
+        <td class="medium">O(n²) proposal</td>
+        <td>Cosmos, Ethereum validators</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-brand">DISTSYS</div>
+    <div class="footer-desc">The complete interactive reference for distributed systems architecture, algorithms, and patterns.</div>
+  </div>
+  <div class="footer-links">
+    <h4>Sections</h4>
+    <a href="#fundamentals">Fundamentals</a>
+    <a href="#consistency">Consistency Models</a>
+    <a href="#consensus">Consensus Algorithms</a>
+    <a href="#replication">Replication</a>
+    <a href="#scalability">Scalability</a>
+  </div>
+  <div class="footer-links">
+    <h4>Patterns</h4>
+    <a href="#failures">Failure Patterns</a>
+    <a href="#messaging">Messaging</a>
+    <a href="#storage">Storage</a>
+    <a href="#quiz">Knowledge Quiz</a>
+  </div>
+  <div class="footer-links">
+    <h4>Key Papers</h4>
+    <a href="#" onclick="return false">Brewer — CAP Conjecture (2000)</a>
+    <a href="#" onclick="return false">Fischer, Lynch, Paterson — FLP (1985)</a>
+    <a href="#" onclick="return false">Ongaro — Raft (2014)</a>
+    <a href="#" onclick="return false">Lamport — Paxos (1998)</a>
+    <a href="#" onclick="return false">DeCandia — Dynamo (2007)</a>
+  </div>
+</footer>
+
+<script>
+// ==================== MODAL DATA ====================
+const capContent = `<p>The CAP Theorem (Brewer, 2000; formally proved by Gilbert & Lynch, 2002) states that any distributed data store can provide at most two of three properties:</p><br>
+<p><strong style="color:#00d4ff">Consistency (C):</strong> Every read receives the most recent write or an error. All nodes see the same data at the same time.</p><br>
+<p><strong style="color:#ff6b35">Availability (A):</strong> Every request receives a (non-error) response, without guarantee it contains the most recent write.</p><br>
+<p><strong style="color:#c77dff">Partition Tolerance (P):</strong> The system continues to operate despite network partitions (message loss or delays between nodes).</p><br>
+<p><strong>The key insight:</strong> In real distributed systems, network partitions ARE going to happen. So the real choice is between C and A during a partition.</p>`;
+
+const baseAcidContent = `<p><strong>ACID</strong> (traditional RDBMS):</p>
+<p>• <strong>Atomicity:</strong> All or nothing</p>
+<p>• <strong>Consistency:</strong> Data always valid</p>
+<p>• <strong>Isolation:</strong> Transactions don't interfere</p>
+<p>• <strong>Durability:</strong> Committed writes survive crashes</p><br>
+<p><strong>BASE</strong> (distributed/NoSQL):</p>
+<p>• <strong>Basically Available:</strong> System guarantees availability</p>
+<p>• <strong>Soft State:</strong> State may change without input (eventual convergence)</p>
+<p>• <strong>Eventually Consistent:</strong> System becomes consistent over time</p><br>
+<p>The trade-off is fundamental: ACID sacrifices scale/availability for strong guarantees. BASE accepts temporary inconsistency for better performance and availability.</p>`;
+
+const fallaciesContent = `<p>Peter Deutsch (Sun Microsystems) identified 8 common false assumptions made by programmers new to distributed computing:</p><br>
+<ol style="padding-left:20px;line-height:2.2;">
+<li>The network is reliable</li>
+<li>Latency is zero</li>
+<li>Bandwidth is infinite</li>
+<li>The network is secure</li>
+<li>Topology doesn't change</li>
+<li>There is one administrator</li>
+<li>Transport cost is zero</li>
+<li>The network is homogeneous</li>
+</ol><br>
+<p>These assumptions lead to designs that work on a single machine but fail in distributed environments. Building production distributed systems requires explicitly accounting for all eight.</p>`;
+
+const flpContent = `<p>Fischer, Lynch, and Paterson (1985) proved that in a purely asynchronous distributed system, it is impossible for a set of processes to agree on a binary value if even one process can fail by crashing.</p><br>
+<p><strong>Why it matters:</strong> It means no deterministic consensus protocol can be guaranteed to terminate in an asynchronous system with even one potential crash failure.</p><br>
+<p><strong>The workarounds (how real systems deal with this):</strong></p>
+<p>• <strong>Timeouts:</strong> Use partial synchrony assumptions (Paxos, Raft)</p>
+<p>• <strong>Randomization:</strong> Ben-Or's algorithm uses randomness to avoid adversarial scheduling</p>
+<p>• <strong>Failure detectors:</strong> Unreliable failure detectors can solve consensus (Chandra-Toueg)</p>`;
+
+const vectorContent = `<p>Vector clocks track causality across distributed processes where there's no global clock. Each process maintains a vector of counters.</p><br>
+<p><strong>Rules:</strong></p>
+<p>• On internal event: increment own counter</p>
+<p>• On send: increment own counter, attach vector</p>
+<p>• On receive: merge vectors (take max each), increment own</p><br>
+<p><strong>Reading the result:</strong></p>
+<p>• V(a) < V(b): event a happened-before event b</p>
+<p>• V(a) || V(b): events are concurrent (neither caused the other)</p><br>
+<p><strong>Used by:</strong> Amazon DynamoDB, Riak, CouchDB for conflict detection. When two versions are concurrent, the client resolves the conflict.</p>`;
+
+const gossipContent = `<p>Gossip (epidemic) protocols spread information by having each node periodically select random peers to exchange state with.</p><br>
+<p><strong>Properties:</strong></p>
+<p>• O(log N) rounds to reach all nodes</p>
+<p>• Highly resilient to node failures</p>
+<p>• Self-healing — information naturally spreads</p>
+<p>• Eventually consistent</p><br>
+<p><strong>Variants:</strong></p>
+<p>• <strong>Push:</strong> Send state to random peers</p>
+<p>• <strong>Pull:</strong> Ask peers for their state</p>
+<p>• <strong>Push-Pull:</strong> Exchange both (fastest convergence)</p><br>
+<p><strong>Used for:</strong> Membership (Cassandra, Consul), failure detection (SWIM protocol), state synchronization (Redis Cluster).</p>`;
+
+const crdtContent = `<p>CRDTs are data structures where concurrent updates can always be merged deterministically without conflicts, using mathematical properties (commutativity, associativity, idempotency).</p><br>
+<p><strong>Types:</strong></p>
+<p>• <strong>G-Counter:</strong> Grows only, each node increments its own slot</p>
+<p>• <strong>PN-Counter:</strong> Positive/Negative — subtract with two G-counters</p>
+<p>• <strong>G-Set:</strong> Grow-only set (never remove)</p>
+<p>• <strong>OR-Set:</strong> Observed-Remove set — tag each element to handle concurrent add/remove</p>
+<p>• <strong>LWW-Register:</strong> Last-write-wins, uses timestamp</p>
+<p>• <strong>RGA:</strong> Replicated Growable Array — collaborative text editing</p><br>
+<p><strong>Used by:</strong> Redis (CRDT mode), Riak, Apple Notes (collaborative editing), Figma (real-time collaboration).</p>`;
+
+const twoGenContent = `<p>Two generals must agree on whether to attack a common enemy. They can only communicate via messengers through enemy territory, where any messenger may be captured.</p><br>
+<p><strong>The problem:</strong> General A sends "Attack at dawn." Even if General B confirms, A doesn't know if the confirmation arrived. If A sends an acknowledgment of the confirmation, B doesn't know if that arrived... This regresses infinitely.</p><br>
+<p><strong>The proof:</strong> No finite protocol guarantees both generals attack simultaneously over an unreliable channel.</p><br>
+<p><strong>Real-world impact:</strong> TCP's 3-way handshake works around this — SYN, SYN-ACK, ACK — but can never be perfectly reliable. Application-level retries and idempotency are the practical solutions.</p>`;
+
+const lsmContent = `<p>Log-Structured Merge Tree writes sequentially to an in-memory buffer (MemTable), then flushes immutable sorted files (SSTables) to disk.</p><br>
+<p><strong>Read path:</strong> Check MemTable → Check recent SSTables → Check bloom filters → Search older SSTables → Merge results</p><br>
+<p><strong>Compaction strategies:</strong></p>
+<p>• <strong>Size-tiered:</strong> Merge similarly-sized SSTables (Cassandra default)</p>
+<p>• <strong>Leveled:</strong> Each level limited in size, less read amplification (RocksDB default)</p>
+<p>• <strong>FIFO:</strong> Discard oldest SSTables when too large (time-series)</p><br>
+<p><strong>Trade-off:</strong> Excellent write throughput (sequential I/O) vs higher read amplification and space amplification during compaction.</p>`;
+
+const btreeContent = `<p>B+ Trees maintain sorted data in a balanced tree where all data lives in leaf nodes (linked for range scans) and internal nodes only hold keys for navigation.</p><br>
+<p><strong>Properties:</strong></p>
+<p>• O(log n) for search, insert, delete</p>
+<p>• All leaves at same depth (balanced)</p>
+<p>• High branching factor = shallow tree = few disk seeks</p>
+<p>• Range scans efficient via linked leaf list</p><br>
+<p><strong>Used by:</strong> InnoDB (MySQL), PostgreSQL, SQLite, Oracle, SQL Server — basically every relational database.</p><br>
+<p><strong>vs LSM Tree:</strong> B+ better for read-heavy, LSM better for write-heavy workloads.</p>`;
+
+const bloomContent = `<p>A Bloom filter is a bit array + k hash functions. To add element x: set bits at h1(x), h2(x)...hk(x). To test: check if ALL those bits are set.</p><br>
+<p><strong>Guarantees:</strong></p>
+<p>• No false negatives: if element is in the set, test always returns true</p>
+<p>• False positives possible: test may say "in set" when it's not</p>
+<p>• Cannot delete elements (without counting bloom filters)</p><br>
+<p><strong>Typical use in LSM:</strong> Before reading SSTables, check bloom filter. If says "not present" → skip entire file. Avoids expensive disk reads for missing keys.</p><br>
+<p><strong>Parameters:</strong> For n elements and false positive rate p, optimal size: m = -n·ln(p)/(ln2)²</p>`;
+
+const walContent = `<p>The Write-Ahead Log ensures durability by writing changes to an append-only log BEFORE applying them to the actual data structures.</p><br>
+<p><strong>Recovery flow:</strong></p>
+<p>1. Crash occurs</p>
+<p>2. On restart, read WAL from last checkpoint</p>
+<p>3. Redo all committed transactions</p>
+<p>4. Undo all incomplete transactions</p>
+<p>5. System is consistent</p><br>
+<p><strong>Why it works:</strong> Sequential writes are much faster than random writes. The WAL is append-only → never overwrites → safe to read during recovery.</p><br>
+<p><strong>Used by:</strong> PostgreSQL (wal_level), MySQL InnoDB (redo log), etcd, SQLite (journal modes).</p>`;
+
+const sagaContent = `<p>A Saga decomposes a distributed transaction into a sequence of local transactions T1...Tn. Each Ti publishes an event triggering Ti+1. On failure at Ti, compensating transactions Ci-1...C1 undo previous steps.</p><br>
+<p><strong>Orchestration vs Choreography:</strong></p>
+<p>• <strong>Orchestration:</strong> Central saga orchestrator coordinates all steps (explicit control flow)</p>
+<p>• <strong>Choreography:</strong> Each service listens for events and reacts (implicit, more decoupled)</p><br>
+<p><strong>Example: Order placement</strong></p>
+<p>Create Order → Reserve Inventory → Charge Payment → Ship → Done</p>
+<p>If Ship fails: Refund Payment → Release Inventory → Cancel Order</p><br>
+<p><strong>Trade-off:</strong> Eventually consistent (not ACID). Business must tolerate temporary inconsistency.</p>`;
+
+const merkleContent = `<p>A Merkle tree hashes data blocks at leaves, then builds a tree of hashes upward. The root hash represents the entire dataset.</p><br>
+<p><strong>Key property:</strong> To verify two datasets are identical, only compare root hashes. To find differences, compare subtrees recursively — O(log n) to find any difference.</p><br>
+<p><strong>Applications:</strong></p>
+<p>• <strong>Git:</strong> Every commit is a Merkle tree of file blobs → content-addressable storage</p>
+<p>• <strong>Bitcoin:</strong> Merkle root of transactions in each block header</p>
+<p>• <strong>DynamoDB:</strong> Anti-entropy between replicas — compare Merkle trees to find which key ranges differ</p>
+<p>• <strong>IPFS:</strong> Content-addressed file system</p>`;
+
+// ==================== CAP INFO ====================
+const capInfos = {
+  c: `<strong style="color:#00d4ff">Consistency:</strong> All nodes see the same data at the same time. After a write, all subsequent reads return that value. Requires coordination — usually synchronous replication or a consensus protocol.`,
+  a: `<strong style="color:#ff6b35">Availability:</strong> Every request receives a response (not an error). Node must always respond, even if it hasn't received the latest data. Cannot refuse requests during partitions.`,
+  p: `<strong style="color:#c77dff">Partition Tolerance:</strong> System continues operating when network partitions occur (messages between nodes are lost). Since partitions WILL happen in real networks, P is non-optional in practice.`,
+  ca: `<strong>CA systems</strong> (Consistency + Availability): Only possible when you can guarantee no network partitions — i.e., single-node or tightly-coupled clusters. MySQL, PostgreSQL in a single datacenter. Partition tolerance not sacrificed lightly.`,
+  cp: `<strong>CP systems</strong> (Consistency + Partition Tolerance): During a network partition, becomes unavailable rather than serve stale data. Examples: ZooKeeper, HBase, etcd. Used for coordination, leader election, config.`,
+  ap: `<strong>AP systems</strong> (Availability + Partition Tolerance): Remains available during partitions, accepting that some nodes may serve stale data. Examples: Cassandra, DynamoDB, CouchDB. Achieves consistency eventually.`,
+  mysql: `<strong>MySQL</strong> (CA-leaning): Single-master with synchronous replicas trades partition tolerance for strong consistency + availability in same datacenter. Geographically distributed MySQL becomes CP with Group Replication.`,
+  zookeeper: `<strong>ZooKeeper</strong> (CP): Refuses reads/writes from minority partitions. Quorum required. Used for distributed coordination, config management, leader election in Hadoop, Kafka.`,
+  hbase: `<strong>HBase</strong> (CP): Built on ZooKeeper. During partition, region servers that can't reach ZooKeeper stop serving. Strong consistency for key-value lookups.`,
+  cassandra: `<strong>Cassandra</strong> (AP-tunable): With consistency level ANY or ONE — highly available but may read stale. With QUORUM or ALL — leans CP. Tunable per operation via consistency level.`,
+  dynamo: `<strong>DynamoDB</strong> (AP with eventual consistency default): Eventually consistent reads by default for max availability. Strongly consistent reads opt-in (higher latency, same cost).`
+};
+
+function showCapInfo(key) {
+  document.getElementById('capInfo').innerHTML = capInfos[key] || 'Click a vertex or edge...';
+}
+
+// ==================== CONSISTENCY MODELS ====================
+const consistencyModels = {
+  linearizability: {
+    name: 'Linearizability',
+    guarantee: '"All operations appear instantaneous and globally ordered"',
+    use_when: '"Financial transactions, leader election, distributed locks"',
+    examples: '["etcd", "ZooKeeper", "Spanner"]',
+    latency: 'HIGH',
+    availability: 'LOW',
+    throughput: 'LOW'
+  },
+  sequential: {
+    name: 'Sequential Consistency',
+    guarantee: '"All nodes observe the same total order of operations"',
+    use_when: '"Shared memory systems, database isolation levels"',
+    examples: '["MESI cache protocol", "Java volatile (approx)"]',
+    latency: 'HIGH',
+    availability: 'LOW',
+    throughput: 'MEDIUM'
+  },
+  causal: {
+    name: 'Causal Consistency',
+    guarantee: '"Causally related writes seen in order; concurrent writes may differ"',
+    use_when: '"Social feeds, collaborative editing, comment systems"',
+    examples: '["MongoDB causal sessions", "COPS", "Bolt-on causal"]',
+    latency: 'MEDIUM',
+    availability: 'MEDIUM',
+    throughput: 'MEDIUM'
+  },
+  readyourwrites: {
+    name: 'Read-Your-Writes',
+    guarantee: '"A client always sees its own writes immediately"',
+    use_when: '"User profile updates, settings, anything user-facing"',
+    examples: '["Read from primary after write", "Sticky sessions", "DynamoDB sessions"]',
+    latency: 'MEDIUM',
+    availability: 'HIGH',
+    throughput: 'HIGH'
+  },
+  eventual: {
+    name: 'Eventual Consistency',
+    guarantee: '"Will converge to same value given no new updates"',
+    use_when: '"Shopping carts, view counts, DNS, anything high-scale"',
+    examples: '["Cassandra", "DynamoDB (default)", "S3", "DNS"]',
+    latency: 'LOW',
+    availability: 'HIGH',
+    throughput: 'VERY HIGH'
+  }
+};
+
+function setConsistency(el, model) {
+  document.querySelectorAll('.consistency-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  const m = consistencyModels[model];
+  document.getElementById('consistencyInfo').innerHTML =
+    `<span class="kw">model</span>: <span class="str">${m.name}</span>\n` +
+    `<span class="kw">guarantee</span>: <span class="str">${m.guarantee}</span>\n` +
+    `<span class="kw">use_when</span>: <span class="str">${m.use_when}</span>\n` +
+    `<span class="kw">examples</span>: ${m.examples}\n` +
+    `<span class="kw">latency</span>: <span class="num">${m.latency}</span>\n` +
+    `<span class="kw">availability</span>: <span class="num">${m.availability}</span>\n` +
+    `<span class="kw">throughput</span>: <span class="num">${m.throughput}</span>`;
+}
+
+// ==================== ALGO TABS ====================
+function showAlgo(name, tab) {
+  document.querySelectorAll('.algo-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.algo-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('algo-' + name).classList.add('active');
+  tab.classList.add('active');
+}
+
+// ==================== RAFT SIMULATION ====================
+let raftElecting = false;
+function triggerElection() {
+  if (raftElecting) return;
+  raftElecting = true;
+  const log = document.getElementById('raft-log');
+  const leader = document.getElementById('raft-leader');
+  const f1 = document.getElementById('raft-f1');
+  const f2 = document.getElementById('raft-f2');
+  const f3 = document.getElementById('raft-f3');
+
+  log.textContent = '[T=1] Leader Node-L crashed! Starting election...';
+  leader.className = 'r-node';
+  leader.style.opacity = '0.3';
+
+  setTimeout(() => {
+    f1.className = 'r-node candidate';
+    log.textContent += '\n[T=2] F1 → RequestVote(term=4) to F2, F3';
+  }, 800);
+  setTimeout(() => {
+    log.textContent += '\n[T=3] F2, F3 → Vote granted (haven\'t voted in term 4)';
+  }, 1600);
+  setTimeout(() => {
+    f1.className = 'r-node leader';
+    f2.className = 'r-node follower';
+    f3.className = 'r-node follower';
+    leader.style.opacity = '0.3';
+    log.textContent += '\n[T=4] F1 wins election with 2/4 votes (quorum). F1 is new LEADER for term 4.';
+    log.textContent += '\n[T=4] F1 → AppendEntries(heartbeat) to all followers...';
+    raftElecting = false;
+  }, 2800);
+}
+
+// ==================== REPLICATION SIMULATOR ====================
+let writeCount = 0;
+let syncMode = true;
+let failedReplicas = new Set();
+
+function toggleReplMode() {
+  syncMode = !syncMode;
+  document.getElementById('replMode').textContent = syncMode ? 'Sync' : 'Async';
+}
+
+function writeData() {
+  writeCount++;
+  const log = document.getElementById('repl-log');
+  const primary = document.getElementById('primary-data');
+  primary.textContent = `v=${writeCount} | writes=${writeCount}`;
+
+  const delays = syncMode ? [0, 100, 200, 300] : [0, 300, 600, 900];
+  const replicas = [
+    { el: document.getElementById('replica1-data'), node: document.getElementById('replica-1'), id: 1 },
+    { el: document.getElementById('replica2-data'), node: document.getElementById('replica-2'), id: 2 },
+    { el: document.getElementById('replica3-data'), node: document.getElementById('replica-3'), id: 3 },
+  ];
+
+  log.textContent = `[${syncMode?'SYNC':'ASYNC'}] Write v=${writeCount} → Primary ✓`;
+
+  replicas.forEach((r, i) => {
+    if (failedReplicas.has(r.id)) {
+      r.node.className = 'repl-node replica';
+      r.el.textContent = `FAILED | lagging`;
+      return;
+    }
+    r.node.className = 'repl-node syncing';
+    setTimeout(() => {
+      if (!failedReplicas.has(r.id)) {
+        r.node.className = 'repl-node replica';
+        r.el.textContent = `v=${writeCount} | lag=${delays[i+1]}ms`;
+        log.textContent += `\n→ Replica-${r.id} synced (lag=${delays[i+1]}ms)`;
+      }
+    }, delays[i+1]);
+  });
+}
+
+function failReplica() {
+  const activeReplicas = [1,2,3].filter(id => !failedReplicas.has(id));
+  if (activeReplicas.length === 0) return;
+  const id = activeReplicas[Math.floor(Math.random() * activeReplicas.length)];
+  failedReplicas.add(id);
+  const node = document.getElementById(`replica-${id}`);
+  node.className = 'repl-node replica';
+  node.style.opacity = '0.4';
+  node.style.borderColor = 'var(--accent2)';
+  document.getElementById(`replica${id}-data`).textContent = 'FAILED | unreachable';
+  document.getElementById('repl-log').textContent = `⚡ Replica-${id} failed! ${3-failedReplicas.size} replicas remaining.`;
+}
+
+function resetReplica() {
+  failedReplicas.clear();
+  writeCount = 0;
+  [1,2,3].forEach(id => {
+    const node = document.getElementById(`replica-${id}`);
+    node.className = 'repl-node replica';
+    node.style.opacity = '';
+    node.style.borderColor = '';
+    document.getElementById(`replica${id}-data`).textContent = `v=0 | lag=0ms`;
+  });
+  document.getElementById('primary-data').textContent = 'v=0 | writes=0';
+  document.getElementById('repl-log').textContent = 'All replicas restored.';
+}
+
+// ==================== CONSISTENT HASHING ====================
+let hashNodes = [
+  { id: 'N1', angle: 0, color: '#00d4ff' },
+  { id: 'N2', angle: 72, color: '#ff6b35' },
+  { id: 'N3', angle: 144, color: '#7fff6b' },
+  { id: 'N4', angle: 216, color: '#c77dff' },
+  { id: 'N5', angle: 288, color: '#ffd600' },
+];
+let hashKeys = [10,45,80,110,160,200,250,310];
+
+function renderHash() {
+  const ring = document.getElementById('hashRing');
+  ring.innerHTML = '';
+  const r = 120;
+  const cx = 140, cy = 140;
+
+  hashNodes.forEach(n => {
+    const rad = (n.angle - 90) * Math.PI / 180;
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
+    const el = document.createElement('div');
+    el.className = 'hash-node';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.borderColor = n.color;
+    el.style.color = n.color;
+    el.textContent = n.id;
+    el.title = `Click to remove ${n.id}`;
+    el.onclick = () => removeHashNode(n.id);
+    ring.appendChild(el);
+  });
+
+  hashKeys.forEach((k, i) => {
+    const angle = k * (360 / 360);
+    const rad2 = (angle - 90) * Math.PI / 180;
+    const kr = r * 0.72;
+    const x = cx + kr * Math.cos(rad2);
+    const y = cy + kr * Math.sin(rad2);
+    const el = document.createElement('div');
+    el.className = 'hash-key';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.textContent = 'k' + (i+1);
+    const assignedNode = getHashNode(k);
+    el.title = `Key ${k} → ${assignedNode}`;
+    ring.appendChild(el);
+  });
+}
+
+function getHashNode(key) {
+  if (hashNodes.length === 0) return 'none';
+  const sorted = [...hashNodes].sort((a,b) => a.angle - b.angle);
+  for (const n of sorted) {
+    if (key <= n.angle * (360/360) * 1) return n.id;
+  }
+  return sorted[0].id;
+}
+
+function removeHashNode(id) {
+  const prev = hashNodes.length;
+  hashNodes = hashNodes.filter(n => n.id !== id);
+  document.getElementById('hashLog').textContent = `Removed ${id}. ${prev-1} nodes remain. Keys remapped: ~${Math.ceil(hashKeys.length / prev)} (K/n remapped, not all ${hashKeys.length}).`;
+  renderHash();
+}
+
+function addHashNode() {
+  const names = ['N6','N7','N8','N9','N0'];
+  const colors = ['#00ffcc','#ff00aa','#ffaa00','#00aaff','#aaff00'];
+  const existing = hashNodes.map(n => n.id);
+  const name = names.find(n => !existing.includes(n)) || 'Nx';
+  const angle = Math.floor(Math.random() * 360);
+  hashNodes.push({ id: name, angle, color: colors[hashNodes.length % colors.length] });
+  document.getElementById('hashLog').textContent = `Added ${name} at position ${angle}°. Only ~K/n keys need remapping.`;
+  renderHash();
+}
+
+function addHashKey() {
+  hashKeys.push(Math.floor(Math.random() * 360));
+  renderHash();
+  document.getElementById('hashLog').textContent = `Added key k${hashKeys.length}. Assigned to ${getHashNode(hashKeys[hashKeys.length-1])}.`;
+}
+
+function resetHash() {
+  hashNodes = [
+    { id: 'N1', angle: 0, color: '#00d4ff' },
+    { id: 'N2', angle: 72, color: '#ff6b35' },
+    { id: 'N3', angle: 144, color: '#7fff6b' },
+    { id: 'N4', angle: 216, color: '#c77dff' },
+    { id: 'N5', angle: 288, color: '#ffd600' },
+  ];
+  hashKeys = [10,45,80,110,160,200,250,310];
+  renderHash();
+  document.getElementById('hashLog').textContent = 'Reset to 5 nodes, 8 keys.';
+}
+
+// ==================== MESSAGE QUEUE ====================
+let queueMessages = [];
+let msgCounter = 0;
+let autoProduceInterval = null;
+let processedCount = 0;
+
+function updateQueueStats() {
+  document.getElementById('queue-stats').textContent = `Queue depth: ${queueMessages.length} | Processed: ${processedCount}`;
+}
+
+function produceMsg() {
+  if (queueMessages.length >= 10) return;
+  msgCounter++;
+  queueMessages.push(msgCounter);
+  renderQueue();
+  updateQueueStats();
+}
+
+function consumeMsg() {
+  if (queueMessages.length === 0) return;
+  queueMessages.shift();
+  processedCount++;
+  renderQueue();
+  updateQueueStats();
+}
+
+function renderQueue() {
+  const ch = document.getElementById('queueChannel');
+  ch.innerHTML = '';
+  queueMessages.slice(0,8).forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'queue-msg';
+    el.textContent = 'm' + m;
+    ch.appendChild(el);
+  });
+}
+
+function autoProduceStart() {
+  if (autoProduceInterval) return;
+  autoProduceInterval = setInterval(produceMsg, 600);
+}
+
+function autoProduceStop() {
+  clearInterval(autoProduceInterval);
+  autoProduceInterval = null;
+}
+
+function autoConsume() {
+  setInterval(consumeMsg, 800);
+}
+
+// ==================== DISTRIBUTED TRACING ====================
+function runTrace() {
+  const tl = document.getElementById('traceTimeline');
+  tl.innerHTML = '';
+  const services = [
+    { name: 'API Gateway', start: 0, dur: 280, color: '#00d4ff' },
+    { name: 'Auth Service', start: 10, dur: 30, color: '#c77dff' },
+    { name: 'User Service', start: 45, dur: 80, color: '#ff6b35' },
+    { name: 'Product DB', start: 60, dur: 60, color: '#7fff6b' },
+    { name: 'Cache (Redis)', start: 48, dur: 5, color: '#ffd600' },
+    { name: 'Event Queue', start: 200, dur: 15, color: '#ff6b35' },
+  ];
+  const total = 300;
+
+  services.forEach((s, i) => {
+    const span = document.createElement('div');
+    span.className = 'trace-span';
+    span.style.opacity = '0';
+    span.innerHTML = `
+      <div class="trace-service">${s.name}</div>
+      <div class="trace-bar-container">
+        <div class="trace-bar" style="left:${(s.start/total)*100}%;width:0%;background:${s.color}20;border:1px solid ${s.color};">
+          <span style="color:${s.color};font-size:9px;">${s.name.split(' ')[0]}</span>
+        </div>
+      </div>
+      <div class="trace-duration">${s.dur}ms</div>
+    `;
+    tl.appendChild(span);
+
+    setTimeout(() => {
+      span.style.opacity = '1';
+      span.style.transition = 'opacity 0.3s';
+      const bar = span.querySelector('.trace-bar');
+      setTimeout(() => {
+        bar.style.width = (s.dur/total*100) + '%';
+      }, 50);
+    }, i * 120);
+  });
+}
+
+// ==================== QUIZ ====================
+const questions = [
+  { q: "The CAP theorem states that a distributed system can guarantee at most how many of the three properties simultaneously?", opts: ["All three: C, A, and P", "Two of three: C, A, or P", "Only one property", "It depends on network conditions"], correct: 1, explanation: "CAP theorem (Brewer, 2000): any distributed data store can guarantee at most two of Consistency, Availability, and Partition Tolerance simultaneously." },
+  { q: "In the Raft consensus algorithm, what is the minimum number of nodes needed to tolerate 2 failures?", opts: ["3 nodes", "4 nodes", "5 nodes", "7 nodes"], correct: 2, explanation: "Raft requires 2f+1 nodes to tolerate f failures. For f=2: 2(2)+1 = 5 nodes. A majority quorum (3/5) can still be reached." },
+  { q: "Which data structure do Cassandra, HBase, and RocksDB use internally for write optimization?", opts: ["B+ Tree", "Red-Black Tree", "LSM Tree", "Skip List"], correct: 2, explanation: "Log-Structured Merge Tree (LSM) optimizes writes via sequential I/O: writes go to MemTable, flushed to SSTables. B+ Trees are used by relational databases like PostgreSQL/MySQL." },
+  { q: "What does 'eventual consistency' guarantee?", opts: ["Writes are immediately visible to all nodes", "All nodes will agree on a value if no new updates occur", "Reads always return the latest write", "No data is ever lost"], correct: 1, explanation: "Eventual consistency guarantees convergence: if no new updates are made to a given data item, eventually all accesses to that item will return the last updated value. No timing guarantee." },
+  { q: "The FLP Impossibility result proves that in an asynchronous distributed system:", opts: ["Consensus is always achievable with enough nodes", "No deterministic algorithm can solve consensus if even one node can crash", "Byzantine failures are impossible to handle", "Network partitions always lead to data loss"], correct: 1, explanation: "Fischer, Lynch, Paterson (1985): No deterministic consensus protocol can guarantee termination in an asynchronous system if even one process may crash. Workarounds: timeouts, randomization, failure detectors." },
+  { q: "Consistent hashing is primarily used to:", opts: ["Hash passwords securely", "Minimize key remapping when nodes are added/removed", "Ensure all reads return consistent data", "Detect Byzantine failures"], correct: 1, explanation: "Consistent hashing places nodes and keys on a ring. When a node joins or leaves, only K/n keys need remapping (K=keys, n=nodes) instead of rehashing everything. Used by Cassandra, DynamoDB, Memcached." },
+  { q: "What is a Bloom filter?", opts: ["A cache eviction policy", "A space-efficient probabilistic set membership structure", "A consensus algorithm for distributed systems", "A network flow control mechanism"], correct: 1, explanation: "Bloom filters answer 'is this element in the set?' with no false negatives but possible false positives. Used in LSM trees (RocksDB, Cassandra) to avoid expensive disk reads for non-existent keys." },
+  { q: "In PBFT (Practical Byzantine Fault Tolerance), how many nodes are needed to tolerate f Byzantine failures?", opts: ["f+1", "2f+1", "3f+1", "4f+1"], correct: 2, explanation: "PBFT requires 3f+1 nodes to tolerate f Byzantine (arbitrary/malicious) failures. This is higher than crash-fault-tolerant protocols (2f+1) because Byzantine nodes can send conflicting messages." },
+  { q: "The Two Generals Problem demonstrates:", opts: ["How to achieve consensus in O(log n) messages", "That it's impossible to guarantee consensus over an unreliable channel", "The efficiency of gossip protocols", "How vector clocks track causality"], correct: 1, explanation: "The Two Generals Problem proves no finite protocol can guarantee two parties coordinate over an unreliable channel. Any acknowledgment of an acknowledgment creates an infinite regress. TCP's handshake works around this practically." },
+  { q: "What is the purpose of a Write-Ahead Log (WAL)?", opts: ["Speed up reads by caching data", "Enable crash recovery by logging changes before applying them", "Compress data before writing to disk", "Implement MVCC for concurrent transactions"], correct: 1, explanation: "WAL writes changes to an append-only log BEFORE applying them. On crash, replay the WAL to recover state. Sequential log writes are much faster than random data writes. Used by PostgreSQL, MySQL, etcd." },
+  { q: "Which consistency level in Cassandra (N=5, W=3, R=3) guarantees strong consistency?", opts: ["W + R > N (3+3=6 > 5) — yes, strongly consistent", "W=3 alone guarantees it", "R=3 alone guarantees it", "Strong consistency is impossible in Cassandra"], correct: 0, explanation: "Quorum consistency: if W + R > N, reads and writes share at least one node — guaranteeing the latest write is visible. With N=5, W=3, R=3: overlap of at least 1 node. This is Cassandra's QUORUM level." },
+  { q: "What is a 'split brain' scenario?", opts: ["When a node runs out of memory", "When network partition causes multiple nodes to believe they are the primary", "When consensus takes too many rounds", "When a cache becomes stale"], correct: 1, explanation: "Split brain: a network partition causes multiple nodes to each believe they're the leader/primary. Both accept writes, creating divergent data. Prevention: quorum-based election, STONITH, fencing tokens, generation numbers." },
+  { q: "CRDTs (Conflict-free Replicated Data Types) solve:", opts: ["Byzantine failures in consensus algorithms", "Merge conflicts in concurrent distributed updates without coordination", "Leader election in partitioned networks", "Clock synchronization across datacenters"], correct: 1, explanation: "CRDTs use mathematical properties (commutativity, associativity, idempotency) to guarantee concurrent updates can always be merged deterministically. No locks, no coordination needed. Used by Redis, Riak, Figma." },
+  { q: "The Saga pattern is used to:", opts: ["Elect a leader in a distributed system", "Implement distributed transactions without distributed locking", "Replicate data across multiple datacenters", "Detect and handle Byzantine failures"], correct: 1, explanation: "Saga decomposes long-lived transactions into local transactions with compensating transactions for rollback. Each step publishes events triggering the next. Achieves eventual consistency without distributed locks." },
+  { q: "Gossip protocol disseminates information to N nodes in approximately:", opts: ["O(1) rounds", "O(log N) rounds", "O(N) rounds", "O(N²) rounds"], correct: 1, explanation: "Gossip spreads information epidemically — each round roughly doubles the number of informed nodes. After O(log N) rounds, all nodes are informed. Highly resilient to failures. Used by Cassandra, Consul SWIM protocol." }
+];
+
+let currentQ = 0, score = 0, answered = false, streak = 0;
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  document.getElementById('quizQ').textContent = q.q;
+  document.getElementById('quizProgress').textContent = `Question ${currentQ+1} of ${questions.length}`;
+  document.getElementById('quizScore').textContent = `${score}/${questions.length}`;
+  document.getElementById('quizFeedback').style.display = 'none';
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('restartBtn').style.display = 'none';
+  document.getElementById('streakDisplay').textContent = streak > 2 ? `🔥 ${streak} streak` : '';
+  answered = false;
+
+  const opts = document.getElementById('quizOpts');
+  opts.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const el = document.createElement('div');
+    el.className = 'quiz-opt';
+    el.textContent = opt;
+    el.onclick = () => answerQ(i, el);
+    opts.appendChild(el);
+  });
+}
+
+function answerQ(i, el) {
+  if (answered) return;
+  answered = true;
+  const q = questions[currentQ];
+  const allOpts = document.querySelectorAll('.quiz-opt');
+  allOpts[q.correct].classList.add('correct');
+  if (i === q.correct) {
+    score++;
+    streak++;
+  } else {
+    el.classList.add('wrong');
+    streak = 0;
+  }
+  document.getElementById('quizScore').textContent = `${score}/${questions.length}`;
+  const fb = document.getElementById('quizFeedback');
+  fb.style.display = 'block';
+  fb.innerHTML = `<span style="color:${i===q.correct?'var(--accent3)':'var(--accent2)'}">${i===q.correct?'✓ Correct!':'✗ Incorrect.'}</span> ${q.explanation}`;
+  document.getElementById('nextBtn').style.display = 'inline-block';
+  if (currentQ === questions.length - 1) {
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('restartBtn').style.display = 'inline-block';
+  }
+  document.getElementById('streakDisplay').textContent = streak > 2 ? `🔥 ${streak} streak` : '';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ < questions.length) renderQuestion();
+}
+
+function restartQuiz() {
+  currentQ = 0; score = 0; streak = 0;
+  renderQuestion();
+}
+
+// ==================== SEARCH ====================
+const searchData = [
+  { title: 'CAP Theorem', section: 'Fundamentals', desc: 'Consistency, Availability, Partition Tolerance trade-offs', anchor: 'fundamentals' },
+  { title: 'Raft Consensus', section: 'Consensus', desc: 'Leader election and log replication algorithm', anchor: 'consensus' },
+  { title: 'Paxos Algorithm', section: 'Consensus', desc: 'Original consensus protocol by Leslie Lamport', anchor: 'consensus' },
+  { title: 'Consistent Hashing', section: 'Scalability', desc: 'Minimize remapping when nodes join or leave', anchor: 'scalability' },
+  { title: 'Vector Clocks', section: 'Fundamentals', desc: 'Track causality without a global clock', anchor: 'fundamentals' },
+  { title: 'LSM Tree', section: 'Storage', desc: 'Write-optimized storage structure for Cassandra, RocksDB', anchor: 'storage' },
+  { title: 'Eventual Consistency', section: 'Consistency', desc: 'Weak consistency model used by DynamoDB, Cassandra', anchor: 'consistency' },
+  { title: 'Linearizability', section: 'Consistency', desc: 'Strongest consistency model, global total order', anchor: 'consistency' },
+  { title: 'Gossip Protocol', section: 'Fundamentals', desc: 'Epidemic information spreading in O(log N) rounds', anchor: 'fundamentals' },
+  { title: 'CRDT', section: 'Fundamentals', desc: 'Conflict-free Replicated Data Types for eventual consistency', anchor: 'fundamentals' },
+  { title: 'Split Brain', section: 'Failures', desc: 'Multiple leaders due to network partition', anchor: 'failures' },
+  { title: 'Two-Phase Commit', section: 'Consensus', desc: 'Atomic distributed transaction protocol', anchor: 'consensus' },
+  { title: 'Write-Ahead Log', section: 'Storage', desc: 'Log changes before applying for crash recovery', anchor: 'storage' },
+  { title: 'Saga Pattern', section: 'Storage', desc: 'Distributed transactions without distributed locks', anchor: 'storage' },
+  { title: 'Bloom Filter', section: 'Storage', desc: 'Probabilistic set membership, no false negatives', anchor: 'storage' },
+  { title: 'Cascading Failures', section: 'Failures', desc: 'Failure propagation through dependent services', anchor: 'failures' },
+  { title: 'PBFT', section: 'Consensus', desc: 'Byzantine fault tolerant consensus protocol', anchor: 'consensus' },
+  { title: 'Merkle Tree', section: 'Storage', desc: 'Hash tree for data integrity verification', anchor: 'storage' },
+  { title: 'Kafka', section: 'Messaging', desc: 'Distributed log-based message streaming', anchor: 'messaging' },
+  { title: 'FLP Impossibility', section: 'Fundamentals', desc: 'Consensus impossible in async systems with crashes', anchor: 'fundamentals' },
+];
+
+function doSearch(e) {
+  if (e.key && e.key !== 'Enter') {
+    const term = document.getElementById('searchInput').value.toLowerCase();
+    if (term.length < 2) { document.getElementById('searchResults').classList.remove('visible'); return; }
+    renderSearch(term);
+    return;
+  }
+  const term = document.getElementById('searchInput').value.toLowerCase();
+  if (term.length < 2) return;
+  renderSearch(term);
+}
+
+function renderSearch(term) {
+  const results = searchData.filter(d =>
+    d.title.toLowerCase().includes(term) || d.desc.toLowerCase().includes(term) || d.section.toLowerCase().includes(term)
+  );
+  const el = document.getElementById('searchResults');
+  if (results.length === 0) { el.classList.remove('visible'); return; }
+  el.innerHTML = results.slice(0,6).map(r => `
+    <div class="result-item" onclick="location.href='#${r.anchor}'">
+      <div class="result-section">${r.section}</div>
+      <div>
+        <div class="result-title">${r.title}</div>
+        <div class="result-desc">${r.desc}</div>
+      </div>
+    </div>
+  `).join('');
+  el.classList.add('visible');
+}
+
+// ==================== MODAL ====================
+function openModal(title, body) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ==================== NETWORK CANVAS ====================
+const canvas = document.getElementById('network-canvas');
+const ctx = canvas.getContext('2d');
+let nodes = [], animFrame;
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+
+function initNodes() {
+  nodes = [];
+  for (let i = 0; i < 40; i++) {
+    nodes.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 3 + 1.5,
+    });
+  }
+}
+
+function drawNetwork() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  nodes.forEach(n => {
+    n.x += n.vx; n.y += n.vy;
+    if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+    if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+  });
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i+1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 150) {
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.strokeStyle = `rgba(0,212,255,${0.12 * (1 - d/150)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,212,255,0.5)';
+    ctx.fill();
+  });
+
+  animFrame = requestAnimationFrame(drawNetwork);
+}
+
+// ==================== CURSOR ====================
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 6 + 'px';
+  cursor.style.top = my - 6 + 'px';
+});
+
+function animCursor() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx - 18 + 'px';
+  ring.style.top = ry - 18 + 'px';
+  requestAnimationFrame(animCursor);
+}
+
+// ==================== PROGRESS BAR ====================
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progress').style.width = p + '%';
+});
+
+// ==================== COUNTERS ====================
+function animateCounter(id, target, duration) {
+  const el = document.getElementById(id);
+  let start = 0;
+  const step = target / (duration / 16);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.floor(start);
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+
+// ==================== FADE IN ====================
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ==================== INIT ====================
+window.addEventListener('load', () => {
+  resizeCanvas();
+  initNodes();
+  drawNetwork();
+  animCursor();
+  renderQuestion();
+  renderHash();
+
+  setTimeout(() => {
+    animateCounter('counter1', 42, 1500);
+    animateCounter('counter2', 7, 1200);
+    animateCounter('counter3', 18, 1400);
+    animateCounter('counter4', 15, 1000);
+  }, 400);
+});
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  initNodes();
+});
+</script>
+</body>
+</html>
