@@ -40,11 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
         appendMessage('user', text);
         aiChatInput.value = '';
         
-        // Mock bot response
+        // Show typing indicator
+        const typingDiv = showTypingIndicator();
+        
         setTimeout(() => {
+            typingDiv.remove();
             const response = getBotResponse(text);
             appendMessage('bot', response);
-        }, 600);
+        }, 1000);
     };
 
     sendChatBtn?.addEventListener('click', sendMessage);
@@ -52,12 +55,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') sendMessage();
     });
 
-    function appendMessage(sender, text) {
+    function appendMessage(sender, content) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `ai-message ${sender}`;
-        msgDiv.textContent = text;
+        
+        if (typeof content === 'string') {
+            msgDiv.innerHTML = content.replace(/\n/g, '<br>');
+        } else {
+            msgDiv.appendChild(content);
+        }
+        
         chatBody?.appendChild(msgDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'ai-message bot typing';
+        typingDiv.innerHTML = '<span></span><span></span><span></span>';
+        chatBody?.appendChild(typingDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return typingDiv;
     }
 
     function renderSuggestions() {
@@ -77,18 +95,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getBotResponse(query) {
         const q = query.toLowerCase();
-        if (q.includes('scale') || q.includes('scaling')) {
-            return "To scale, consider horizontal scaling (adding nodes), load balancing, and partitioning your database (sharding). Which area would you like to dive into?";
+        
+        // 1. Search in QUESTIONS
+        const matchedQuestion = QUESTIONS.find(item => 
+            item.title.toLowerCase().includes(q) || 
+            item.tags.some(t => t.toLowerCase().includes(q)) ||
+            (item.company && item.company.toLowerCase().includes(q))
+        );
+
+        if (matchedQuestion) {
+            return `I found a relevant interview question: <strong>${matchedQuestion.icon} ${matchedQuestion.title}</strong>.<br><br>${matchedQuestion.desc}<br><br><button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="window.app.openQuestion(${matchedQuestion.id}); document.getElementById('aiChatWindow').classList.add('hidden');">Open Question Details</button>`;
         }
+
+        // 2. Search in CONCEPTS
+        const matchedConcept = CONCEPTS.find(item => 
+            item.title.toLowerCase().includes(q) || 
+            item.tags.some(t => t.toLowerCase().includes(q)) ||
+            item.desc.toLowerCase().includes(q)
+        );
+
+        if (matchedConcept) {
+            return `<strong>${matchedConcept.icon} ${matchedConcept.title}</strong>: ${matchedConcept.desc}<br><br><button class="btn btn-sm btn-ghost" style="margin-top:10px" onclick="window.app.navigateTo('concepts'); document.getElementById('aiChatWindow').classList.add('hidden');">View All Concepts</button>`;
+        }
+
+        // 3. Search in GUIDES_DATA
+        const matchedGuide = GUIDES_DATA.find(item => 
+            item.title.toLowerCase().includes(q) || 
+            item.tags.some(t => t.toLowerCase().includes(q)) ||
+            item.desc.toLowerCase().includes(q)
+        );
+
+        if (matchedGuide) {
+            return `I recommend checking out this deep dive: <strong>${matchedGuide.icon} ${matchedGuide.title}</strong>.<br><br>${matchedGuide.desc}<br><br><a href="${matchedGuide.url}" target="_blank" class="btn btn-sm btn-primary" style="margin-top:10px; text-decoration:none;">Read Guide ↗</a>`;
+        }
+
+        // Specific high-signal triggers
         if (q.includes('cap')) {
-            return "The CAP theorem states that a distributed system can only provide two out of three: Consistency, Availability, and Partition Tolerance. In a network partition, you must choose between C and A.";
+            return "The CAP theorem states that a distributed system can only provide two out of three: Consistency, Availability, and Partition Tolerance. In a network partition, you must choose between C and A. Check the <strong>Distributed Systems</strong> section for more!";
         }
-        if (q.includes('sql') || q.includes('nosql')) {
-            return "SQL is great for relational data and ACID compliance. NoSQL excels at massive writes and flexible schemas. What's your specific use case?";
+        
+        if (q.includes('hello') || q.includes('hi ') || q.includes('hey')) {
+            return "Hello! I'm your System Design Assistant. You can ask me things like 'How to scale Twitter?', 'Explain Load Balancing', or 'Show me the Kubernetes guide'. What are we building today?";
         }
-        if (q.includes('kafka')) {
-            return "Kafka uses a distributed append-only log. It scales by partitioning topics across multiple brokers and allows consumers to read at their own pace.";
-        }
-        return "That's a great question! I'm still learning, but you can find more about that in our 'Deep Dives & Guides' section. Would you like me to summarize a specific guide?";
+
+        return "That's a great topic! I don't have a specific result for that yet, but you can find more in our <strong>Deep Dives</strong> or <strong>Concepts</strong> sections. Would you like me to show you the top interview questions?";
     }
 });
+
