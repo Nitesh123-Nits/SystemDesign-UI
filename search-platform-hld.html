@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Platform — System Design HLD</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --accent5: #ef4444;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --glow: rgba(0,229,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    z-index: 100;
+    overflow-y: auto;
+    padding: 0 0 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #00e5ff22, #7c3aed22);
+    border: 1px solid #00e5ff33;
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .logo-text { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+
+  .sidebar-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .sidebar-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: 'Space Mono', monospace; }
+
+  .nav-section { margin: 4px 12px 0; }
+  .nav-label { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; padding: 12px 8px 6px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    font-weight: 400;
+    margin-bottom: 1px;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: linear-gradient(135deg, #00e5ff18, #7c3aed18); color: var(--accent); border: 1px solid #00e5ff22; }
+  .nav-item .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+  .nav-num { margin-left: auto; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-muted); }
+
+  /* MAIN */
+  .main {
+    margin-left: 260px;
+    padding: 40px 48px;
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+  }
+
+  /* SECTION */
+  .section { display: none; animation: fadeIn 0.4s ease; }
+  .section.active { display: block; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* PAGE HEADER */
+  .page-header {
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  .page-title span { color: var(--accent); }
+
+  .page-desc { font-size: 15px; color: var(--text-dim); max-width: 680px; line-height: 1.7; font-weight: 300; }
+
+  /* CARDS GRID */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .cards-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .cards-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    transition: all 0.25s;
+  }
+
+  .card:hover { border-color: #2a2a3e; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+
+  .card-accent { border-left: 3px solid var(--accent); }
+  .card-accent2 { border-left: 3px solid var(--accent2); }
+  .card-accent3 { border-left: 3px solid var(--accent3); }
+  .card-accent4 { border-left: 3px solid var(--accent4); }
+  .card-accent5 { border-left: 3px solid var(--accent5); }
+
+  .card-icon { font-size: 22px; margin-bottom: 14px; }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .card-body { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* STAT CARDS */
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+  }
+
+  .stat-num { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+  .stat-num.purple { color: var(--accent2); }
+  .stat-num.amber { color: var(--accent3); }
+  .stat-num.green { color: var(--accent4); }
+  .stat-num.red { color: var(--accent5); }
+  .stat-label { font-size: 12px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+  .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+
+  /* TAGS */
+  .tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: 'Space Mono', monospace; margin: 3px; }
+  .tag-blue { background: #00e5ff18; color: var(--accent); border: 1px solid #00e5ff33; }
+  .tag-purple { background: #7c3aed18; color: #a78bfa; border: 1px solid #7c3aed33; }
+  .tag-amber { background: #f59e0b18; color: #fbbf24; border: 1px solid #f59e0b33; }
+  .tag-green { background: #10b98118; color: #34d399; border: 1px solid #10b98133; }
+  .tag-red { background: #ef444418; color: #f87171; border: 1px solid #ef444433; }
+
+  /* FLOW DIAGRAM */
+  .flow-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+
+  .flow-row { display: flex; align-items: center; gap: 0; margin-bottom: 16px; flex-wrap: nowrap; }
+  .flow-node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 110px;
+    flex-shrink: 0;
+  }
+
+  .flow-node.highlight { border-color: #00e5ff55; background: #00e5ff0a; }
+  .flow-node.highlight2 { border-color: #7c3aed55; background: #7c3aed0a; }
+  .flow-node.highlight3 { border-color: #f59e0b55; background: #f59e0b0a; }
+  .flow-node.highlight4 { border-color: #10b98155; background: #10b9810a; }
+  .flow-node.highlight5 { border-color: #ef444455; background: #ef44440a; }
+
+  .flow-node-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .flow-node-sub { font-size: 10px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+
+  .flow-arrow {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--text-muted);
+    font-size: 18px;
+  }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .data-table th {
+    background: var(--surface2);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface2); color: var(--text); }
+  .data-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+
+  /* LIST */
+  .bullet-list { list-style: none; }
+  .bullet-list li {
+    padding: 8px 0 8px 22px;
+    position: relative;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bullet-list li:last-child { border-bottom: none; }
+
+  .bullet-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 10px;
+    top: 9px;
+  }
+
+  .bullet-list li strong { color: var(--text); }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #0d0d15;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.8;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+
+  .code-block .kw { color: var(--accent2); }
+  .code-block .str { color: var(--accent4); }
+  .code-block .num { color: var(--accent3); }
+  .code-block .cm { color: var(--text-muted); font-style: italic; }
+  .code-block .fn { color: var(--accent); }
+
+  /* Q&A */
+  .qa-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .qa-question {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: background 0.2s;
+  }
+
+  .qa-question:hover { background: var(--surface2); }
+  .qa-q-badge { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent); background: #00e5ff18; border: 1px solid #00e5ff33; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+  .qa-chevron { margin-left: auto; color: var(--text-muted); transition: transform 0.2s; font-size: 12px; }
+  .qa-item.open .qa-chevron { transform: rotate(90deg); }
+
+  .qa-answer {
+    display: none;
+    padding: 0 20px 16px 20px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  .qa-item.open .qa-answer { display: block; animation: fadeIn 0.3s ease; }
+
+  /* ARCH DIAGRAM */
+  .arch-layer {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .arch-layer-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+
+  .arch-components { display: flex; gap: 8px; flex-wrap: wrap; }
+  .arch-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .arch-chip-blue { background: #00e5ff15; border: 1px solid #00e5ff33; color: var(--accent); }
+  .arch-chip-purple { background: #7c3aed15; border: 1px solid #7c3aed33; color: #a78bfa; }
+  .arch-chip-amber { background: #f59e0b15; border: 1px solid #f59e0b33; color: #fbbf24; }
+  .arch-chip-green { background: #10b98115; border: 1px solid #10b98133; color: #34d399; }
+  .arch-chip-red { background: #ef444415; border: 1px solid #ef444433; color: #f87171; }
+  .arch-chip-gray { background: #ffffff08; border: 1px solid #ffffff15; color: var(--text-dim); }
+
+  .arch-divider {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 18px;
+    margin: 4px 0;
+  }
+
+  /* TIMELINE */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before { content: ''; position: absolute; left: 5px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+
+  .timeline-item { position: relative; padding-bottom: 24px; }
+  .timeline-dot {
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .timeline-dot.purple { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+  .timeline-dot.amber { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+
+  .timeline-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .timeline-body { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+
+  /* METRIC BAR */
+  .metric-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .metric-name { font-size: 12px; color: var(--text-dim); min-width: 160px; font-family: 'Space Mono', monospace; }
+  .metric-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .metric-bar { height: 100%; border-radius: 4px; }
+  .metric-val { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-muted); min-width: 60px; text-align: right; }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: linear-gradient(135deg, #00e5ff08, #7c3aed08);
+    border: 1px solid #00e5ff22;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+
+  .highlight-box-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .highlight-box-body { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .main { margin-left: 200px; padding: 28px 24px; }
+    .cards-grid-3 { grid-template-columns: 1fr; }
+    .cards-grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .full-width { grid-column: 1 / -1; }
+
+  /* HLD DIAGRAM */
+  .hld-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+
+  .hld-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .hld-box {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 10px 18px;
+    text-align: center;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    border: 1px solid var(--border);
+  }
+
+  .hld-box.client { border-color: #00e5ff55; color: var(--accent); background: #00e5ff08; }
+  .hld-box.lb { border-color: #7c3aed55; color: #a78bfa; background: #7c3aed08; }
+  .hld-box.service { border-color: #f59e0b55; color: #fbbf24; background: #f59e0b08; }
+  .hld-box.storage { border-color: #10b98155; color: #34d399; background: #10b98108; }
+  .hld-box.queue { border-color: #ef444455; color: #f87171; background: #ef444408; }
+  .hld-box.cache { border-color: #8b5cf655; color: #c4b5fd; background: #8b5cf608; }
+
+  .hld-arrow-down { text-align: center; color: var(--text-muted); font-size: 20px; margin: 4px 0; }
+  .hld-label { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--text-muted); text-align: center; margin-top: 4px; letter-spacing: 1px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+  @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-dot"></div>
+      <span class="logo-text">HLD</span>
+    </div>
+    <div class="sidebar-title">Search Platform<br>System Design</div>
+    <div class="sidebar-sub">// like Google Search</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Framework</div>
+    <div class="nav-item active" data-sec="overview" onclick="nav(this,'overview')">
+      <span class="nav-icon">🗺</span> Overview & Framework
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Requirements</div>
+    <div class="nav-item" data-sec="functional" onclick="nav(this,'functional')">
+      <span class="nav-icon">⚙️</span> Functional Req.
+    </div>
+    <div class="nav-item" data-sec="nonfunctional" onclick="nav(this,'nonfunctional')">
+      <span class="nav-icon">🛡</span> Non-Functional Req.
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Estimation</div>
+    <div class="nav-item" data-sec="capacity" onclick="nav(this,'capacity')">
+      <span class="nav-icon">📊</span> Capacity Estimation
+    </div>
+    <div class="nav-item" data-sec="planning" onclick="nav(this,'planning')">
+      <span class="nav-icon">🗓</span> Capacity Planning
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Architecture</div>
+    <div class="nav-item" data-sec="hld" onclick="nav(this,'hld')">
+      <span class="nav-icon">🏗</span> High-Level Design
+    </div>
+    <div class="nav-item" data-sec="components" onclick="nav(this,'components')">
+      <span class="nav-icon">🧩</span> Core Components
+    </div>
+    <div class="nav-item" data-sec="dataflow" onclick="nav(this,'dataflow')">
+      <span class="nav-icon">🔄</span> Data Flow
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Deep Dives</div>
+    <div class="nav-item" data-sec="indexing" onclick="nav(this,'indexing')">
+      <span class="nav-icon">📑</span> Crawling & Indexing
+    </div>
+    <div class="nav-item" data-sec="ranking" onclick="nav(this,'ranking')">
+      <span class="nav-icon">⭐</span> Ranking & Relevance
+    </div>
+    <div class="nav-item" data-sec="querypipeline" onclick="nav(this,'querypipeline')">
+      <span class="nav-icon">🔍</span> Query Pipeline
+    </div>
+    <div class="nav-item" data-sec="storage" onclick="nav(this,'storage')">
+      <span class="nav-icon">🗄</span> Storage & Index
+    </div>
+    <div class="nav-item" data-sec="caching" onclick="nav(this,'caching')">
+      <span class="nav-icon">⚡</span> Caching Strategy
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Interview</div>
+    <div class="nav-item" data-sec="counter" onclick="nav(this,'counter')">
+      <span class="nav-icon">💬</span> Counter Questions
+    </div>
+    <div class="nav-item" data-sec="concepts" onclick="nav(this,'concepts')">
+      <span class="nav-icon">🧠</span> Key Concepts
+    </div>
+    <div class="nav-item" data-sec="tradeoffs" onclick="nav(this,'tradeoffs')">
+      <span class="nav-icon">⚖️</span> Trade-offs
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ====== OVERVIEW ====== -->
+  <section id="overview" class="section active">
+    <div class="page-header">
+      <div class="page-eyebrow">// 01 — FRAMEWORK</div>
+      <div class="page-title">Search Platform<br><span>System Design</span></div>
+      <div class="page-desc">A comprehensive high-level design for a Google-scale search platform — covering web crawling, inverted indexing, query processing, ranking, and serving billions of queries per day.</div>
+    </div>
+
+    <div class="section-label">Interview Framework</div>
+    <div class="cards-grid-3">
+      <div class="card card-accent">
+        <div class="card-icon">1️⃣</div>
+        <div class="card-title">Clarify Requirements</div>
+        <div class="card-body">Ask about scope (web/product/internal), scale, latency SLOs, ranking signals, freshness, personalization, and supported query types.</div>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-icon">2️⃣</div>
+        <div class="card-title">Capacity Estimation</div>
+        <div class="card-body">Estimate QPS, corpus size, storage, bandwidth, indexing throughput, and memory requirements. Back-of-envelope math impresses.</div>
+      </div>
+      <div class="card card-accent3">
+        <div class="card-icon">3️⃣</div>
+        <div class="card-title">High-Level Design</div>
+        <div class="card-body">Draw the crawler → indexer → serving pipeline. Identify key components: URL Frontier, Inverted Index, Query Processor, Ranker, Serving Layer.</div>
+      </div>
+      <div class="card card-accent4">
+        <div class="card-icon">4️⃣</div>
+        <div class="card-title">Deep Dive</div>
+        <div class="card-body">Go deep on inverted index structure, sharding strategies, distributed ranking, caching layers, and freshness vs. coverage trade-offs.</div>
+      </div>
+      <div class="card card-accent5">
+        <div class="card-icon">5️⃣</div>
+        <div class="card-title">Address Bottlenecks</div>
+        <div class="card-body">Handle hot shards, tail latency, indexing lag, duplicate content, spam detection, and graceful degradation under load.</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #8b5cf6;">
+        <div class="card-icon">6️⃣</div>
+        <div class="card-title">Trade-offs & Evolution</div>
+        <div class="card-body">Discuss freshness vs. coverage, precision vs. recall, cost vs. latency, and how the system evolves from MVP to global scale.</div>
+      </div>
+    </div>
+
+    <div class="section-label">System Scope</div>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title">📥 Ingestion Layer</div>
+        <div class="card-body">Web crawler discovers and fetches billions of URLs. Robots.txt compliance, politeness throttling, duplicate detection via SimHash.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-blue">Crawler</span>
+          <span class="tag tag-blue">URL Frontier</span>
+          <span class="tag tag-blue">DNS Resolver</span>
+          <span class="tag tag-blue">Content Store</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔧 Processing Layer</div>
+        <div class="card-body">Document parsing, tokenization, stemming, stop-word removal, link graph extraction, anchor text aggregation, PageRank computation.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-purple">Tokenizer</span>
+          <span class="tag tag-purple">Parser</span>
+          <span class="tag tag-purple">Link Extractor</span>
+          <span class="tag tag-purple">PageRank</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🗄 Index Layer</div>
+        <div class="card-body">Distributed inverted index maps terms → (docID, position, frequency). Forward index for snippet generation. DocInfo store for metadata.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-amber">Inverted Index</span>
+          <span class="tag tag-amber">Forward Index</span>
+          <span class="tag tag-amber">DocStore</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔍 Query Layer</div>
+        <div class="card-body">Query parsing, spelling correction, intent classification, Boolean retrieval, TF-IDF + BM25 + ML ranking, result merging, snippet generation.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-green">Query Parser</span>
+          <span class="tag tag-green">Ranker</span>
+          <span class="tag tag-green">Blender</span>
+          <span class="tag tag-green">Snippeter</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🚀 Serving Layer</div>
+        <div class="card-body">Low-latency result serving with CDN, result cache, A/B testing framework, ads mixing, and personalization signals blending.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-red">CDN</span>
+          <span class="tag tag-red">Result Cache</span>
+          <span class="tag tag-red">A/B Layer</span>
+          <span class="tag tag-red">Ads Mixer</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📡 Data Services</div>
+        <div class="card-body">Knowledge Graph, Autocomplete service, Spell checker, Query understanding (NLP), SafeSearch classifier, Freshness pipeline.</div>
+        <div style="margin-top: 12px;">
+          <span class="tag tag-blue">KG</span>
+          <span class="tag tag-blue">Autocomplete</span>
+          <span class="tag tag-blue">NLP</span>
+          <span class="tag tag-blue">SafeSearch</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FUNCTIONAL ====== -->
+  <section id="functional" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 02 — REQUIREMENTS</div>
+      <div class="page-title">Functional<br><span>Requirements</span></div>
+      <div class="page-desc">What the system must do — the core features and capabilities from the user, operator, and system perspective.</div>
+    </div>
+
+    <div class="section-label">Core User Features</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">🔍 Full-Text Search</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Return ranked results for keyword queries</li>
+          <li>Support boolean operators: AND, OR, NOT, quotes for exact match</li>
+          <li>Support field-restricted search: <strong>site:</strong>, <strong>filetype:</strong>, <strong>intitle:</strong></li>
+          <li>Handle natural language queries & questions</li>
+          <li>Stemming and lemmatization (running → run)</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">⚡ Autocomplete & Suggestions</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Real-time query suggestions as user types (&lt;100ms)</li>
+          <li>Personalized suggestions based on history</li>
+          <li>Trending queries and popular searches</li>
+          <li>Spell correction and "did you mean?"</li>
+          <li>Related searches at bottom of SERP</li>
+        </ul>
+      </div>
+      <div class="card card-accent3">
+        <div class="card-title">🌐 Web Crawling & Indexing</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Crawl and index billions of web pages</li>
+          <li>Respect robots.txt and crawl-delay</li>
+          <li>Handle JS-rendered pages (headless browser)</li>
+          <li>De-duplicate near-identical pages (SimHash)</li>
+          <li>Freshness: re-crawl pages based on update frequency</li>
+        </ul>
+      </div>
+      <div class="card card-accent4">
+        <div class="card-title">📊 Rich Results & Knowledge</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Featured snippets and direct answers</li>
+          <li>Knowledge Graph panels (entity cards)</li>
+          <li>Image, video, news, shopping vertical results</li>
+          <li>Structured data (JSON-LD, Schema.org) rendering</li>
+          <li>Sitelinks and breadcrumb navigation</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">System Requirements</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Requirement</th><th>Description</th><th>Priority</th></tr></thead>
+        <tbody>
+          <tr><td><strong>URL Frontier Management</strong></td><td>Prioritized queue of URLs to crawl, supporting billions of entries</td><td><span class="tag tag-red">P0</span></td></tr>
+          <tr><td><strong>Document Storage</strong></td><td>Store raw HTML + parsed content + metadata for every crawled page</td><td><span class="tag tag-red">P0</span></td></tr>
+          <tr><td><strong>Inverted Index Build</strong></td><td>Build and maintain term→postings index distributed across shards</td><td><span class="tag tag-red">P0</span></td></tr>
+          <tr><td><strong>Ranking Pipeline</strong></td><td>Multi-stage ranking: retrieval → scoring → re-ranking with ML</td><td><span class="tag tag-red">P0</span></td></tr>
+          <tr><td><strong>Query Serving</strong></td><td>Serve queries against the index, merge partial results, generate snippets</td><td><span class="tag tag-red">P0</span></td></tr>
+          <tr><td><strong>Personalization</strong></td><td>Optionally adjust rankings based on user history and location</td><td><span class="tag tag-amber">P1</span></td></tr>
+          <tr><td><strong>SafeSearch</strong></td><td>Filter adult/spam/malware content from results</td><td><span class="tag tag-amber">P1</span></td></tr>
+          <tr><td><strong>Ads Integration</strong></td><td>Blend sponsored results with organic results via auction</td><td><span class="tag tag-amber">P1</span></td></tr>
+          <tr><td><strong>Analytics Pipeline</strong></td><td>Log queries, clicks, impressions for ML training and analytics</td><td><span class="tag tag-green">P2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== NON-FUNCTIONAL ====== -->
+  <section id="nonfunctional" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 03 — NFR</div>
+      <div class="page-title">Non-Functional<br><span>Requirements</span></div>
+      <div class="page-desc">The quality attributes that define how the system behaves — performance, reliability, scalability, and operational properties.</div>
+    </div>
+
+    <div class="section-label">Performance SLOs</div>
+    <div class="cards-grid-3">
+      <div class="stat-card">
+        <div class="stat-num">&lt;200ms</div>
+        <div class="stat-label">P99 Query Latency</div>
+        <div class="stat-sub">End-to-end from request receipt to response sent</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num purple">&lt;100ms</div>
+        <div class="stat-label">Autocomplete Latency</div>
+        <div class="stat-sub">Suggestion must appear before user finishes typing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num amber">99.999%</div>
+        <div class="stat-label">Search Availability</div>
+        <div class="stat-sub">&lt;5 min downtime/year; active-active multi-region</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num green">100K+</div>
+        <div class="stat-label">Peak QPS</div>
+        <div class="stat-sub">Google handles ~99K QPS; system must scale horizontally</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num red">&lt;15min</div>
+        <div class="stat-label">Freshness (News)</div>
+        <div class="stat-sub">Breaking news indexed within 15 minutes of publication</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">1B+</div>
+        <div class="stat-label">Pages Indexed</div>
+        <div class="stat-sub">Google indexes ~130 trillion pages; start at 1B scale</div>
+      </div>
+    </div>
+
+    <div class="section-label">Quality Attributes</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">📈 Scalability</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Horizontal scaling of all components independently</li>
+          <li>Index sharding by URL hash or document range</li>
+          <li>Crawler scales to thousands of nodes</li>
+          <li>Stateless query servers — add capacity instantly</li>
+          <li>Auto-scaling based on QPS load</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">🛡 Reliability & Fault Tolerance</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>No single point of failure in critical path</li>
+          <li>Index replicated 3×; auto failover on shard loss</li>
+          <li>Circuit breakers on all downstream calls</li>
+          <li>Graceful degradation: serve stale results if index unavailable</li>
+          <li>Multi-region active-active deployment</li>
+        </ul>
+      </div>
+      <div class="card card-accent3">
+        <div class="card-title">🔒 Security & Compliance</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>DDoS protection and rate limiting per IP/user</li>
+          <li>Right to be forgotten / GDPR deindexing within 72h</li>
+          <li>No PII in query logs by default (anonymize after 6mo)</li>
+          <li>Crawler IP allowlisting by webmasters</li>
+          <li>SafeSearch filtering on by default for minors</li>
+        </ul>
+      </div>
+      <div class="card card-accent4">
+        <div class="card-title">⚙️ Maintainability</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Blue-green deployment for zero-downtime index updates</li>
+          <li>Comprehensive metrics: latency, coverage, freshness, quality</li>
+          <li>Canary rollouts for ranking model changes</li>
+          <li>A/B testing framework baked into serving layer</li>
+          <li>Shadow traffic for load testing</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">Consistency Model</div>
+    <div class="highlight-box">
+      <div class="highlight-box-title">⚡ Eventual Consistency (Acceptable)</div>
+      <div class="highlight-box-body">Search is inherently eventually consistent. A newly published page may take minutes-to-hours to be crawled, indexed, and served. This is acceptable for general web search. For news/freshness vertical, a separate real-time pipeline (Kafka → streaming indexer) maintains near-real-time freshness. The serving layer uses the latest available index shard and does NOT require strong consistency guarantees.</div>
+    </div>
+  </section>
+
+  <!-- ====== CAPACITY ====== -->
+  <section id="capacity" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 04 — ESTIMATION</div>
+      <div class="page-title">Capacity<br><span>Estimation</span></div>
+      <div class="page-desc">Back-of-envelope calculations for a Google-scale search platform. Show your math in interviews — this demonstrates systems thinking.</div>
+    </div>
+
+    <div class="section-label">Assumptions</div>
+    <div class="cards-grid-3">
+      <div class="stat-card"><div class="stat-num">8B</div><div class="stat-label">Daily Queries (Google)</div><div class="stat-sub">~100K avg QPS; 3× at peak = 300K QPS</div></div>
+      <div class="stat-card"><div class="stat-num purple">50B</div><div class="stat-label">Pages in Corpus</div><div class="stat-sub">Targeting 50 billion indexed documents</div></div>
+      <div class="stat-card"><div class="stat-num amber">100KB</div><div class="stat-label">Avg Page Size (raw)</div><div class="stat-sub">HTML content; ~20KB after compression</div></div>
+      <div class="stat-card"><div class="stat-num green">4B</div><div class="stat-label">URLs Crawled/Day</div><div class="stat-sub">~46,000 pages/second crawl rate</div></div>
+      <div class="stat-card"><div class="stat-num red">10</div><div class="stat-label">Avg Words per Query</div><div class="stat-sub">Approx tokens processed per query</div></div>
+      <div class="stat-card"><div class="stat-num">500</div><div class="stat-label">Avg Words per Document</div><div class="stat-sub">After HTML stripping and parsing</div></div>
+    </div>
+
+    <div class="section-label">Storage Estimation</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Component</th><th>Calculation</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Raw Page Store</strong></td><td>50B pages × 100KB avg = 5,000 TB</td><td><span class="tag tag-red">5 PB</span></td></tr>
+          <tr><td><strong>Compressed Content</strong></td><td>5 PB × 20% compression ratio</td><td><span class="tag tag-amber">1 PB</span></td></tr>
+          <tr><td><strong>Inverted Index</strong></td><td>~100B unique terms × avg posting list × 12 bytes</td><td><span class="tag tag-amber">200 TB</span></td></tr>
+          <tr><td><strong>Forward Index</strong></td><td>50B docs × 200 bytes metadata each</td><td><span class="tag tag-green">10 TB</span></td></tr>
+          <tr><td><strong>Link Graph</strong></td><td>~500B edges × 16 bytes (src+dst docID)</td><td><span class="tag tag-green">8 TB</span></td></tr>
+          <tr><td><strong>Query Logs</strong></td><td>8B queries/day × 500 bytes × 365 days</td><td><span class="tag tag-green">1.4 PB/yr</span></td></tr>
+          <tr><td><strong>Thumbnail Cache</strong></td><td>50B pages × 5KB avg thumbnail</td><td><span class="tag tag-amber">250 TB</span></td></tr>
+          <tr><td><strong>Total (w/ 3× replication)</strong></td><td>~1.5 PB raw index × 3</td><td><span class="tag tag-red">~7 PB</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Bandwidth Estimation</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">📥 Crawler Ingress</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>46,000 pages/sec</strong> × 100KB = 4.6 GB/s ingress</li>
+          <li>After compression: ~920 MB/s effective write rate</li>
+          <li>DNS lookups: ~46K/s (mostly cached)</li>
+          <li>Crawler network: ~40 Gbps bandwidth needed</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">📤 Serving Egress</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>100K QPS</strong> × 30KB avg response = 3 GB/s</li>
+          <li>Peak (3× burst): ~9 GB/s egress</li>
+          <li>CDN offloads ~70% of cached popular queries</li>
+          <li>Effective origin bandwidth: ~2.7 GB/s</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">Compute Estimation</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Component</th><th>Unit Cost</th><th>Scale</th><th>Servers</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Web Crawlers</strong></td><td>1 server = 100 pages/sec</td><td>46,000 pages/sec</td><td><span class="tag tag-blue">~500 servers</span></td></tr>
+          <tr><td><strong>Index Shards</strong></td><td>1 shard = 100M docs, 64GB RAM</td><td>50B docs total</td><td><span class="tag tag-blue">500 shards × 3</span></td></tr>
+          <tr><td><strong>Query Servers</strong></td><td>1 server = 1,000 QPS</td><td>100K QPS</td><td><span class="tag tag-blue">~200 servers</span></td></tr>
+          <tr><td><strong>Ranking ML</strong></td><td>GPU inference, 100 QPS/GPU</td><td>100K QPS</td><td><span class="tag tag-purple">~1,000 GPUs</span></td></tr>
+          <tr><td><strong>Result Cache</strong></td><td>Redis, 1TB per node</td><td>20TB hot cache</td><td><span class="tag tag-green">20 nodes</span></td></tr>
+          <tr><td><strong>Autocomplete</strong></td><td>In-memory trie</td><td>100K RPS</td><td><span class="tag tag-green">50 servers</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== PLANNING ====== -->
+  <section id="planning" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 05 — PLANNING</div>
+      <div class="page-title">Capacity<br><span>Planning</span></div>
+      <div class="page-desc">Growth planning, scaling strategies, and resource allocation across the system lifecycle.</div>
+    </div>
+
+    <div class="section-label">Growth Phases</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-title">Phase 1 — MVP (1B pages, 1K QPS)</div>
+        <div class="timeline-body">Single-region deployment. Monolithic crawler with 50 nodes. Single inverted index cluster (~50 shards). Basic BM25 ranking. No ML re-ranking. Simple LRU cache. Target: prove correctness and basic functionality.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot purple"></div>
+        <div class="timeline-title">Phase 2 — Scale-Out (10B pages, 10K QPS)</div>
+        <div class="timeline-body">Shard index by URL hash. Add distributed crawl scheduler (Kafka-based URL frontier). Introduce ML ranking (offline-trained GBDT). Add Redis result cache. Deploy CDN for serving. Introduce query serving tier with load balancer.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot amber"></div>
+        <div class="timeline-title">Phase 3 — Production (50B pages, 100K QPS)</div>
+        <div class="timeline-body">Multi-region active-active. 500+ index shards with 3× replication. Two-phase ranking: Retrieval (BM25) → Neural re-ranking (BERT/LLM). Streaming freshness pipeline. Full personalization. Autocomplete service. Knowledge Graph integration. A/B testing at serving layer.</div>
+      </div>
+    </div>
+
+    <div class="section-label">Index Sharding Strategy</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent3">
+        <div class="card-title">🔢 Document-Partitioned Index</div>
+        <div class="card-body" style="margin-top: 8px;">Shard by docID range or URL hash. Each shard holds a complete local inverted index for its documents. Query fan-out: send query to all shards, merge top-K results.<br><br><strong>Pros:</strong> Simple, easy rebalancing.<br><strong>Cons:</strong> Fan-out to all shards on every query, network intensive.</div>
+      </div>
+      <div class="card card-accent4">
+        <div class="card-title">📝 Term-Partitioned Index</div>
+        <div class="card-body" style="margin-top: 8px;">Shard by term hash. Each shard owns all postings for a subset of terms. Query is decomposed into terms, each fetched from different shards.<br><br><strong>Pros:</strong> Fewer shards hit per query.<br><strong>Cons:</strong> Hot shards for popular terms (mitigation: replicate hot terms).</div>
+      </div>
+    </div>
+
+    <div class="section-label">Resource Planning Over 3 Years</div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="metric-row"><div class="metric-name">Index Size (TB)</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:20%; background: linear-gradient(90deg, #00e5ff, #7c3aed);"></div></div><div class="metric-val">200 TB Y1</div></div>
+      <div class="metric-row"><div class="metric-name">Index Size (TB)</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:55%; background: linear-gradient(90deg, #00e5ff, #7c3aed);"></div></div><div class="metric-val">600 TB Y2</div></div>
+      <div class="metric-row"><div class="metric-name">Index Size (TB)</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:100%; background: linear-gradient(90deg, #00e5ff, #7c3aed);"></div></div><div class="metric-val">1.5 PB Y3</div></div>
+      <div class="metric-row" style="margin-top: 16px;"><div class="metric-name">Crawl Servers</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:15%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div></div><div class="metric-val">50 → Y1</div></div>
+      <div class="metric-row"><div class="metric-name">Crawl Servers</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:50%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div></div><div class="metric-val">200 → Y2</div></div>
+      <div class="metric-row"><div class="metric-name">Crawl Servers</div><div class="metric-bar-wrap"><div class="metric-bar" style="width:100%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div></div><div class="metric-val">500 → Y3</div></div>
+    </div>
+  </section>
+
+  <!-- ====== HLD ====== -->
+  <section id="hld" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 06 — ARCHITECTURE</div>
+      <div class="page-title">High-Level<br><span>Design</span></div>
+      <div class="page-desc">End-to-end system architecture — from user query to result serving, and from URL discovery to index building.</div>
+    </div>
+
+    <div class="section-label">Full System Architecture</div>
+    <div class="hld-diagram">
+      <!-- User layer -->
+      <div class="hld-row">
+        <div class="hld-box client">📱 Web / Mobile Client</div>
+      </div>
+      <div class="hld-arrow-down">↓</div>
+      <div class="hld-row">
+        <div class="hld-box lb">🌐 Global CDN + DNS Load Balancer</div>
+      </div>
+      <div class="hld-arrow-down">↓</div>
+      <div class="hld-row">
+        <div class="hld-box lb">⚖️ API Gateway / Load Balancer (L7)</div>
+      </div>
+      <div class="hld-arrow-down">↓</div>
+
+      <!-- Query serving -->
+      <div class="hld-row" style="gap: 12px;">
+        <div class="hld-box service">🔍 Query<br>Processor</div>
+        <div class="hld-box service">💡 Autocomplete<br>Service</div>
+        <div class="hld-box service">✏️ Spell<br>Checker</div>
+        <div class="hld-box service">🧠 NLP<br>Intent</div>
+      </div>
+      <div class="hld-arrow-down">↓</div>
+
+      <!-- Caching -->
+      <div class="hld-row">
+        <div class="hld-box cache">⚡ Result Cache (Redis) — L1 Cache</div>
+      </div>
+      <div class="hld-arrow-down">↓ (cache miss)</div>
+
+      <!-- Index serving -->
+      <div class="hld-row" style="gap: 12px;">
+        <div class="hld-box storage">📑 Index Shard 1<br><small>docID 0-100M</small></div>
+        <div class="hld-box storage">📑 Index Shard 2<br><small>docID 100-200M</small></div>
+        <div class="hld-box storage">📑 Index Shard N<br><small>docID N-N+100M</small></div>
+        <div style="font-size: 20px; color: var(--text-muted); display: flex; align-items: center;">···</div>
+      </div>
+      <div class="hld-arrow-down">↓ partial results</div>
+
+      <!-- Ranking -->
+      <div class="hld-row" style="gap: 12px;">
+        <div class="hld-box service">⭐ Result Merger<br>& Ranker</div>
+        <div class="hld-box service">🤖 ML Re-ranker<br>(BERT/LLM)</div>
+        <div class="hld-box service">✂️ Snippet<br>Generator</div>
+        <div class="hld-box service">💰 Ads<br>Mixer</div>
+      </div>
+      <div class="hld-arrow-down">↓ final SERP</div>
+      <div class="hld-row">
+        <div class="hld-box client">📤 Search Engine Results Page (SERP) → User</div>
+      </div>
+    </div>
+
+    <div class="section-label">Crawling & Indexing Pipeline</div>
+    <div class="hld-diagram">
+      <div class="hld-row" style="gap: 12px; justify-content: flex-start;">
+        <div class="hld-box client">🌱 Seed URLs</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">→</div>
+        <div class="hld-box queue">📋 URL Frontier<br>(Priority Queue)</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">→</div>
+        <div class="hld-box service">🕷 Web Crawler<br>Farm</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">→</div>
+        <div class="hld-box storage">🗃 Raw Page<br>Store</div>
+      </div>
+      <div class="hld-arrow-down" style="text-align: left; margin-left: 66%;">↓</div>
+      <div class="hld-row" style="gap: 12px; justify-content: flex-end;">
+        <div class="hld-box service">🔧 Document<br>Processor</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">←</div>
+        <div class="hld-box service">🔗 Link<br>Extractor</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">←</div>
+        <div class="hld-box service">🧹 HTML<br>Parser</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">←</div>
+        <div class="hld-box service">🚚 Content<br>Fetcher</div>
+      </div>
+      <div class="hld-arrow-down">↓ processed docs</div>
+      <div class="hld-row" style="gap: 12px;">
+        <div class="hld-box service">📊 Inverted Index<br>Builder (MapReduce)</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">→</div>
+        <div class="hld-box storage">📑 Distributed<br>Inverted Index</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">+</div>
+        <div class="hld-box storage">📋 Forward<br>Index</div>
+        <div style="color: var(--text-muted); font-size: 18px; display:flex; align-items:center;">+</div>
+        <div class="hld-box storage">🔗 Link<br>Graph</div>
+      </div>
+    </div>
+
+    <div class="section-label">Architecture Layers</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">CLIENT LAYER</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-blue">Web Browser</div>
+        <div class="arch-chip arch-chip-blue">Mobile App</div>
+        <div class="arch-chip arch-chip-blue">Voice Search</div>
+        <div class="arch-chip arch-chip-blue">API Consumers</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">EDGE LAYER</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-purple">Global CDN (Cloudflare/Akamai)</div>
+        <div class="arch-chip arch-chip-purple">Anycast DNS</div>
+        <div class="arch-chip arch-chip-purple">DDoS Protection</div>
+        <div class="arch-chip arch-chip-purple">TLS Termination</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">GATEWAY</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-amber">API Gateway</div>
+        <div class="arch-chip arch-chip-amber">Rate Limiter</div>
+        <div class="arch-chip arch-chip-amber">Auth Service</div>
+        <div class="arch-chip arch-chip-amber">Request Router</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">QUERY LAYER</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-blue">Query Parser</div>
+        <div class="arch-chip arch-chip-blue">Spell Corrector</div>
+        <div class="arch-chip arch-chip-blue">Intent Classifier</div>
+        <div class="arch-chip arch-chip-blue">Autocomplete</div>
+        <div class="arch-chip arch-chip-blue">Personalization</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">CACHING</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-green">Redis Result Cache</div>
+        <div class="arch-chip arch-chip-green">Query Cache (L1)</div>
+        <div class="arch-chip arch-chip-green">Index Block Cache</div>
+        <div class="arch-chip arch-chip-green">Posting List Cache</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">RETRIEVAL</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-red">Index Shard 1..N (BM25)</div>
+        <div class="arch-chip arch-chip-red">Vector Index (ANN)</div>
+        <div class="arch-chip arch-chip-red">Knowledge Graph DB</div>
+        <div class="arch-chip arch-chip-red">Doc Store</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">RANKING</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-purple">L1 BM25 Scorer</div>
+        <div class="arch-chip arch-chip-purple">L2 GBDT Ranker</div>
+        <div class="arch-chip arch-chip-purple">L3 Neural Re-ranker</div>
+        <div class="arch-chip arch-chip-purple">Snippet Generator</div>
+        <div class="arch-chip arch-chip-purple">Ads Blender</div>
+      </div>
+    </div>
+    <div class="arch-divider">↓</div>
+    <div class="arch-layer">
+      <div class="arch-layer-label">DATA STORE</div>
+      <div class="arch-components">
+        <div class="arch-chip arch-chip-gray">Inverted Index (custom LSM)</div>
+        <div class="arch-chip arch-chip-gray">Raw Pages (GCS/S3)</div>
+        <div class="arch-chip arch-chip-gray">Query Logs (BigQuery)</div>
+        <div class="arch-chip arch-chip-gray">Link Graph (Bigtable)</div>
+        <div class="arch-chip arch-chip-gray">DocMeta (Spanner)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== COMPONENTS ====== -->
+  <section id="components" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 07 — COMPONENTS</div>
+      <div class="page-title">Core<br><span>Components</span></div>
+      <div class="page-desc">Deep description of each major component, its responsibilities, technology choices, and internal design.</div>
+    </div>
+
+    <div class="section-label">Crawler System</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">🕷 Web Crawler</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>URL Frontier:</strong> Priority queue (BFS + PageRank priority). Use Kafka as distributed queue with priority topics.</li>
+          <li><strong>DNS Resolver:</strong> Local DNS cache to reduce lookup latency. Batch resolve URLs.</li>
+          <li><strong>Fetcher:</strong> Async HTTP/2 with connection pooling. 100ms timeout.</li>
+          <li><strong>Robots.txt Cache:</strong> Per-domain cache with 24h TTL.</li>
+          <li><strong>Politeness:</strong> Rate limit 1 req/sec per domain. Respect crawl-delay header.</li>
+          <li><strong>Deduplication:</strong> SimHash fingerprint stored in Redis. Reject near-duplicates.</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">⚙️ Document Processor</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>HTML Parser:</strong> Extract clean text, title, meta description, headings.</li>
+          <li><strong>Link Extractor:</strong> Extract all outbound links, normalize URLs.</li>
+          <li><strong>Language Detection:</strong> fastText langdetect on first 500 chars.</li>
+          <li><strong>Content Quality:</strong> Filter thin content (&lt;100 words), spam pages.</li>
+          <li><strong>JS Rendering:</strong> Headless Chromium pool for JS-heavy pages (10% of pages).</li>
+          <li><strong>Structured Data:</strong> Extract JSON-LD, OpenGraph, schema.org markup.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">Index Builder</div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">📑 Inverted Index Construction (MapReduce)</div>
+      <div class="code-block" style="margin-top: 16px;">
+<span class="cm">// Map Phase: emit (term, docID, tf, position)</span>
+<span class="kw">map</span>(docID, document) {
+  tokens = <span class="fn">tokenize</span>(document.text)
+  <span class="kw">for</span> (pos, term in tokens):
+    tf = <span class="fn">count</span>(term, document)
+    emit(term, {docID, tf, pos, fieldWeight})
+}
+
+<span class="cm">// Reduce Phase: build posting list per term</span>
+<span class="kw">reduce</span>(term, postings[]) {
+  sorted = <span class="fn">sortBy</span>(postings, 'docID')
+  <span class="cm">// Delta-encode docIDs for compression</span>
+  compressed = <span class="fn">varIntEncode</span>(sorted.docIDs)
+  write(term → {compressed_postings, df: len(postings)})
+}
+
+<span class="cm">// Posting List Format per term:</span>
+<span class="cm">// [docID_delta, tf, positions[], field_flags]</span>
+<span class="cm">// Compressed with VByte encoding → 4-8 bytes/entry</span>
+      </div>
+    </div>
+
+    <div class="section-label">Query Processor Components</div>
+    <div class="cards-grid-3">
+      <div class="card">
+        <div class="card-title">🔠 Query Parser</div>
+        <div class="card-body">Tokenize, normalize case, handle operators (AND/OR/NOT/NEAR), expand synonyms, identify entities and intents.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">✏️ Spell Corrector</div>
+        <div class="card-body">Noisy channel model. Edit distance + language model probability. Uses query logs for high-confidence corrections.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🧠 Intent Classifier</div>
+        <div class="card-body">Classify query intent: navigational, informational, transactional. Routes to appropriate vertical (web/images/maps).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔀 Query Fan-out</div>
+        <div class="card-body">Scatter query to all index shards in parallel. Collect top-K candidates from each shard. Merge and globally rank.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">✂️ Snippet Generator</div>
+        <div class="card-body">Extract best passage containing query terms. Highlight matches. Use forward index to fetch original text. Max 160 chars.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📐 Feature Extractor</div>
+        <div class="card-body">Extract 200+ ranking features: TF-IDF, BM25, PageRank, freshness, click-through rate, anchor text, domain authority.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== DATA FLOW ====== -->
+  <section id="dataflow" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 08 — DATA FLOW</div>
+      <div class="page-title">Data<br><span>Flow</span></div>
+      <div class="page-desc">Step-by-step trace of a query through the system and the ingestion pipeline from crawl to index.</div>
+    </div>
+
+    <div class="section-label">Query Flow (User → Results)</div>
+    <div class="flow-container">
+      <div style="overflow-x: auto;">
+        <div class="flow-row">
+          <div class="flow-node highlight"><div class="flow-node-title">User</div><div class="flow-node-sub">types query</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight2"><div class="flow-node-title">CDN/Edge</div><div class="flow-node-sub">TLS + route</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight3"><div class="flow-node-title">API Gateway</div><div class="flow-node-sub">auth + limit</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight4"><div class="flow-node-title">Query Parser</div><div class="flow-node-sub">tokens + ops</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight5"><div class="flow-node-title">Spell Check</div><div class="flow-node-sub">correct typos</div></div>
+        </div>
+        <div class="flow-row" style="margin-top: 8px;">
+          <div class="flow-node highlight5"><div class="flow-node-title">Result Cache</div><div class="flow-node-sub">Redis lookup</div></div>
+          <div class="flow-arrow">↓miss</div>
+          <div class="flow-node highlight4"><div class="flow-node-title">Index Scatter</div><div class="flow-node-sub">fan-out N shards</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight3"><div class="flow-node-title">BM25 Score</div><div class="flow-node-sub">per shard</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight2"><div class="flow-node-title">Gather+Merge</div><div class="flow-node-sub">top-1000</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight"><div class="flow-node-title">ML Rerank</div><div class="flow-node-sub">neural model</div></div>
+        </div>
+        <div class="flow-row" style="margin-top: 8px; justify-content: flex-end;">
+          <div class="flow-node highlight"><div class="flow-node-title">Snippet Gen</div><div class="flow-node-sub">extract passage</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight2"><div class="flow-node-title">Ads Blend</div><div class="flow-node-sub">top/bottom ads</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight3"><div class="flow-node-title">Cache Write</div><div class="flow-node-sub">store result</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight4"><div class="flow-node-title">SERP Response</div><div class="flow-node-sub">JSON → Client</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Crawl → Index Flow (Ingestion)</div>
+    <div class="flow-container">
+      <div class="flow-row">
+        <div class="flow-node highlight"><div class="flow-node-title">Seed URLs</div><div class="flow-node-sub">manual + sitemap</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight2"><div class="flow-node-title">URL Frontier</div><div class="flow-node-sub">Kafka priority Q</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight3"><div class="flow-node-title">DNS Resolver</div><div class="flow-node-sub">+ robots check</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight4"><div class="flow-node-title">HTTP Fetcher</div><div class="flow-node-sub">async / pool</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight5"><div class="flow-node-title">Raw Store</div><div class="flow-node-sub">GCS/S3 blob</div></div>
+      </div>
+      <div class="flow-row" style="margin-top: 8px;">
+        <div class="flow-node highlight5"><div class="flow-node-title">HTML Parser</div><div class="flow-node-sub">clean text</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight4"><div class="flow-node-title">Link Extract</div><div class="flow-node-sub">new URLs → Q</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight3"><div class="flow-node-title">SimHash</div><div class="flow-node-sub">dedup check</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight2"><div class="flow-node-title">Tokenizer</div><div class="flow-node-sub">stem + TF</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node highlight"><div class="flow-node-title">Index Shard</div><div class="flow-node-sub">write postings</div></div>
+      </div>
+    </div>
+
+    <div class="section-label">Latency Budget (P99 &lt;200ms)</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Step</th><th>Budget</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>DNS + TLS + Network RTT</td><td><span class="tag tag-green">~20ms</span></td><td>CDN edge terminates TLS, nearby PoP</td></tr>
+          <tr><td>API Gateway routing</td><td><span class="tag tag-green">~5ms</span></td><td>Auth check, rate limit token bucket</td></tr>
+          <tr><td>Query parsing + spell check</td><td><span class="tag tag-green">~5ms</span></td><td>In-memory, pre-loaded models</td></tr>
+          <tr><td>Result cache lookup (hit)</td><td><span class="tag tag-green">~2ms</span></td><td>Redis local, ~30% hit rate for popular queries</td></tr>
+          <tr><td>Index scatter to N shards</td><td><span class="tag tag-amber">~30ms</span></td><td>Parallel fan-out; slowest shard determines latency</td></tr>
+          <tr><td>BM25 scoring on each shard</td><td><span class="tag tag-amber">~20ms</span></td><td>Skip lists for intersection; SIMD acceleration</td></tr>
+          <tr><td>Gather + merge top-1000</td><td><span class="tag tag-green">~10ms</span></td><td>K-way merge across shards</td></tr>
+          <tr><td>ML re-ranking (GBDT/BERT)</td><td><span class="tag tag-amber">~40ms</span></td><td>GPU inference for top-100; CPU for GBDT</td></tr>
+          <tr><td>Snippet generation</td><td><span class="tag tag-green">~15ms</span></td><td>Forward index lookup + passage extraction</td></tr>
+          <tr><td>Serialization + response</td><td><span class="tag tag-green">~10ms</span></td><td>JSON serialize top-10 results</td></tr>
+          <tr><td><strong>TOTAL</strong></td><td><span class="tag tag-blue">~157ms</span></td><td>P99 target: 200ms ✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== INDEXING ====== -->
+  <section id="indexing" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 09 — DEEP DIVE</div>
+      <div class="page-title">Crawling &<br><span>Indexing</span></div>
+      <div class="page-desc">Deep dive into the web crawler architecture and distributed inverted index construction.</div>
+    </div>
+
+    <div class="section-label">URL Frontier Design</div>
+    <div class="two-col">
+      <div class="card card-accent">
+        <div class="card-title">Priority Queue Architecture</div>
+        <div class="card-body">
+          <strong>Front queues (priority):</strong> Separate queues by URL priority score (PageRank + freshness + domain authority). High-priority URLs crawled more frequently.<br><br>
+          <strong>Back queues (politeness):</strong> One queue per domain. Ensures only 1 outstanding request per domain at a time. Min delay enforced (1 req/sec default).<br><br>
+          <strong>Implementation:</strong> Kafka topics per priority level. Back queues use per-domain state in Redis. Total frontier size: ~100B URLs, ~1.5TB Redis.
+        </div>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">Duplicate Detection (SimHash)</div>
+        <div class="card-body">
+          <strong>URL Normalization:</strong> Lowercase, remove tracking params, canonical URL resolution.<br><br>
+          <strong>Content SimHash:</strong> Compute 64-bit SimHash fingerprint of document. Store in Redis bitset. If Hamming distance &lt;3 → near-duplicate, skip.<br><br>
+          <strong>Exact duplicate:</strong> MD5 hash of stripped content. Reject if seen before.<br><br>
+          <strong>Scale:</strong> 50B fingerprints × 8 bytes = 400GB in-memory fingerprint store.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Inverted Index Structure</div>
+    <div class="code-block">
+<span class="cm">// Inverted Index: term → posting list</span>
+{
+  <span class="str">"python"</span>: {
+    df: <span class="num">12_000_000</span>,  <span class="cm">// document frequency</span>
+    postings: [
+      {docID: <span class="num">4521</span>, tf: <span class="num">8</span>, positions: [<span class="num">12,45,89</span>], fields: <span class="str">"TITLE|BODY"</span>},
+      {docID: <span class="num">4522</span>, tf: <span class="num">3</span>, positions: [<span class="num">5,110,234</span>], fields: <span class="str">"BODY"</span>},
+      <span class="cm">// ... sorted by docID, delta-encoded</span>
+    ]
+  }
+}
+
+<span class="cm">// Compression: Variable-byte encoding</span>
+<span class="cm">// docID deltas: [4521, 1, 502, 3, ...] → 1-2 bytes each</span>
+<span class="cm">// Skip pointers every 128 entries → O(√n) skipping</span>
+<span class="cm">// Block-level compression (PForDelta) for posting lists >1000</span>
+
+<span class="cm">// Intersection (AND query) using merge:</span>
+<span class="kw">function</span> <span class="fn">intersect</span>(list1, list2):
+  i, j = <span class="num">0</span>, <span class="num">0</span>
+  results = []
+  <span class="kw">while</span> i &lt; len(list1) <span class="kw">and</span> j &lt; len(list2):
+    <span class="kw">if</span> list1[i].docID == list2[j].docID:
+      results.append(list1[i]); i++; j++
+    <span class="kw">elif</span> list1[i].docID &lt; list2[j].docID: i++
+    <span class="kw">else</span>: j++
+  <span class="kw">return</span> results  <span class="cm">// O(n+m) with skip pointers → O(√n + √m)</span>
+    </div>
+
+    <div class="section-label">Freshness Pipeline</div>
+    <div class="highlight-box">
+      <div class="highlight-box-title">⚡ Real-Time Freshness (News & High-Priority)</div>
+      <div class="highlight-box-body">
+        <strong>RSS/Sitemap streaming:</strong> Monitor 100K+ news RSS feeds. Kafka producer ingests new URLs with HIGH priority flag.<br><br>
+        <strong>Streaming indexer:</strong> Flink job processes high-priority documents through a mini-indexer. Updates a "fresh shard" overlay. Fresh shard results are merged with base index results at query time.<br><br>
+        <strong>Freshness SLO:</strong> Breaking news indexed within 15 minutes. General web re-crawl every 2-30 days based on update frequency.
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== RANKING ====== -->
+  <section id="ranking" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 10 — DEEP DIVE</div>
+      <div class="page-title">Ranking &<br><span>Relevance</span></div>
+      <div class="page-desc">Multi-stage ranking pipeline from BM25 retrieval to neural re-ranking with 200+ features.</div>
+    </div>
+
+    <div class="section-label">Multi-Stage Ranking Pipeline</div>
+    <div class="cards-grid-3">
+      <div class="card card-accent">
+        <div class="card-title">L1 — Retrieval (BM25)</div>
+        <div class="card-body">Inverted index lookup. BM25 score for query-document pair. Returns top-1000 candidates per shard. Extremely fast: ~10ms. Focuses on term matching.</div>
+        <div style="margin-top: 12px;"><span class="tag tag-blue">BM25</span><span class="tag tag-blue">TF-IDF</span><span class="tag tag-blue">Skip Lists</span></div>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">L2 — Ranking (GBDT)</div>
+        <div class="card-body">Gradient Boosted Decision Tree (LambdaMART) on 200+ features: PageRank, click-through rate, anchor text, freshness, mobile friendliness, HTTPS, load speed.</div>
+        <div style="margin-top: 12px;"><span class="tag tag-purple">LambdaMART</span><span class="tag tag-purple">XGBoost</span><span class="tag tag-purple">200+ features</span></div>
+      </div>
+      <div class="card card-accent3">
+        <div class="card-title">L3 — Re-Ranking (Neural)</div>
+        <div class="card-body">BERT-based cross-encoder re-ranks top-100 results with deep semantic understanding. Captures query-document semantic similarity. ~40ms on GPU.</div>
+        <div style="margin-top: 12px;"><span class="tag tag-amber">BERT</span><span class="tag tag-amber">LLM</span><span class="tag tag-amber">Semantic</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">Ranking Signals (Features)</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Category</th><th>Signals</th><th>Weight</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Query-Document Relevance</strong></td><td>BM25 score, TF-IDF, exact match, phrase match, title match, anchor text match</td><td><span class="tag tag-red">Very High</span></td></tr>
+          <tr><td><strong>Link Authority</strong></td><td>PageRank, TrustRank, number of inbound links, domain authority, link diversity</td><td><span class="tag tag-red">Very High</span></td></tr>
+          <tr><td><strong>User Signals</strong></td><td>Click-through rate (CTR), dwell time, bounce rate, pogo-sticking, long clicks</td><td><span class="tag tag-amber">High</span></td></tr>
+          <tr><td><strong>Content Quality</strong></td><td>Content length, reading level, E-E-A-T score, spam score, ad density</td><td><span class="tag tag-amber">High</span></td></tr>
+          <tr><td><strong>Technical Signals</strong></td><td>Page load speed (Core Web Vitals), mobile-friendly, HTTPS, structured data</td><td><span class="tag tag-green">Medium</span></td></tr>
+          <tr><td><strong>Freshness</strong></td><td>Publication date, last modified, update frequency, news vs. evergreen</td><td><span class="tag tag-green">Medium</span></td></tr>
+          <tr><td><strong>Localization</strong></td><td>User location, language, local intent (restaurants near me)</td><td><span class="tag tag-blue">Contextual</span></td></tr>
+          <tr><td><strong>Personalization</strong></td><td>Search history, clicked domains, saved pages, browsing context</td><td><span class="tag tag-blue">Contextual</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-label">PageRank Computation</div>
+    <div class="code-block">
+<span class="cm">// PageRank: iterative algorithm on link graph</span>
+<span class="cm">// PR(A) = (1-d) + d × Σ(PR(Ti)/C(Ti)) for all Ti linking to A</span>
+<span class="cm">// d = damping factor = 0.85, converges in ~50 iterations</span>
+
+<span class="kw">for</span> iteration in range(<span class="num">50</span>):
+  new_pr = {}
+  <span class="kw">for</span> page in all_pages:
+    score = (<span class="num">1</span> - <span class="num">0.85</span>) / N  <span class="cm">// teleportation</span>
+    <span class="kw">for</span> inbound_link in link_graph[page]:
+      score += <span class="num">0.85</span> * pr[inbound_link] / out_degree[inbound_link]
+    new_pr[page] = score
+  pr = new_pr
+
+<span class="cm">// At scale: MapReduce/Spark GraphX on link graph</span>
+<span class="cm">// Link graph: ~500B edges, stored in Bigtable</span>
+<span class="cm">// Re-computed: weekly batch job (full), daily incremental</span>
+    </div>
+  </section>
+
+  <!-- ====== QUERY PIPELINE ====== -->
+  <section id="querypipeline" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 11 — DEEP DIVE</div>
+      <div class="page-title">Query<br><span>Pipeline</span></div>
+      <div class="page-desc">End-to-end query processing from raw user input to structured search results.</div>
+    </div>
+
+    <div class="section-label">Query Understanding</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">🔤 Query Parsing Steps</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>Tokenization:</strong> Split on whitespace, handle hyphen/slash</li>
+          <li><strong>Case folding:</strong> Lowercase (except acronyms)</li>
+          <li><strong>Stop word removal:</strong> "the", "a", "is" (but NOT for phrase queries)</li>
+          <li><strong>Stemming/Lemmatization:</strong> running → run (Porter Stemmer)</li>
+          <li><strong>Operator detection:</strong> AND/OR/NOT/site:/filetype: operators</li>
+          <li><strong>Quote handling:</strong> "exact phrase" → phrase query</li>
+          <li><strong>Synonym expansion:</strong> car → automobile, car, vehicle</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">🧠 Query Intent Classification</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>Navigational:</strong> "youtube", "github login" → go to specific site</li>
+          <li><strong>Informational:</strong> "how to make pasta" → provide information</li>
+          <li><strong>Transactional:</strong> "buy iPhone 15" → intent to purchase</li>
+          <li><strong>Local:</strong> "coffee shops nearby" → geo-bound results</li>
+          <li><strong>Ambiguous:</strong> "jaguar" → car or animal? Use context</li>
+          <li><strong>Question:</strong> "who is…", "what is…" → direct answer box</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">Autocomplete Architecture</div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">⚡ Real-Time Autocomplete (&lt;100ms)</div>
+      <div class="two-col" style="margin-top: 16px; margin-bottom: 0;">
+        <div>
+          <div style="font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 8px;">DATA STRUCTURE</div>
+          <ul class="bullet-list">
+            <li><strong>Trie (prefix tree)</strong> loaded in memory per datacenter</li>
+            <li>Each trie node stores top-10 completions by frequency</li>
+            <li>~500GB in-memory trie for 1B+ query prefixes</li>
+            <li>Updated from query logs daily (offline batch)</li>
+            <li>Personalized layer: user's own history boosted</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 8px;">SERVING</div>
+          <ul class="bullet-list">
+            <li>Every keypress triggers request after 50ms debounce</li>
+            <li>Request to nearest datacenter (anycast)</li>
+            <li>Trie lookup: O(m) where m = prefix length</li>
+            <li>Trending queries boosted via real-time signal</li>
+            <li>SafeSearch filters out inappropriate suggestions</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== STORAGE ====== -->
+  <section id="storage" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 12 — DEEP DIVE</div>
+      <div class="page-title">Storage &<br><span>Index</span></div>
+      <div class="page-desc">Storage layer design for the inverted index, raw content, link graph, and metadata stores.</div>
+    </div>
+
+    <div class="section-label">Storage by Component</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Component</th><th>Technology</th><th>Why</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Raw Page Store</strong></td><td>Google Cloud Storage / S3</td><td>Cheap blob storage, high durability, content-addressed by URL hash</td><td>~1 PB</td></tr>
+          <tr><td><strong>Inverted Index</strong></td><td>Custom LSM-tree engine</td><td>Optimized for sequential posting list reads; custom compression (VByte)</td><td>~200 TB</td></tr>
+          <tr><td><strong>Forward Index</strong></td><td>Custom column store</td><td>Per-document feature vectors, fast random access by docID</td><td>~10 TB</td></tr>
+          <tr><td><strong>Document Metadata</strong></td><td>Google Spanner / CockroachDB</td><td>ACID, globally consistent doc metadata (URL, crawl time, lang)</td><td>~5 TB</td></tr>
+          <tr><td><strong>Link Graph</strong></td><td>Google Bigtable / HBase</td><td>Wide-column, scales to 500B edges, row key = source URL hash</td><td>~8 TB</td></tr>
+          <tr><td><strong>URL Dedup Store</strong></td><td>Redis (sorted set + bitfield)</td><td>In-memory SimHash fingerprint lookup, &lt;1ms latency</td><td>~400 GB</td></tr>
+          <tr><td><strong>Query Logs</strong></td><td>BigQuery / Redshift</td><td>Analytics, ML training data, OLAP queries</td><td>~1.4 PB/yr</td></tr>
+          <tr><td><strong>Result Cache</strong></td><td>Redis Cluster</td><td>Cache top-30% queries, 5-minute TTL for freshness</td><td>~20 TB</td></tr>
+          <tr><td><strong>Autocomplete Trie</strong></td><td>Custom in-memory (mmap)</div></td><td>Sub-millisecond prefix lookups; rebuilt nightly from query logs</td><td>~500 GB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Index Sharding & Replication</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent3">
+        <div class="card-title">🔀 Sharding Strategy</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li><strong>Document-partitioned:</strong> URL hash mod N shards (preferred)</li>
+          <li>Each shard: ~100M documents, ~64GB RAM for postings cache</li>
+          <li>Hot terms (e.g., "the") on every shard — use skip lists</li>
+          <li>Shard rebalancing via consistent hashing ring</li>
+          <li>500 shards for 50B doc corpus</li>
+        </ul>
+      </div>
+      <div class="card card-accent4">
+        <div class="card-title">📦 Replication Strategy</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>3× replication per shard (1 primary + 2 replicas)</li>
+          <li>Read from any replica (load balance reads)</li>
+          <li>Eventual consistency for index updates acceptable</li>
+          <li>Leader election via Raft for write coordination</li>
+          <li>Cross-region replication for disaster recovery</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== CACHING ====== -->
+  <section id="caching" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 13 — DEEP DIVE</div>
+      <div class="page-title">Caching<br><span>Strategy</span></div>
+      <div class="page-desc">Multi-level caching architecture from CDN to posting list cache to achieve sub-200ms P99 latency.</div>
+    </div>
+
+    <div class="section-label">Cache Hierarchy</div>
+    <div class="cards-grid-3">
+      <div class="stat-card">
+        <div class="stat-num">L0</div>
+        <div class="stat-label">CDN / Browser Cache</div>
+        <div class="stat-sub">SERP pages cached at CDN edge for popular queries. Cache-Control: max-age=60. ~10% of traffic served here.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num purple">L1</div>
+        <div class="stat-label">Result Cache (Redis)</div>
+        <div class="stat-sub">Top 30% queries cached. Key = normalized query string. TTL: 5 min general, 30 sec news. ~30% cache hit rate.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num amber">L2</div>
+        <div class="stat-label">Index Block Cache</div>
+        <div class="stat-sub">OS page cache + custom buffer pool caches hot posting lists in RAM. Top 1% terms always hot (~80% of query volume).</div>
+      </div>
+    </div>
+
+    <div class="section-label">Posting List Cache (Critical Path)</div>
+    <div class="highlight-box">
+      <div class="highlight-box-title">🔑 Zipf's Law: 1% of terms = 80% of queries</div>
+      <div class="highlight-box-body">Query term distribution follows Zipf's law. The top 10,000 most frequent terms appear in 80% of all queries. Strategy: <strong>pre-load top 10K posting lists into RAM</strong> on every index shard. For 100M doc/shard, top posting lists = ~50GB per shard (fits in 64GB RAM). Cache eviction: LRU with frequency-based aging. Result: ~80% of inverted index lookups served from RAM → sub-10ms retrieval.</div>
+    </div>
+
+    <div class="section-label">Cache Invalidation Strategy</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Cache Layer</th><th>TTL</th><th>Invalidation</th></tr></thead>
+        <tbody>
+          <tr><td>CDN (SERP pages)</td><td>60 seconds</td><td>Purge API on index update for specific queries</td></tr>
+          <tr><td>Result Cache (Redis)</td><td>5 min (news: 30s)</td><td>Time-based expiry. Manual purge for breaking news via pub/sub.</td></tr>
+          <tr><td>Index Block Cache</td><td>Never (eviction only)</td><td>LRU eviction when shard receives new index segment</td></tr>
+          <tr><td>DNS Cache</td><td>5 minutes</td><td>TTL-based; no manual invalidation</td></tr>
+          <tr><td>Robots.txt Cache</td><td>24 hours</td><td>TTL-based expiry per domain</td></tr>
+          <tr><td>Autocomplete Trie</td><td>24 hours</td><td>Rebuilt nightly; hot-swap with zero downtime</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== COUNTER QUESTIONS ====== -->
+  <section id="counter" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 14 — INTERVIEW</div>
+      <div class="page-title">Counter<br><span>Questions</span></div>
+      <div class="page-desc">Probing questions an interviewer will ask, and how to answer them confidently.</div>
+    </div>
+
+    <div class="section-label">Clarification Questions to Ask First</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">🎯 Scope Questions</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Are we building web search (crawl the internet) or product search (internal corpus)?</li>
+          <li>What scale — startup (1M docs) or Google-scale (50B docs)?</li>
+          <li>What's the latency SLO — 100ms or 500ms?</li>
+          <li>Do we need personalization / user accounts?</li>
+          <li>What verticals — web only, or also images/video/maps?</li>
+          <li>Is freshness critical (news) or not (evergreen content)?</li>
+        </ul>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">⚙️ Technical Questions</div>
+        <ul class="bullet-list" style="margin-top: 8px;">
+          <li>Do we need semantic/vector search or keyword search only?</li>
+          <li>Should we handle multi-language queries?</li>
+          <li>What's the read:write ratio? (Typically 1000:1 for search)</li>
+          <li>Do we need real-time indexing or is batch sufficient?</li>
+          <li>Are there regulatory requirements (GDPR, CCPA)?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-label">Hard Interview Questions & Answers</div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How would you handle a query for a very common term like "the" which appears in billions of documents?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        "The" is a stop word — we remove it from the index entirely for keyword queries. For phrase queries ("the matrix"), we keep positional information but use skip pointers to efficiently navigate huge posting lists. At the index shard level, the posting list for "the" is pre-cached in RAM (it's always hot), and we use SIMD instructions to vectorize the intersection. For BM25, high-IDF terms dominate scoring, so "the" contributes negligible score anyway.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How do you prevent a slow index shard from degrading P99 latency for all queries?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        This is the "straggler problem." Solutions: (1) <strong>Hedged requests</strong> — after 50ms, re-send the same request to a replica; use whichever responds first. (2) <strong>Speculative execution</strong> — proactively scatter to multiple replicas. (3) <strong>Timeout + partial results</strong> — if shard N doesn't respond in 150ms, return results from other shards only (graceful degradation). (4) <strong>Load shedding</strong> — circuit breaker marks overloaded shard as "slow" and routes to replicas. (5) <strong>Result from cache</strong> — stale results are better than timeout for most queries.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How would you design the freshness pipeline for news search?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        Separate real-time pipeline from the batch pipeline: (1) <strong>RSS/Sitemap poller</strong> monitors 100K+ news sources every 30 seconds. New URLs → Kafka high-priority topic. (2) <strong>Fast crawler pool</strong> dedicated to high-priority URLs, SLA: fetch within 2 minutes. (3) <strong>Streaming indexer</strong> (Flink) processes documents and writes to a <strong>news shard overlay</strong> — a small, fast-updating index separate from the main index. (4) At query time, the query processor hits BOTH the main index AND the news overlay. Results merged with freshness boost. News overlay is small (&lt;1M docs) so it fits entirely in RAM.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How do you handle spam and SEO manipulation?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        Multi-layer defense: (1) <strong>TrustRank</strong>: start from known trusted seed sites (gov, edu) and propagate trust through link graph. Pages far from trusted seeds get penalized. (2) <strong>Spam classifier</strong>: ML model trained on labeled spam features: keyword stuffing, cloaking, link farms, thin content, ad-heavy pages. (3) <strong>Link quality</strong>: discount links from known link farms. Use link diversity (unique domains) not raw count. (4) <strong>Click signal validation</strong>: detect click fraud via bot detection (IP, user-agent, behavior). (5) <strong>Manual review</strong>: webmaster quality team reviews flagged sites. (6) <strong>Demotion on user feedback</strong>: high "back to search" rate demotes page.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How would you scale the system from 1K to 100K QPS?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        Horizontal scaling at each layer: (1) <strong>Query servers:</strong> Stateless — add more boxes, load balancer distributes. 1K QPS → 100 servers for 100K QPS. (2) <strong>Index shards:</strong> Add shards as corpus grows; add replicas as QPS grows. Each replica handles read traffic. (3) <strong>Cache:</strong> Result cache reduces effective QPS by 30-70%. Scale Redis cluster. (4) <strong>CDN:</strong> Popular SERP pages cached at edge. (5) <strong>ML inference:</strong> Add GPUs for neural re-ranking. (6) <strong>Data centers:</strong> Multi-region active-active — US, EU, APAC — reduces latency and spreads load. (7) <strong>Auto-scaling:</strong> K8s HPA scales query server pods on CPU/QPS metrics.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        How do you compute PageRank at web scale (50B pages, 500B edges)?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        Use distributed graph processing: (1) <strong>Storage:</strong> Link graph stored in Bigtable/Colossus — row key = source URL hash, value = list of destination hashes. (2) <strong>Computation:</strong> Apache Spark GraphX or custom MapReduce. Each iteration: Map phase reads current PR values, emits (destination, contribution) pairs. Reduce phase sums contributions per destination. (3) <strong>Scale:</strong> ~50 iterations needed for convergence. At 500B edges × 16 bytes = 8TB. Runs on 10,000-core cluster in ~4 hours. (4) <strong>Incremental:</strong> Full recompute weekly. Daily incremental update for newly crawled pages using approximate local updates. (5) <strong>Personalized PR:</strong> Compute topic-sensitive PR (sports, tech, health) — 16 topic vectors, each with different teleportation distribution.
+      </div>
+    </div>
+
+    <div class="qa-item" onclick="toggleQA(this)">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q</span>
+        Should you use vector search (semantic) or inverted index (keyword)? Both?
+        <span class="qa-chevron">▶</span>
+      </div>
+      <div class="qa-answer">
+        Modern search uses BOTH — this is called <strong>hybrid search</strong>: (1) <strong>Sparse retrieval (BM25/inverted index):</strong> Excellent for exact keyword matching, navigational queries, rare terms. Very fast. (2) <strong>Dense retrieval (vector search):</strong> Excellent for semantic similarity, paraphrases, zero-shot generalization. Requires ANN index (FAISS, ScaNN). Slower and more storage. (3) <strong>Hybrid:</strong> Run both in parallel, merge results using Reciprocal Rank Fusion (RRF) or learned fusion. The neural re-ranker (L3) is itself a semantic component that re-ranks candidate retrieved via BM25. Trade-off: vector search requires embedding inference at query time (adds ~10-20ms) and embedding store (~16KB per doc × 50B = 800TB).
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== KEY CONCEPTS ====== -->
+  <section id="concepts" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 15 — KNOWLEDGE</div>
+      <div class="page-title">Key<br><span>Concepts</span></div>
+      <div class="page-desc">Essential algorithms, data structures, and concepts you must know for a search system design interview.</div>
+    </div>
+
+    <div class="section-label">Core Algorithms</div>
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">📊 BM25 Formula</div>
+        <div class="code-block" style="font-size: 11px; margin-top: 12px; margin-bottom: 0;">
+<span class="cm">// BM25 score(D, Q) = Σ IDF(qi) × TF_norm</span>
+<span class="cm">// IDF(qi) = log((N - df_i + 0.5) / (df_i + 0.5))</span>
+<span class="cm">// TF_norm = (tf × (k1+1)) / (tf + k1×(1-b+b×|D|/avgdl))</span>
+<span class="cm">// k1 = 1.5 (term freq saturation), b = 0.75 (length norm)</span>
+<span class="cm">// N = corpus size, df = doc frequency, tf = term freq</span>
+        </div>
+      </div>
+      <div class="card card-accent2">
+        <div class="card-title">🔗 PageRank Formula</div>
+        <div class="code-block" style="font-size: 11px; margin-top: 12px; margin-bottom: 0;">
+<span class="cm">// PR(A) = (1-d) + d × Σ PR(T_i) / C(T_i)</span>
+<span class="cm">// d = 0.85 (damping factor / teleportation)</span>
+<span class="cm">// T_i = pages linking to A</span>
+<span class="cm">// C(T_i) = number of outbound links from T_i</span>
+<span class="cm">// Converges in ~50 iterations for most corpora</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Must-Know Data Structures</div>
+    <div class="cards-grid-3">
+      <div class="card">
+        <div class="card-title">📝 Inverted Index</div>
+        <div class="card-body">Maps term → posting list {docID, TF, positions}. Core of all search engines. Compressed with VByte/PForDelta. Skip pointers for fast intersection.</div>
+        <div style="margin-top: 10px;"><span class="tag tag-blue">O(|q|) lookup</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🌳 Trie (Prefix Tree)</div>
+        <div class="card-body">Used for autocomplete. Each node = character. Walk prefix, collect candidates from subtree. O(m) lookup where m = prefix length. Memory-optimized with compressed trie.</div>
+        <div style="margin-top: 10px;"><span class="tag tag-blue">O(m) prefix</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔢 Bloom Filter</div>
+        <div class="card-body">Probabilistic set membership. Used in crawlers to check if URL was already seen. Space-efficient: 10 bits/element for 1% false positive rate. Never miss a URL (no false negatives).</div>
+        <div style="margin-top: 10px;"><span class="tag tag-purple">O(k) ops</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🧮 SimHash</div>
+        <div class="card-body">Locality-sensitive hash for near-duplicate detection. Similar documents → similar 64-bit hashes. Hamming distance &lt;3 → near-duplicate. Enables dedup at billions of pages.</div>
+        <div style="margin-top: 10px;"><span class="tag tag-purple">64-bit LSH</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔵 Min-Hash / LSH</div>
+        <div class="card-body">Jaccard similarity estimation via min-wise hashing. Approximate nearest neighbor search for vector embeddings (FAISS, ScaNN). Essential for semantic search at scale.</div>
+        <div style="margin-top: 10px;"><span class="tag tag-amber">ANN search</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📦 Skip Lists</div>
+        <div class="card-body">Used in posting list traversal. Skip pointers every √n entries allow O(√n) skipping vs O(n) linear scan. Critical for AND queries on large posting lists.</div>
+        <div style="margin-top: 10px;"><span class="tag tag-amber">O(√n) skip</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">Key Concepts Glossary</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td><strong>TF-IDF</strong></td><td>Term Frequency × Inverse Document Frequency. High TF + low DF = relevant term. Foundation of text ranking.</td></tr>
+          <tr><td><strong>Posting List</strong></td><td>Sorted list of (docID, metadata) pairs for a term in an inverted index. The core data structure of search.</td></tr>
+          <tr><td><strong>SERP</strong></td><td>Search Engine Results Page. The page shown to users with ranked results, snippets, and rich features.</td></tr>
+          <tr><td><strong>LambdaMART</strong></td><td>Learning-to-Rank algorithm. GBDT optimized with NDCG-based lambda gradients. Industry standard L2 ranker.</td></tr>
+          <tr><td><strong>NDCG</strong></td><td>Normalized Discounted Cumulative Gain. Standard ranking quality metric. Discounts results lower in the list.</td></tr>
+          <tr><td><strong>Crawl Budget</strong></td><td>Number of pages Googlebot will crawl on a site per day. Determined by site authority and server speed.</td></tr>
+          <tr><td><strong>Canonical URL</strong></td><td>The preferred URL for a piece of content. Prevents duplicate indexing of same content at multiple URLs.</td></tr>
+          <tr><td><strong>E-E-A-T</strong></td><td>Experience, Expertise, Authoritativeness, Trustworthiness. Google's quality framework for evaluating content.</td></tr>
+          <tr><td><strong>Shard</strong></td><td>A partition of the index. Each shard holds a subset of documents. Queries fan out to all shards.</td></tr>
+          <tr><td><strong>Hedged Request</strong></td><td>Sending the same request to multiple replicas after a timeout, using whichever responds first. Reduces tail latency.</td></tr>
+          <tr><td><strong>Pogo-sticking</strong></td><td>User clicks result, immediately returns to SERP to try another. Strong negative relevance signal.</td></tr>
+          <tr><td><strong>VByte Encoding</strong></td><td>Variable-length byte encoding for integers. Small integers use fewer bytes. Used to compress docID deltas in posting lists.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== TRADEOFFS ====== -->
+  <section id="tradeoffs" class="section">
+    <div class="page-header">
+      <div class="page-eyebrow">// 16 — TRADE-OFFS</div>
+      <div class="page-title">Design<br><span>Trade-offs</span></div>
+      <div class="page-desc">Every design decision involves trade-offs. Knowing these shows senior engineering thinking.</div>
+    </div>
+
+    <div class="section-label">Key Design Trade-offs</div>
+
+    <div class="cards-grid-2">
+      <div class="card card-accent">
+        <div class="card-title">⚡ Freshness vs. Coverage</div>
+        <div class="card-body">
+          <strong>Crawl more = better coverage</strong> but more resources and may miss updates.<br>
+          <strong>Crawl faster = fresher</strong> but wastes budget on unchanged pages.<br><br>
+          <strong>Solution:</strong> Adaptive crawl frequency — crawl frequently updated pages (news) every 15min, evergreen content every 30 days. Use Last-Modified and ETag headers. Monitor for sitemaps.
+        </div>
+      </div>
+
+      <div class="card card-accent2">
+        <div class="card-title">🎯 Precision vs. Recall</div>
+        <div class="card-body">
+          <strong>High precision</strong> = fewer results but very relevant. Better for most queries.<br>
+          <strong>High recall</strong> = more results but more noise. Better for rare queries.<br><br>
+          <strong>Solution:</strong> Two-phase retrieval. L1 optimizes recall (BM25, top-1000). L2/L3 optimize precision (ranking, re-ranking). User feedback (clicks) continuously calibrates the balance.
+        </div>
+      </div>
+
+      <div class="card card-accent3">
+        <div class="card-title">💰 Cost vs. Latency</div>
+        <div class="card-body">
+          <strong>Neural re-ranking (BERT)</strong>: Best quality, costs GPU, adds 40ms.<br>
+          <strong>GBDT ranking</strong>: Good quality, CPU-only, adds 10ms.<br>
+          <strong>BM25 only</strong>: Cheapest, fastest, lowest quality.<br><br>
+          <strong>Solution:</strong> Use ML re-ranking only for queries where it helps (ambiguous, head queries). Skip for navigational queries where first result is obvious.
+        </div>
+      </div>
+
+      <div class="card card-accent4">
+        <div class="card-title">🗄 Index Freshness vs. Stability</div>
+        <div class="card-body">
+          <strong>Streaming index updates:</strong> Always fresh, but complex, risk of inconsistency.<br>
+          <strong>Batch index rebuilds:</strong> Stable and consistent, but hours of lag.<br><br>
+          <strong>Solution:</strong> Hybrid. Main index rebuilt in weekly batch (stable, high-quality). News overlay updated in real-time (Flink). Merged at query time with freshness boost.
+        </div>
+      </div>
+
+      <div class="card card-accent5">
+        <div class="card-title">🔀 Document vs. Term Partitioning</div>
+        <div class="card-body">
+          <strong>Document-partitioned:</strong> Each shard has all terms for subset of docs. Query fans out to ALL shards. Simple, good load distribution.<br>
+          <strong>Term-partitioned:</strong> Each shard has all docs for subset of terms. Query goes to fewer shards. But hot shards for popular terms.<br><br>
+          <strong>Winner:</strong> Document-partitioned (Google uses this). Fan-out to all shards is manageable with hedged requests.
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 3px solid #8b5cf6;">
+        <div class="card-title">👤 Personalization vs. Privacy</div>
+        <div class="card-body">
+          <strong>More personalization</strong> = better relevance for user, but requires storing browsing history.<br>
+          <strong>No personalization</strong> = better privacy, same results for everyone.<br><br>
+          <strong>Solution:</strong> Opt-in personalization. Minimal server-side storage (session-based). Use on-device models for sensitive signals. Anonymize logs after 6 months. GDPR right-to-delete.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">When Things Go Wrong</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Failure Scenario</th><th>Detection</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Index Shard Goes Down</strong></td><td>Health check failure, timeout spike</td><td>Route to replica; mark shard degraded; page on-call</td></tr>
+          <tr><td><strong>Crawler DDoSing a Site</strong></td><td>Error rate spike from target domain</td><td>Automatic crawl-delay increase; robots.txt re-check</td></tr>
+          <tr><td><strong>Query Cache Stampede</strong></td><td>Sudden spike on cache expiry</td><td>Cache jitter (randomize TTL ±10%); probabilistic early expiry</td></tr>
+          <tr><td><strong>ML Model Regression</strong></td><td>NDCG drop on eval set</td><td>Automatic rollback to previous model version</td></tr>
+          <tr><td><strong>Spam Index Pollution</strong></td><td>Quality rater flagging; CTR signals</td><td>SpamBrain classifier; TrustRank demotion; manual review</td></tr>
+          <tr><td><strong>Index Update Lag</strong></td><td>Freshness SLO alert</td><td>Prioritize crawl queue; scale streaming indexer</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  function nav(el, sec) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(sec).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function toggleQA(el) {
+    el.classList.toggle('open');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitter-Like Platform — System Design HLD</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090a;
+    --surface: #0f1114;
+    --surface2: #161a1f;
+    --surface3: #1e242c;
+    --border: #252b35;
+    --border2: #2e3740;
+    --accent: #1d9bf0;
+    --accent2: #0f7bc4;
+    --gold: #f4c430;
+    --green: #00ba7c;
+    --red: #f4212e;
+    --purple: #7856ff;
+    --text: #e7ecf0;
+    --text2: #8b98a5;
+    --text3: #536471;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --serif: 'Lora', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  .nav-section {
+    padding: 16px 12px 8px;
+  }
+
+  .nav-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 12px;
+    margin-bottom: 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active {
+    background: rgba(29,155,240,0.12);
+    color: var(--accent);
+    border-color: rgba(29,155,240,0.2);
+  }
+
+  .nav-icon {
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--surface3);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ─── MAIN ─── */
+  .main {
+    margin-left: 280px;
+    min-height: 100vh;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    padding: 60px 60px 50px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.4;
+    mask-image: radial-gradient(ellipse 80% 100% at 50% 0%, black 30%, transparent 100%);
+  }
+
+  .hero-glow {
+    position: absolute;
+    top: -100px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(29,155,240,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(29,155,240,0.1);
+    border: 1px solid rgba(29,155,240,0.25);
+    color: var(--accent);
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  .hero h1 {
+    font-size: clamp(32px, 4vw, 54px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero-desc {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 600px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    font-family: var(--mono);
+  }
+
+  .stat-val.blue { color: var(--accent); }
+  .stat-val.gold { color: var(--gold); }
+  .stat-val.green { color: var(--green); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ─── CONTENT AREA ─── */
+  .content {
+    padding: 40px 60px;
+    max-width: 1100px;
+  }
+
+  /* ─── SECTION ─── */
+  .section {
+    margin-bottom: 64px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .section-icon {
+    margin-left: auto;
+    font-size: 22px;
+    opacity: 0.6;
+  }
+
+  /* ─── FRAMEWORK BOX ─── */
+  .framework-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .framework-step {
+    flex: 1;
+    padding: 20px 16px;
+    position: relative;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .framework-step:last-child { border-right: none; }
+  .framework-step:hover { background: var(--surface2); }
+
+  .fs-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .fs-icon { font-size: 20px; margin-bottom: 6px; }
+
+  .fs-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .fs-time {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: var(--border2); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .card-header-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .card-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .tag-functional { background: rgba(0,186,124,0.12); color: var(--green); border: 1px solid rgba(0,186,124,0.2); }
+  .tag-non-functional { background: rgba(120,86,255,0.12); color: var(--purple); border: 1px solid rgba(120,86,255,0.2); }
+  .tag-capacity { background: rgba(244,196,48,0.12); color: var(--gold); border: 1px solid rgba(244,196,48,0.2); }
+  .tag-critical { background: rgba(244,33,46,0.12); color: var(--red); border: 1px solid rgba(244,33,46,0.2); }
+  .tag-design { background: rgba(29,155,240,0.12); color: var(--accent); border: 1px solid rgba(29,155,240,0.2); }
+  .tag-deep { background: rgba(244,196,48,0.12); color: var(--gold); border: 1px solid rgba(244,196,48,0.2); }
+  .tag-counter { background: rgba(120,86,255,0.12); color: var(--purple); border: 1px solid rgba(120,86,255,0.2); }
+
+  .card-body {
+    padding: 20px;
+    display: none;
+  }
+
+  .card.open .card-body { display: block; }
+
+  .chevron {
+    font-size: 12px;
+    color: var(--text3);
+    transition: transform 0.2s;
+  }
+  .card.open .chevron { transform: rotate(180deg); }
+
+  /* ─── REQ GRID ─── */
+  .req-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .req-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .req-bullet {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .bullet-green { background: var(--green); box-shadow: 0 0 8px rgba(0,186,124,0.5); }
+  .bullet-blue { background: var(--accent); box-shadow: 0 0 8px rgba(29,155,240,0.5); }
+  .bullet-gold { background: var(--gold); box-shadow: 0 0 8px rgba(244,196,48,0.5); }
+  .bullet-red { background: var(--red); box-shadow: 0 0 8px rgba(244,33,46,0.5); }
+  .bullet-purple { background: var(--purple); box-shadow: 0 0 8px rgba(120,86,255,0.5); }
+
+  .req-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .req-text strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; font-size: 12px; }
+
+  /* ─── TABLE ─── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .data-table th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .data-table .mono { font-family: var(--mono); color: var(--accent); font-size: 12px; }
+  .data-table .gold { font-family: var(--mono); color: var(--gold); }
+  .data-table .green { font-family: var(--mono); color: var(--green); }
+  .data-table .red-text { color: var(--red); font-family: var(--mono); }
+
+  /* ─── ARCH DIAGRAM ─── */
+  .arch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .arch-layer {
+    margin-bottom: 24px;
+  }
+
+  .arch-layer-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .arch-layer-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .arch-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .arch-box {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .box-blue { background: rgba(29,155,240,0.08); border-color: rgba(29,155,240,0.3); color: #60b4f6; }
+  .box-green { background: rgba(0,186,124,0.08); border-color: rgba(0,186,124,0.3); color: #3dd68c; }
+  .box-gold { background: rgba(244,196,48,0.08); border-color: rgba(244,196,48,0.3); color: var(--gold); }
+  .box-purple { background: rgba(120,86,255,0.08); border-color: rgba(120,86,255,0.3); color: #a685ff; }
+  .box-red { background: rgba(244,33,46,0.08); border-color: rgba(244,33,46,0.3); color: #f76d77; }
+  .box-gray { background: var(--surface2); border-color: var(--border); color: var(--text2); }
+  .box-teal { background: rgba(0,180,180,0.08); border-color: rgba(0,180,180,0.3); color: #4dd; }
+
+  .arch-arrow {
+    display: flex;
+    justify-content: center;
+    color: var(--text3);
+    font-size: 18px;
+    margin: 4px 0;
+  }
+
+  /* ─── CODE BLOCK ─── */
+  .code-block {
+    background: #0a0c0f;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    overflow-x: auto;
+    margin: 12px 0;
+    line-height: 1.7;
+  }
+
+  .code-block .kw { color: #f97583; }
+  .code-block .str { color: #9ecbff; }
+  .code-block .num { color: var(--gold); }
+  .code-block .comment { color: #586069; font-style: italic; }
+  .code-block .fn { color: #b392f0; }
+  .code-block .key { color: var(--green); }
+
+  /* ─── TIMELINE ─── */
+  .timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .tl-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px; top: 20px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 8px rgba(29,155,240,0.5);
+  }
+
+  .tl-phase {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .tl-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .tl-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* ─── PILLS ─── */
+  .pill-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .pill-accent { background: rgba(29,155,240,0.1); border-color: rgba(29,155,240,0.25); color: var(--accent); }
+  .pill-green2 { background: rgba(0,186,124,0.1); border-color: rgba(0,186,124,0.25); color: var(--green); }
+  .pill-gold2 { background: rgba(244,196,48,0.1); border-color: rgba(244,196,48,0.25); color: var(--gold); }
+  .pill-purple2 { background: rgba(120,86,255,0.1); border-color: rgba(120,86,255,0.25); color: var(--purple); }
+  .pill-red2 { background: rgba(244,33,46,0.1); border-color: rgba(244,33,46,0.25); color: var(--red); }
+  .pill-gray2 { background: var(--surface2); border-color: var(--border); color: var(--text2); }
+
+  /* ─── QUESTION BLOCK ─── */
+  .qa-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .qa-q {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    align-items: flex-start;
+    user-select: none;
+  }
+
+  .qa-q:hover { background: var(--surface2); }
+
+  .q-icon {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(29,155,240,0.12);
+    border: 1px solid rgba(29,155,240,0.2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .q-text { font-size: 14px; font-weight: 600; flex: 1; line-height: 1.4; }
+  .q-arrow { color: var(--text3); font-size: 12px; margin-top: 3px; transition: transform 0.2s; flex-shrink: 0; }
+  .qa-block.open .q-arrow { transform: rotate(180deg); }
+
+  .qa-a {
+    display: none;
+    padding: 0 18px 16px 44px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .qa-block.open .qa-a { display: block; }
+
+  .qa-a strong { color: var(--text); font-weight: 700; }
+  .qa-a ul { padding-left: 20px; margin-top: 8px; }
+  .qa-a li { margin-bottom: 5px; }
+  .qa-a .hint {
+    background: rgba(244,196,48,0.08);
+    border: 1px solid rgba(244,196,48,0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--gold);
+  }
+  .qa-a .hint::before { content: '💡 '; }
+
+  /* ─── METRIC CARDS ─── */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .metric-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .metric-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .metric-value.accent { color: var(--accent); }
+  .metric-value.gold { color: var(--gold); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.red { color: var(--red); }
+  .metric-value.purple { color: var(--purple); }
+
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ─── COMPARISON ─── */
+  .compare-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row:first-child { background: var(--surface2); }
+
+  .compare-cell {
+    padding: 12px 16px;
+    font-size: 12px;
+    border-right: 1px solid var(--border);
+  }
+
+  .compare-cell:last-child { border-right: none; }
+  .compare-row:first-child .compare-cell { font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text3); }
+  .compare-cell.feature { color: var(--text); font-weight: 600; }
+  .compare-cell .yes { color: var(--green); }
+  .compare-cell .no { color: var(--red); }
+  .compare-cell .partial { color: var(--gold); }
+
+  /* ─── DEEPDIVE DIAGRAM ─── */
+  .flow-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    padding: 24px 0;
+  }
+
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 24px;
+    text-align: center;
+    position: relative;
+    min-width: 200px;
+  }
+
+  .flow-box.highlight { border-color: rgba(29,155,240,0.4); background: rgba(29,155,240,0.06); }
+  .flow-box.gold-box { border-color: rgba(244,196,48,0.4); background: rgba(244,196,48,0.06); }
+  .flow-box.green-box { border-color: rgba(0,186,124,0.4); background: rgba(0,186,124,0.06); }
+
+  .flow-box-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .flow-box-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .flow-arrow { color: var(--text3); font-size: 20px; margin: 6px 0; }
+
+  .flow-parallel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+  }
+
+  /* ─── KEY CONCEPTS ─── */
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color 0.2s;
+  }
+
+  .concept-card:hover { border-color: var(--border2); }
+
+  .concept-icon { font-size: 22px; margin-bottom: 10px; }
+
+  .concept-name {
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .concept-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .concept-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+
+  .ctag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text3);
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  /* ─── INLINE CODE ─── */
+  code {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  /* ─── ALERT ─── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-blue { background: rgba(29,155,240,0.08); border: 1px solid rgba(29,155,240,0.2); color: #8dc9f5; }
+  .alert-gold { background: rgba(244,196,48,0.08); border: 1px solid rgba(244,196,48,0.2); color: #e8be50; }
+  .alert-green { background: rgba(0,186,124,0.08); border: 1px solid rgba(0,186,124,0.2); color: #5dd4a4; }
+  .alert-red { background: rgba(244,33,46,0.08); border: 1px solid rgba(244,33,46,0.2); color: #f4767f; }
+
+  /* ─── FORMULA ─── */
+  .formula {
+    background: #0a0c0f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gold);
+    margin: 10px 0;
+    line-height: 1.8;
+  }
+
+  /* ─── SCROLL ─── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* ─── FULLSCREEN TOGGLE ─── */
+  .sidebar-toggle {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 220px; }
+    .main { margin-left: 220px; }
+    .hero { padding: 40px 32px; }
+    .content { padding: 32px; }
+    .req-grid { grid-template-columns: 1fr; }
+    .concept-grid { grid-template-columns: 1fr; }
+    .framework-flow { flex-direction: column; }
+    .framework-step { border-right: none; border-bottom: 1px solid var(--border); }
+    .framework-step:last-child { border-bottom: none; }
+  }
+
+  /* Stagger delays */
+  .section:nth-child(1) { animation-delay: 0.05s; }
+  .section:nth-child(2) { animation-delay: 0.1s; }
+  .section:nth-child(3) { animation-delay: 0.15s; }
+  .section:nth-child(4) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">𝕏</div>
+      <div>
+        <div class="logo-text">System Design</div>
+        <div class="logo-sub">HLD Interview Guide</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-section">
+    <div class="nav-label">Framework</div>
+    <a href="#framework" class="nav-item active" onclick="setActive(this)">
+      <div class="nav-icon">🗺</div> Interview Framework
+      <span class="nav-badge">7 steps</span>
+    </a>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Requirements</div>
+    <a href="#functional" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">✅</div> Functional Reqs
+    </a>
+    <a href="#nonfunctional" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">⚡</div> Non-Functional Reqs
+    </a>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Estimation</div>
+    <a href="#capacity" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">📊</div> Capacity Estimation
+    </a>
+    <a href="#planning" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🏗</div> Capacity Planning
+    </a>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Architecture</div>
+    <a href="#hld" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🔭</div> High Level Design
+    </a>
+    <a href="#deepdive" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🔬</div> Deep Dives
+    </a>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Interview Mastery</div>
+    <a href="#counter" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">💬</div> Counter Questions
+    </a>
+    <a href="#concepts" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">🧠</div> Key Concepts
+    </a>
+    <a href="#tradeoffs" class="nav-item" onclick="setActive(this)">
+      <div class="nav-icon">⚖️</div> Trade-offs
+    </a>
+  </nav>
+</aside>
+
+<!-- ─── MAIN ─── -->
+<main class="main">
+
+  <!-- ─── HERO ─── -->
+  <header class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-tag">
+        <span>●</span> System Design Interview Prep
+      </div>
+      <h1>Designing a <span>Twitter-Like</span><br>Social Platform</h1>
+      <p class="hero-desc">A complete HLD interview reference — from clarifying questions through deep dives. Master every layer of a high-scale social media system.</p>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-val blue">500M</div><div class="stat-label">Daily Active Users</div></div>
+        <div class="stat"><div class="stat-val gold">500K</div><div class="stat-label">Tweets / Min</div></div>
+        <div class="stat"><div class="stat-val green">150ms</div><div class="stat-label">Feed P99 Latency</div></div>
+        <div class="stat"><div class="stat-val" style="color:#a685ff">99.99%</div><div class="stat-label">Availability SLA</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── CONTENT ─── -->
+  <div class="content">
+
+    <!-- ══════════════════════════════════════
+         1. FRAMEWORK
+    ══════════════════════════════════════ -->
+    <section class="section" id="framework">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">Interview Framework</h2>
+        <span class="section-icon">🗺</span>
+      </div>
+
+      <div class="alert alert-blue">
+        <span class="alert-icon">ℹ️</span>
+        <span>Always spend the first <strong>2–3 minutes</strong> asking clarifying questions before drawing any diagrams. Interviewers reward structured thinking over premature architecture.</span>
+      </div>
+
+      <div class="framework-flow">
+        <div class="framework-step">
+          <div class="fs-num">01</div>
+          <div class="fs-icon">🎯</div>
+          <div class="fs-title">Clarify</div>
+          <div class="fs-time">3 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">02</div>
+          <div class="fs-icon">📋</div>
+          <div class="fs-title">Requirements</div>
+          <div class="fs-time">5 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">03</div>
+          <div class="fs-icon">🔢</div>
+          <div class="fs-title">Estimation</div>
+          <div class="fs-time">5 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">04</div>
+          <div class="fs-icon">🔭</div>
+          <div class="fs-title">HLD</div>
+          <div class="fs-time">15 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">05</div>
+          <div class="fs-icon">🔬</div>
+          <div class="fs-title">Deep Dives</div>
+          <div class="fs-time">15 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">06</div>
+          <div class="fs-icon">⚖️</div>
+          <div class="fs-title">Trade-offs</div>
+          <div class="fs-time">5 min</div>
+        </div>
+        <div class="framework-step">
+          <div class="fs-num">07</div>
+          <div class="fs-icon">💬</div>
+          <div class="fs-title">Wrap Up</div>
+          <div class="fs-time">2 min</div>
+        </div>
+      </div>
+
+      <div class="card open" id="clarify-card">
+        <div class="card-header" onclick="toggleCard('clarify-card')">
+          <div class="card-header-icon" style="background:rgba(29,155,240,0.12)">🎯</div>
+          <div class="card-title">Clarifying Questions to Ask</div>
+          <span class="card-tag tag-design">Must Ask</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-phase">SCOPE</div>
+              <div class="tl-title">What features do we need to support?</div>
+              <div class="tl-desc">Tweet posting, following, home timeline, search, trending, notifications, DMs, media uploads? Pin down the MVP scope.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">SCALE</div>
+              <div class="tl-title">How many users are we designing for?</div>
+              <div class="tl-desc">Get MAU/DAU, tweets per day, read:write ratio. "Twitter-like" could mean 10K users or 500M — confirms estimation direction.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">PERFORMANCE</div>
+              <div class="tl-title">What are latency & availability expectations?</div>
+              <div class="tl-desc">Is 200ms acceptable for timeline? Is it okay to show slightly stale data (eventual consistency)? Defines caching and consistency model.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">CONSTRAINTS</div>
+              <div class="tl-title">Any special constraints?</div>
+              <div class="tl-desc">Character limits, media file sizes, rate limiting, geolocation requirements, content moderation, celebrity / whale user handling.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">FOCUS</div>
+              <div class="tl-title">Which area should I go deepest on?</div>
+              <div class="tl-desc">Feed generation? Notification system? Search? This signals where to spend your deep-dive time.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         2. FUNCTIONAL REQUIREMENTS
+    ══════════════════════════════════════ -->
+    <section class="section" id="functional">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">Functional Requirements</h2>
+        <span class="section-icon">✅</span>
+      </div>
+
+      <div class="alert alert-green">
+        <span class="alert-icon">💡</span>
+        <span>Separate <strong>Core</strong> (must-have for MVP) from <strong>Extended</strong> (nice-to-have). This shows prioritization ability — a senior engineer skill.</span>
+      </div>
+
+      <div class="card open" id="fr-core">
+        <div class="card-header" onclick="toggleCard('fr-core')">
+          <div class="card-header-icon" style="background:rgba(0,186,124,0.12)">⭐</div>
+          <div class="card-title">Core Features (MVP)</div>
+          <span class="card-tag tag-functional">Functional</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="req-grid">
+            <div class="req-item">
+              <div class="req-bullet bullet-green"></div>
+              <div class="req-text"><strong>Tweet CRUD</strong>Post tweets (≤280 chars + media), edit (with history), delete. Retweet & quote-tweet support.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-green"></div>
+              <div class="req-text"><strong>User Graph (Follow)</strong>Follow/unfollow users. Asymmetric graph — following ≠ followers. Block & mute support.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-green"></div>
+              <div class="req-text"><strong>Home Timeline</strong>Personalized feed of tweets from followed accounts + ranked recommendations. Infinite scroll.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-green"></div>
+              <div class="req-text"><strong>Engagement</strong>Like, reply, bookmark. Engagement counts visible in real-time. Threaded conversations.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>User Profiles</strong>Profile page with bio, header, pinned tweet, follower/following count, tweet history.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>Notifications</strong>Push + in-app: likes, replies, follows, mentions. Badge count, mark as read.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>Search</strong>Full-text tweet search. Hashtag search. User search. Near-real-time indexing.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>Trending Topics</strong>Real-time trending hashtags/topics, personalized by location & interest.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="fr-ext">
+        <div class="card-header" onclick="toggleCard('fr-ext')">
+          <div class="card-header-icon" style="background:rgba(120,86,255,0.12)">🚀</div>
+          <div class="card-title">Extended Features (Post-MVP)</div>
+          <span class="card-tag tag-non-functional">Extended</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="pill-grid">
+            <span class="pill pill-purple2">💬 Direct Messages (DMs)</span>
+            <span class="pill pill-purple2">📡 Twitter Spaces (Audio)</span>
+            <span class="pill pill-purple2">📰 Twitter Lists</span>
+            <span class="pill pill-purple2">🔞 Sensitive Content Filter</span>
+            <span class="pill pill-purple2">📲 Push Notifications (Mobile)</span>
+            <span class="pill pill-purple2">🌍 Translation</span>
+            <span class="pill pill-purple2">⚡ Analytics Dashboard</span>
+            <span class="pill pill-purple2">📌 Communities</span>
+            <span class="pill pill-purple2">🛡 Content Moderation</span>
+            <span class="pill pill-purple2">🎯 Ads Targeting</span>
+            <span class="pill pill-purple2">✅ Verification Badges</span>
+            <span class="pill pill-purple2">📊 Polls</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         3. NON-FUNCTIONAL REQUIREMENTS
+    ══════════════════════════════════════ -->
+    <section class="section" id="nonfunctional">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">Non-Functional Requirements</h2>
+        <span class="section-icon">⚡</span>
+      </div>
+
+      <div class="alert alert-gold">
+        <span class="alert-icon">⚠️</span>
+        <span>NFRs drive the entire architecture. State them explicitly — they justify every design decision you make later (CDN, caching, sharding, fan-out strategy, etc.)</span>
+      </div>
+
+      <div class="card open" id="nfr-card">
+        <div class="card-header" onclick="toggleCard('nfr-card')">
+          <div class="card-header-icon" style="background:rgba(120,86,255,0.12)">⚡</div>
+          <div class="card-title">System Quality Attributes</div>
+          <span class="card-tag tag-non-functional">NFR</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border)">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Attribute</th>
+                  <th>Requirement</th>
+                  <th>Target</th>
+                  <th>Justification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Availability</strong></td>
+                  <td>System must stay up</td>
+                  <td class="green">99.99% (52m/yr downtime)</td>
+                  <td>Global social platform — outages are very public</td>
+                </tr>
+                <tr>
+                  <td><strong>Read Latency</strong></td>
+                  <td>Timeline load</td>
+                  <td class="mono">&lt;150ms p99</td>
+                  <td>User retention drops sharply at >200ms</td>
+                </tr>
+                <tr>
+                  <td><strong>Write Latency</strong></td>
+                  <td>Tweet posted</td>
+                  <td class="mono">&lt;500ms p99</td>
+                  <td>Acceptable for eventual consistency fan-out</td>
+                </tr>
+                <tr>
+                  <td><strong>Scalability</strong></td>
+                  <td>Handle traffic spikes</td>
+                  <td class="gold">10× surge capacity</td>
+                  <td>Breaking news events cause massive spikes</td>
+                </tr>
+                <tr>
+                  <td><strong>Consistency</strong></td>
+                  <td>Feed freshness</td>
+                  <td class="mono">Eventual (~sec)</td>
+                  <td>Strong consistency not needed; stale feeds OK</td>
+                </tr>
+                <tr>
+                  <td><strong>Durability</strong></td>
+                  <td>Zero data loss</td>
+                  <td class="green">11 nines (S3-class)</td>
+                  <td>Tweets are user-generated content; must not lose</td>
+                </tr>
+                <tr>
+                  <td><strong>Fault Tolerance</strong></td>
+                  <td>Partial failures</td>
+                  <td class="gold">Graceful degradation</td>
+                  <td>Recommendation failure → show chronological feed</td>
+                </tr>
+                <tr>
+                  <td><strong>Security</strong></td>
+                  <td>Auth, privacy</td>
+                  <td class="green">OAuth2, E2E for DMs</td>
+                  <td>Account takeovers are high-profile incidents</td>
+                </tr>
+                <tr>
+                  <td><strong>Observability</strong></td>
+                  <td>Metrics, tracing, logs</td>
+                  <td class="mono">Real-time dashboards</td>
+                  <td>Required for rapid incident response</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="alert alert-blue">
+              <span class="alert-icon">📌</span>
+              <span><strong>CAP Theorem Choice:</strong> Twitter chooses <strong>Availability + Partition Tolerance (AP)</strong> over Consistency. A user seeing a tweet appear 2 seconds late is acceptable; a user seeing "Service Unavailable" is not.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         4. CAPACITY ESTIMATION
+    ══════════════════════════════════════ -->
+    <section class="section" id="capacity">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">Capacity Estimation</h2>
+        <span class="section-icon">📊</span>
+      </div>
+
+      <div class="alert alert-blue">
+        <span class="alert-icon">📐</span>
+        <span>Always start with user numbers, derive QPS, then calculate storage. Show your math out loud — interviewers want to see the reasoning, not just the answer.</span>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Monthly Active Users</div>
+          <div class="metric-value accent">500M</div>
+          <div class="metric-sub">MAU</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Daily Active Users</div>
+          <div class="metric-value accent">200M</div>
+          <div class="metric-sub">~40% of MAU</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Tweets / Day</div>
+          <div class="metric-value gold">500M</div>
+          <div class="metric-sub">2.5 tweets/DAU/day</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Tweet Write QPS</div>
+          <div class="metric-value gold">~6K</div>
+          <div class="metric-sub">500M / 86,400s</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Read:Write Ratio</div>
+          <div class="metric-value purple">100:1</div>
+          <div class="metric-sub">Social = read heavy</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Timeline Read QPS</div>
+          <div class="metric-value green">~600K</div>
+          <div class="metric-sub">6K × 100</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Peak QPS (Spike)</div>
+          <div class="metric-value red">~1.5M</div>
+          <div class="metric-sub">2.5× avg read QPS</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg Following</div>
+          <div class="metric-value accent">200</div>
+          <div class="metric-sub">per user</div>
+        </div>
+      </div>
+
+      <div class="card open" id="storage-card">
+        <div class="card-header" onclick="toggleCard('storage-card')">
+          <div class="card-header-icon" style="background:rgba(244,196,48,0.12)">💾</div>
+          <div class="card-title">Storage Estimation</div>
+          <span class="card-tag tag-capacity">Capacity</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="formula">
+# Tweet Storage
+tweet_size = 280 chars × 2 bytes + metadata = ~1KB / tweet
+daily_tweets = 500M tweets/day
+daily_tweet_storage = 500M × 1KB ≈ 500GB/day
+5-year_tweets = 500GB × 365 × 5 ≈ 912TB ≈ ~1PB
+
+# Media Storage (photos ~200KB, videos ~3MB, 30% with media)
+photo_tweets = 500M × 0.2 × 200KB = 20TB/day
+video_tweets = 500M × 0.1 × 3MB = 150TB/day
+total_media/day ≈ 170TB/day
+
+# User Data
+user_record ≈ 500B
+total_users = 500M × 500B = 250GB
+
+# Social Graph (follow edges)
+avg_following = 200, avg_followers = 200
+edge = ~8 bytes (user_id_pair)
+total_edges = 500M × 200 × 8B ≈ 800GB
+
+# Total 5-year Storage ≈ ~1PB tweets + ~300PB media + hot data in cache
+          </div>
+
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border)">
+            <table class="data-table">
+              <thead>
+                <tr><th>Data Type</th><th>Size/Unit</th><th>Volume</th><th>Daily Growth</th><th>5-Year Total</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Tweet text</td><td class="mono">~1KB</td><td>500M/day</td><td class="gold">500GB</td><td class="red-text">~1PB</td></tr>
+                <tr><td>Photos</td><td class="mono">~200KB</td><td>100M/day</td><td class="gold">20TB</td><td class="red-text">~36PB</td></tr>
+                <tr><td>Videos</td><td class="mono">~3MB</td><td>50M/day</td><td class="gold">150TB</td><td class="red-text">~274PB</td></tr>
+                <tr><td>User profiles</td><td class="mono">~500B</td><td>500M users</td><td class="gold">~1GB</td><td class="red-text">~250GB</td></tr>
+                <tr><td>Social graph</td><td class="mono">~8B/edge</td><td>100B edges</td><td class="gold">~1GB</td><td class="red-text">~800GB</td></tr>
+                <tr><td>Timeline cache</td><td class="mono">~800B/tweet</td><td>200 tweets/user</td><td class="gold">—</td><td class="red-text">~32TB</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="bandwidth-card">
+        <div class="card-header" onclick="toggleCard('bandwidth-card')">
+          <div class="card-header-icon" style="background:rgba(120,86,255,0.12)">📡</div>
+          <div class="card-title">Bandwidth & Network Estimation</div>
+          <span class="card-tag tag-capacity">Capacity</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="formula">
+# Ingress (writes)
+tweet_ingress = 6K tweets/s × 1KB = 6MB/s
+media_ingress = (20TB + 150TB) / 86400 ≈ 1.97GB/s ≈ ~2GB/s
+
+# Egress (reads — much larger)
+# Assume each timeline load = 20 tweets × 1KB + thumbnails
+timeline_text_egress = 600K reads/s × 20KB = 12GB/s
+thumbnail_egress ≈ 4× text = ~48GB/s
+
+# CDN offload: ~80% of media served from CDN edge
+# Origin egress ≈ 20% of 48GB/s = ~10GB/s to origin
+
+# Total Peak Bandwidth: ~60-70 GB/s egress (with CDN)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         5. CAPACITY PLANNING
+    ══════════════════════════════════════ -->
+    <section class="section" id="planning">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">Capacity Planning</h2>
+        <span class="section-icon">🏗</span>
+      </div>
+
+      <div class="card open" id="server-plan">
+        <div class="card-header" onclick="toggleCard('server-plan')">
+          <div class="card-header-icon" style="background:rgba(0,186,124,0.12)">🖥</div>
+          <div class="card-title">Server Fleet Planning</div>
+          <span class="card-tag tag-capacity">Planning</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border)">
+            <table class="data-table">
+              <thead>
+                <tr><th>Service</th><th>QPS Load</th><th>Per-server cap</th><th>Servers needed</th><th>With 3× headroom</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>API Gateway / LB</strong></td>
+                  <td class="mono">600K RPS</td>
+                  <td class="mono">50K RPS</td>
+                  <td class="gold">12</td>
+                  <td class="green">36</td>
+                </tr>
+                <tr>
+                  <td><strong>Tweet Service</strong></td>
+                  <td class="mono">6K WPS</td>
+                  <td class="mono">1K WPS</td>
+                  <td class="gold">6</td>
+                  <td class="green">18</td>
+                </tr>
+                <tr>
+                  <td><strong>Timeline Service</strong></td>
+                  <td class="mono">600K RPS</td>
+                  <td class="mono">10K RPS</td>
+                  <td class="gold">60</td>
+                  <td class="green">180</td>
+                </tr>
+                <tr>
+                  <td><strong>Fan-out Workers</strong></td>
+                  <td class="mono">6K events/s</td>
+                  <td class="mono">500 evts/s</td>
+                  <td class="gold">12</td>
+                  <td class="green">36</td>
+                </tr>
+                <tr>
+                  <td><strong>Search Indexer</strong></td>
+                  <td class="mono">6K writes/s</td>
+                  <td class="mono">2K/s</td>
+                  <td class="gold">3</td>
+                  <td class="green">9</td>
+                </tr>
+                <tr>
+                  <td><strong>Notification Service</strong></td>
+                  <td class="mono">1M events/s</td>
+                  <td class="mono">100K/s</td>
+                  <td class="gold">10</td>
+                  <td class="green">30</td>
+                </tr>
+                <tr>
+                  <td><strong>Media Upload</strong></td>
+                  <td class="mono">2GB/s ingress</td>
+                  <td class="mono">200MB/s</td>
+                  <td class="gold">10</td>
+                  <td class="green">30</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:14px">
+            <div class="formula">
+# Cache Planning (Redis / Memcached)
+hot_tweets = 20% of tweets get 80% of reads (Pareto)
+cache_hit_target = 95%+ (offload DB reads)
+timeline_cache_size = 200M users × 200 tweets × 800B ≈ 32TB
+→ Need ~320 × 100GB Redis nodes (or fewer with 1TB instances)
+
+# DB Sharding (Cassandra / PostgreSQL)
+tweets_shard_key = tweet_id (time-sortable, e.g. Snowflake ID)
+user_shard_key = user_id
+target_shard_size = &lt;500GB/shard
+shards_needed = 1PB / 500GB = 2000 shards (tweet data)
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         6. HIGH LEVEL DESIGN
+    ══════════════════════════════════════ -->
+    <section class="section" id="hld">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">High-Level Design</h2>
+        <span class="section-icon">🔭</span>
+      </div>
+
+      <div class="alert alert-blue">
+        <span class="alert-icon">🎨</span>
+        <span>Draw top-down: Client → API Gateway → Services → Data Stores. Explain each component's role before moving to the next. Don't skip explaining <em>why</em> each component exists.</span>
+      </div>
+
+      <!-- Architecture Diagram -->
+      <div class="arch-diagram" style="margin-bottom:20px">
+        <div class="arch-layer">
+          <div class="arch-layer-label">Client Layer</div>
+          <div class="arch-row">
+            <span class="arch-box box-gray">📱 Mobile App (iOS/Android)</span>
+            <span class="arch-box box-gray">🌐 Web Browser (React/Next.js)</span>
+            <span class="arch-box box-gray">🖥 Desktop App (Electron)</span>
+            <span class="arch-box box-gray">🤖 API Consumers (Bots/3rd party)</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↓ HTTPS / WebSocket / gRPC ↓</div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">Edge & Gateway Layer</div>
+          <div class="arch-row">
+            <span class="arch-box box-blue">🌍 CDN (CloudFront/Fastly) — Static Assets + Media</span>
+            <span class="arch-box box-blue">🔀 Global Load Balancer (Anycast DNS)</span>
+          </div>
+          <div class="arch-row" style="margin-top:6px">
+            <span class="arch-box box-blue">🚪 API Gateway (Rate Limit / Auth / SSL Termination / Routing)</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↓ Internal gRPC / REST ↓</div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">Service Layer (Microservices)</div>
+          <div class="arch-row">
+            <span class="arch-box box-green">✍️ Tweet Service</span>
+            <span class="arch-box box-green">📰 Timeline Service</span>
+            <span class="arch-box box-green">👤 User Service</span>
+            <span class="arch-box box-green">🔔 Notification Svc</span>
+            <span class="arch-box box-green">🔍 Search Service</span>
+            <span class="arch-box box-green">💬 DM Service</span>
+            <span class="arch-box box-green">📸 Media Service</span>
+            <span class="arch-box box-green">📈 Analytics Svc</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↓ Kafka (Async Event Bus) ↓</div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">Async Processing Layer</div>
+          <div class="arch-row">
+            <span class="arch-box box-gold">⚡ Fan-Out Workers</span>
+            <span class="arch-box box-gold">📧 Email/Push Workers</span>
+            <span class="arch-box box-gold">🔍 Search Indexer</span>
+            <span class="arch-box box-gold">📊 Trend Aggregator</span>
+            <span class="arch-box box-gold">🛡 Spam/ML Processor</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">↓ Storage Reads/Writes ↓</div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">Storage Layer</div>
+          <div class="arch-row">
+            <span class="arch-box box-red">🐘 PostgreSQL (Users, Social Graph)</span>
+            <span class="arch-box box-red">🔷 Cassandra (Tweets, Timeline)</span>
+            <span class="arch-box box-red">⚡ Redis (Cache, Sessions, Counters)</span>
+            <span class="arch-box box-red">🔍 Elasticsearch (Full-text search)</span>
+            <span class="arch-box box-red">🪣 S3/Object Store (Media)</span>
+            <span class="arch-box box-red">📊 Hadoop/Spark (Analytics)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key flows -->
+      <div class="card open" id="write-flow">
+        <div class="card-header" onclick="toggleCard('write-flow')">
+          <div class="card-header-icon" style="background:rgba(244,196,48,0.12)">✍️</div>
+          <div class="card-title">Write Path — Tweet Post Flow</div>
+          <span class="card-tag tag-design">Critical Flow</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="flow-diagram">
+            <div class="flow-box highlight">
+              <div class="flow-box-title">User posts tweet</div>
+              <div class="flow-box-sub">HTTP POST /api/v1/tweets</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box">
+              <div class="flow-box-title">API Gateway</div>
+              <div class="flow-box-sub">Auth token validation + Rate limit check</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box highlight">
+              <div class="flow-box-title">Tweet Service</div>
+              <div class="flow-box-sub">Validate, generate Snowflake ID, store in Cassandra</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box gold-box">
+              <div class="flow-box-title">Kafka — "tweet.created" event</div>
+              <div class="flow-box-sub">topic: tweets | key: user_id | async broadcast</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%">
+              <div class="flow-box green-box">
+                <div class="flow-box-title">Fan-out Service</div>
+                <div class="flow-box-sub">Write tweet_id to follower timelines in Redis</div>
+              </div>
+              <div class="flow-box green-box">
+                <div class="flow-box-title">Search Indexer</div>
+                <div class="flow-box-sub">Index tweet in Elasticsearch</div>
+              </div>
+              <div class="flow-box green-box">
+                <div class="flow-box-title">Notification Svc</div>
+                <div class="flow-box-sub">Notify @mentions, hashtag followers</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-gold" style="margin-top:16px">
+            <span class="alert-icon">⚠️</span>
+            <span><strong>Celebrity Problem:</strong> Users with millions of followers (Kim Kardashian, Elon Musk) would trigger millions of fan-out writes. Solution: <strong>Hybrid push-pull</strong> — fan-out for regular users (&lt;10K followers), pull at read time for celebrities. Merge at timeline read.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="read-flow">
+        <div class="card-header" onclick="toggleCard('read-flow')">
+          <div class="card-header-icon" style="background:rgba(29,155,240,0.12)">📰</div>
+          <div class="card-title">Read Path — Home Timeline Generation</div>
+          <span class="card-tag tag-design">Critical Flow</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="flow-diagram">
+            <div class="flow-box highlight">
+              <div class="flow-box-title">User opens home timeline</div>
+              <div class="flow-box-sub">GET /api/v1/timeline/home</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box">
+              <div class="flow-box-title">Timeline Service</div>
+              <div class="flow-box-sub">Check Redis cache for user's pre-computed feed</div>
+            </div>
+            <div class="flow-arrow">↓ Cache MISS path ↓</div>
+            <div class="flow-box gold-box">
+              <div class="flow-box-title">Fetch following list from Graph Service</div>
+              <div class="flow-box-sub">User follows 200 accounts → get their recent tweet_ids</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box">
+              <div class="flow-box-title">Merge & Rank</div>
+              <div class="flow-box-sub">Merge tweet_ids from all 200 followees, apply ML ranking model</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-box green-box">
+              <div class="flow-box-title">Hydrate Tweets + Cache</div>
+              <div class="flow-box-sub">Fetch tweet objects, store in Redis (TTL 5min), return to user</div>
+            </div>
+          </div>
+
+          <div class="code-block" style="margin-top:16px">
+<span class="comment">// Timeline cache key design</span>
+<span class="kw">const</span> timelineCacheKey = <span class="str">`timeline:home:{user_id}`</span>;
+<span class="comment">// Value: sorted set of tweet_ids (score = timestamp)</span>
+<span class="comment">// TTL: 5 minutes (short enough for freshness)</span>
+<span class="comment">// Max entries: 800 (user typically sees ~20/session)</span>
+
+<span class="comment">// Fan-out on write stores:</span>
+ZADD timeline:home:user_123 <span class="num">1699000000</span> tweet_456789
+ZREMRANGEBYRANK timeline:home:user_123 <span class="num">0</span> -<span class="num">801</span> <span class="comment">// trim to 800</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="db-choices">
+        <div class="card-header" onclick="toggleCard('db-choices')">
+          <div class="card-header-icon" style="background:rgba(244,33,46,0.12)">🗄</div>
+          <div class="card-title">Database Technology Choices</div>
+          <span class="card-tag tag-design">Data Layer</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border)">
+            <table class="data-table">
+              <thead>
+                <tr><th>Data</th><th>Technology</th><th>Why?</th><th>Alternative</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Tweets</strong></td>
+                  <td><span class="pill pill-gold2" style="display:inline-flex;font-size:11px">Cassandra</span></td>
+                  <td>Write-heavy, time-series, wide rows, auto-sharding, tunable consistency</td>
+                  <td>DynamoDB, ScyllaDB</td>
+                </tr>
+                <tr>
+                  <td><strong>Users & Social Graph</strong></td>
+                  <td><span class="pill pill-accent" style="display:inline-flex;font-size:11px">PostgreSQL</span></td>
+                  <td>ACID for user data, complex queries for profiles, follower counts</td>
+                  <td>MySQL, Neo4j for graph</td>
+                </tr>
+                <tr>
+                  <td><strong>Timelines (cache)</strong></td>
+                  <td><span class="pill pill-red2" style="display:inline-flex;font-size:11px">Redis Cluster</span></td>
+                  <td>Sub-ms reads, sorted sets perfect for time-ordered feeds, pub/sub for live updates</td>
+                  <td>Memcached, Aerospike</td>
+                </tr>
+                <tr>
+                  <td><strong>Search</strong></td>
+                  <td><span class="pill pill-gold2" style="display:inline-flex;font-size:11px">Elasticsearch</span></td>
+                  <td>Full-text, inverted index, faceted search, near real-time indexing</td>
+                  <td>Solr, Typesense</td>
+                </tr>
+                <tr>
+                  <td><strong>Media</strong></td>
+                  <td><span class="pill pill-green2" style="display:inline-flex;font-size:11px">S3 + CDN</span></td>
+                  <td>Cheap, durable, globally replicated, CDN edge caching for latency</td>
+                  <td>GCS, Azure Blob</td>
+                </tr>
+                <tr>
+                  <td><strong>Message Queue</strong></td>
+                  <td><span class="pill pill-purple2" style="display:inline-flex;font-size:11px">Kafka</span></td>
+                  <td>High throughput, replay, multiple consumers, partitioned by user_id</td>
+                  <td>RabbitMQ, SQS, Pulsar</td>
+                </tr>
+                <tr>
+                  <td><strong>Counters</strong></td>
+                  <td><span class="pill pill-red2" style="display:inline-flex;font-size:11px">Redis</span></td>
+                  <td>INCR is atomic, extremely fast, no DB load for like/RT counts</td>
+                  <td>Cassandra counters</td>
+                </tr>
+                <tr>
+                  <td><strong>Rate Limiting</strong></td>
+                  <td><span class="pill pill-red2" style="display:inline-flex;font-size:11px">Redis + Sliding Window</span></td>
+                  <td>Distributed counters across all API gateway instances</td>
+                  <td>Token bucket in-memory</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         7. DEEP DIVES
+    ══════════════════════════════════════ -->
+    <section class="section" id="deepdive">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">Deep Dives</h2>
+        <span class="section-icon">🔬</span>
+      </div>
+
+      <div class="card open" id="dd-fanout">
+        <div class="card-header" onclick="toggleCard('dd-fanout')">
+          <div class="card-header-icon" style="background:rgba(244,196,48,0.12)">⚡</div>
+          <div class="card-title">Deep Dive: Fan-out Architecture</div>
+          <span class="card-tag tag-deep">Deep Dive</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-gold">
+            <span class="alert-icon">⭐</span>
+            <span>This is the most asked deep dive in Twitter system design. Know both strategies cold.</span>
+          </div>
+
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border);margin-bottom:16px">
+            <div class="compare-row">
+              <div class="compare-cell">Strategy</div>
+              <div class="compare-cell">Fan-out on Write (Push)</div>
+              <div class="compare-cell">Fan-out on Read (Pull)</div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">How it works</div>
+              <div class="compare-cell">On tweet post, pre-compute and write tweet_id to all follower timelines immediately</div>
+              <div class="compare-cell">On timeline request, fetch tweets from all followees in real-time and merge</div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">Read latency</div>
+              <div class="compare-cell"><span class="yes">Very fast (pre-computed)</span></div>
+              <div class="compare-cell"><span class="no">Slower (N DB reads per load)</span></div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">Write cost</div>
+              <div class="compare-cell"><span class="no">High — 200 follower fan-out per tweet</span></div>
+              <div class="compare-cell"><span class="yes">Low — just write the tweet once</span></div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">Celebrity problem</div>
+              <div class="compare-cell"><span class="no">Catastrophic — 10M fan-out writes</span></div>
+              <div class="compare-cell"><span class="yes">No issue — pull on demand</span></div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">Inactive users</div>
+              <div class="compare-cell"><span class="no">Waste — writes to users who never log in</span></div>
+              <div class="compare-cell"><span class="yes">No waste</span></div>
+            </div>
+            <div class="compare-row">
+              <div class="compare-cell feature">Twitter's choice</div>
+              <div class="compare-cell"><span class="yes">✓ For normal users (&lt;10K followers)</span></div>
+              <div class="compare-cell"><span class="yes">✓ For celebrities (&gt;10K followers)</span></div>
+            </div>
+          </div>
+
+          <div class="alert alert-green">
+            <span class="alert-icon">✅</span>
+            <span><strong>Hybrid Strategy (Twitter's Real Approach):</strong> Fan-out on write for normal users. At read time, pull tweets from celebrity accounts separately and merge with pre-computed feed. The merge is O(n) where n = number of celebrities followed, which is small.</span>
+          </div>
+
+          <div class="code-block">
+<span class="comment">// Hybrid timeline merge pseudocode</span>
+<span class="kw">async function</span> <span class="fn">getHomeTimeline</span>(userId) {
+  <span class="comment">// 1. Get pre-computed feed from Redis (push-model users)</span>
+  <span class="kw">const</span> cachedFeed = <span class="kw">await</span> redis.<span class="fn">zrevrange</span>(<span class="str">`tl:{userId}`</span>, <span class="num">0</span>, <span class="num">199</span>);
+  
+  <span class="comment">// 2. Get celebrity followees for this user</span>
+  <span class="kw">const</span> celebrities = <span class="kw">await</span> graphDb.<span class="fn">getCelebrityFollowees</span>(userId);
+  
+  <span class="comment">// 3. Pull recent tweets from each celebrity (last 24h only)</span>
+  <span class="kw">const</span> celebTweets = <span class="kw">await</span> Promise.<span class="fn">all</span>(
+    celebrities.<span class="fn">map</span>(c => tweetStore.<span class="fn">getRecentTweets</span>(c.id, <span class="num">24</span>))
+  );
+  
+  <span class="comment">// 4. Merge + rank all tweets, return top 20</span>
+  <span class="kw">return</span> rankingModel.<span class="fn">rank</span>([...cachedFeed, ...celebTweets.<span class="fn">flat</span>]).<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">20</span>);
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="dd-search">
+        <div class="card-header" onclick="toggleCard('dd-search')">
+          <div class="card-header-icon" style="background:rgba(29,155,240,0.12)">🔍</div>
+          <div class="card-title">Deep Dive: Search & Trending</div>
+          <span class="card-tag tag-deep">Deep Dive</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="req-grid">
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>Indexing Pipeline</strong>Tweet posted → Kafka → Search Consumer → Elasticsearch. Lag target: &lt;5 seconds to searchable.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-blue"></div>
+              <div class="req-text"><strong>Index Design</strong>Inverted index on tokens. Store tweet_id, user_id, timestamp, engagement_score. Shard by time ranges.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-gold"></div>
+              <div class="req-text"><strong>Trending Algorithm</strong>Count hashtag occurrences in sliding 1-hour window. Use Count-Min Sketch for memory efficiency. Top-K with min-heap.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-gold"></div>
+              <div class="req-text"><strong>Trending Personalization</strong>Global trending → filtered by location → filtered by interest graph → merge with social graph signals.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-green"></div>
+              <div class="req-text"><strong>Typeahead / Autocomplete</strong>Trie in Redis with prefix matching. Pre-warm popular searches. Cache top-10 results per prefix.</div>
+            </div>
+            <div class="req-item">
+              <div class="req-bullet bullet-purple"></div>
+              <div class="req-text"><strong>Spam Filtering</strong>ML classifier on tweet content before indexing. Velocity checks (same text from many accounts = spam).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="dd-notifications">
+        <div class="card-header" onclick="toggleCard('dd-notifications')">
+          <div class="card-header-icon" style="background:rgba(0,186,124,0.12)">🔔</div>
+          <div class="card-title">Deep Dive: Notification System</div>
+          <span class="card-tag tag-deep">Deep Dive</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="arch-diagram">
+            <div class="arch-row">
+              <span class="arch-box box-gold">Kafka: notification.events</span>
+            </div>
+            <div class="arch-row" style="margin-top:8px">→ partitioned by recipient user_id</div>
+            <div class="arch-row" style="margin-top:8px">
+              <span class="arch-box box-green">Notification Worker Pool (consume events)</span>
+            </div>
+            <div class="arch-row" style="margin-top:8px">
+              <span class="arch-box box-blue">Preference Service</span>
+              <span class="arch-box box-blue">Rate Limiter (max 10 notifs/hr per user)</span>
+              <span class="arch-box box-blue">Dedup Cache (Redis)</span>
+            </div>
+            <div class="arch-row" style="margin-top:8px">
+              <span class="arch-box box-green">APNs (iOS Push)</span>
+              <span class="arch-box box-green">FCM (Android Push)</span>
+              <span class="arch-box box-green">WebSocket (Browser)</span>
+              <span class="arch-box box-green">Email (SES/Sendgrid)</span>
+              <span class="arch-box box-green">SMS (Twilio)</span>
+            </div>
+          </div>
+
+          <div class="formula" style="margin-top:14px">
+# Notification Load
+like_rate = 6K tweets/s × avg 50 likes = 300K like events/s
+follow_rate = ~10K follows/s
+mention_rate = ~50K mentions/s
+total_events ≈ 1M events/s → Kafka handles easily with partitioning
+
+# Delivery SLA
+push_notification: &lt;5 seconds (p95)
+in-app badge: &lt;2 seconds (WebSocket)
+email digest: within 30 minutes (batch)
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="dd-media">
+        <div class="card-header" onclick="toggleCard('dd-media')">
+          <div class="card-header-icon" style="background:rgba(120,86,255,0.12)">📸</div>
+          <div class="card-title">Deep Dive: Media Upload & CDN</div>
+          <span class="card-tag tag-deep">Deep Dive</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-phase">STEP 1</div>
+              <div class="tl-title">Client requests pre-signed S3 upload URL</div>
+              <div class="tl-desc">Media service generates a pre-signed S3 URL (valid 15 min). Client uploads directly to S3 — bypasses your servers entirely. Reduces load, no bottleneck.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">STEP 2</div>
+              <div class="tl-title">S3 triggers Lambda → Processing Pipeline</div>
+              <div class="tl-desc">On upload: generate thumbnails (WebP, AVIF), compress video (H.264, HEVC), extract EXIF, run NSFW detection, virus scan. Store all variants in S3.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">STEP 3</div>
+              <div class="tl-title">CDN Distribution</div>
+              <div class="tl-desc">Media URLs point to CDN (CloudFront / Fastly). Edge nodes cache at 150+ PoPs globally. Cache key = content hash → infinite TTL, immutable assets. 95%+ cache hit ratio target.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-phase">STEP 4</div>
+              <div class="tl-title">Adaptive Bitrate for Video</div>
+              <div class="tl-desc">Generate HLS/DASH manifests. Client selects quality based on bandwidth. Prevents buffering on slow connections. Critical for mobile experience.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         8. COUNTER QUESTIONS
+    ══════════════════════════════════════ -->
+    <section class="section" id="counter">
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2 class="section-title">Counter Questions & Expected Answers</h2>
+        <span class="section-icon">💬</span>
+      </div>
+
+      <div class="alert alert-gold">
+        <span class="alert-icon">🎯</span>
+        <span>Interviewers will probe your design. These are the most common challenges. Practice saying these answers out loud until they feel natural.</span>
+      </div>
+
+      <div class="qa-block" id="qa1">
+        <div class="qa-q" onclick="toggleQA('qa1')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you handle a famous user with 50 million followers posting a tweet?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>The "Celebrity Problem" / "Hot Key Problem"</strong>
+          <ul>
+            <li>Pure fan-out-on-write is impossible — 50M writes would take hours and spike the DB.</li>
+            <li>Use <strong>hybrid strategy</strong>: celebrity tweets are NOT fanned out. Instead, stored once in Cassandra.</li>
+            <li>At read time, timeline service identifies celebrity followees for this user, fetches their last N tweets, and merges with pre-computed feed from regular users.</li>
+            <li>Celebrity threshold: configurable (e.g., &gt;10K followers = celebrity mode).</li>
+          </ul>
+          <div class="hint">The interviewer wants to hear: "fan-out on write doesn't scale for celebrities, so I'd use pull for high-follower accounts and push for regular users — a hybrid approach."</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa2">
+        <div class="qa-q" onclick="toggleQA('qa2')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you ensure tweets appear in real-time? What about WebSockets vs polling?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Real-time Feed Updates:</strong>
+          <ul>
+            <li><strong>WebSockets</strong> (preferred): Persistent connection, server pushes new tweet_ids as they arrive. Client fetches tweet details. Efficient — no wasted polls.</li>
+            <li><strong>Server-Sent Events (SSE)</strong>: Simpler than WebSocket, HTTP-based, one-directional. Good for notification streams.</li>
+            <li><strong>Long Polling</strong>: Fallback for clients that can't maintain WebSocket (corporate proxies).</li>
+            <li>Architecture: When fan-out worker writes to Redis timeline, it also publishes to a Redis pub/sub channel per user. WebSocket service subscribes per connected user.</li>
+          </ul>
+          <div class="hint">Scale concern: 200M DAU can't all hold WebSocket connections. Use multiplexing — route to shared WebSocket servers partitioned by user_id range. Each server handles ~50K connections.</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa3">
+        <div class="qa-q" onclick="toggleQA('qa3')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">What happens if your cache goes down? How do you prevent a cache stampede?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Cache Failure Resilience:</strong>
+          <ul>
+            <li><strong>Redis Cluster</strong> with replicas — automatic failover. No single point of failure.</li>
+            <li>If cache is cold (stampede risk): use <strong>probabilistic early expiration</strong> or <strong>mutex/distributed lock</strong> so only one request regenerates the cache while others wait.</li>
+            <li><strong>Circuit breaker</strong>: if cache is fully down, fall back to database reads with rate limiting to prevent DB overload.</li>
+            <li><strong>Gradual cache warm-up</strong> on startup: don't accept traffic until cache is pre-warmed from DB snapshots.</li>
+            <li>Cache-aside pattern (not write-through) gives more control over what gets cached.</li>
+          </ul>
+          <div class="hint">Mention the "thundering herd" problem by name — it shows experience with distributed systems failure modes.</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa4">
+        <div class="qa-q" onclick="toggleQA('qa4')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you shard your database? What's your sharding key for tweets?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Sharding Strategy:</strong>
+          <ul>
+            <li><strong>Tweet sharding by tweet_id</strong> (Snowflake ID = timestamp + worker_id + sequence). This distributes writes evenly and allows time-range queries on a single shard.</li>
+            <li><strong>User timeline sharding by user_id</strong>: All timeline entries for a user go to the same shard → no cross-shard joins for timeline fetch.</li>
+            <li><strong>Hotspot concern</strong>: Sharding by user_id means a celebrity's data is on one shard. Mitigate with read replicas + caching.</li>
+            <li><strong>Consistent hashing</strong>: Adds/removes shards without full reshuffling. Virtual nodes smooth load distribution.</li>
+          </ul>
+          <div class="hint">Snowflake ID is Twitter's actual invention for this problem — mention it. It provides: globally unique IDs, monotonically increasing (sortable by time), generated without a DB round-trip.</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa5">
+        <div class="qa-q" onclick="toggleQA('qa5')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you handle the like/retweet count being slightly off?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Eventual Consistency for Counters:</strong>
+          <ul>
+            <li>Exact counts are not critical — users don't notice "10,000 vs 10,003 likes."</li>
+            <li>Counts stored in <strong>Redis with INCR</strong> — atomic, fast. Periodically flushed to Cassandra (every 30s).</li>
+            <li>For display, read from Redis (fast, possibly slightly stale). For analytics, read from Cassandra.</li>
+            <li>If Redis node fails: recover counts from Cassandra + Kafka event replay (all like events are in Kafka).</li>
+          </ul>
+          <div class="hint">This is a great example of trading strong consistency for performance. Say explicitly: "I choose AP over CP here — eventual consistency is acceptable for engagement counts."</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa6">
+        <div class="qa-q" onclick="toggleQA('qa6')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How would you scale search to handle 600K read QPS?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Search Scaling:</strong>
+          <ul>
+            <li><strong>Elasticsearch cluster</strong> with horizontal sharding — shard by time window (shard per day/week). Old shards are read-only and highly cacheable.</li>
+            <li><strong>Search result caching</strong>: Popular queries (e.g., "World Cup") cached in Redis. Invalidate when new tweets with those terms arrive.</li>
+            <li><strong>Read replicas</strong>: Multiple ES replicas serve search traffic. Write to primary, reads distributed.</li>
+            <li><strong>Query optimization</strong>: Use filter clauses (not scored, cached by ES) for structured filters (date range, verified only). Only full-text on content field.</li>
+            <li><strong>Separate recent vs. historical</strong>: Hot index (last 7 days) in SSD-backed nodes, cold index (older) in HDD-backed nodes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa7">
+        <div class="qa-q" onclick="toggleQA('qa7')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you handle rate limiting at scale?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Distributed Rate Limiting:</strong>
+          <ul>
+            <li><strong>Sliding window counter in Redis</strong>: Use ZADD to track request timestamps per user. O(log N) per check. Accurate but memory-intensive.</li>
+            <li><strong>Token bucket</strong>: Simpler, allows bursting. Stored in Redis. Replenish tokens at fixed rate.</li>
+            <li><strong>Fixed window</strong>: Simplest, slight boundary condition issue. Fine for most use cases.</li>
+            <li>Rate limit tiers: Unauthenticated (100 req/hr), Regular (1500 req/hr), Partner API (custom).</li>
+            <li>Edge enforcement: Rate limits checked at API Gateway — before hitting any downstream service.</li>
+            <li>Distributed: All gateway nodes share same Redis cluster → consistent limits across regions.</li>
+          </ul>
+          <div class="hint">Mention X-RateLimit-Remaining, X-RateLimit-Reset headers in responses — shows you think about developer experience, not just backend.</div>
+        </div>
+      </div>
+
+      <div class="qa-block" id="qa8">
+        <div class="qa-q" onclick="toggleQA('qa8')">
+          <span class="q-icon">Q</span>
+          <div class="q-text">How do you design the "Who to Follow" recommendation system?</div>
+          <span class="q-arrow">▼</span>
+        </div>
+        <div class="qa-a">
+          <strong>Follow Recommendations:</strong>
+          <ul>
+            <li><strong>Graph-based</strong>: "Friends of friends" (2nd-degree connections) — computed offline via Hadoop/Spark nightly, stored in Redis.</li>
+            <li><strong>Interest-based</strong>: User's engagement history → infer interests → recommend users who tweet about those topics.</li>
+            <li><strong>Collaborative filtering</strong>: Users with similar follow graphs get similar recommendations (matrix factorization).</li>
+            <li><strong>Trending account signals</strong>: Accounts gaining followers fast in your network get boosted.</li>
+            <li>Serving: Pre-computed results cached per user, refreshed daily. Real-time blend with personalization layer.</li>
+          </ul>
+          <div class="hint">Separate offline training (batch, Spark on HDFS) from online serving (pre-computed, Redis). Don't try to compute recommendations in real-time — it won't scale.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         9. KEY CONCEPTS
+    ══════════════════════════════════════ -->
+    <section class="section" id="concepts">
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2 class="section-title">Key Concepts to Master</h2>
+        <span class="section-icon">🧠</span>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="concept-icon">❄️</div>
+          <div class="concept-name">Snowflake ID</div>
+          <div class="concept-desc">Twitter's distributed ID generation. 64-bit: 41 bits timestamp + 10 bits machine ID + 12 bits sequence. Globally unique, time-sortable, DB-free generation. ~4096 IDs/ms/machine.</div>
+          <div class="concept-tags">
+            <span class="ctag">ID Generation</span>
+            <span class="ctag">Distributed</span>
+            <span class="ctag">Time-sortable</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">💍</div>
+          <div class="concept-name">Consistent Hashing</div>
+          <div class="concept-desc">Maps keys to nodes on a ring. Adding/removing nodes only remaps ~K/N keys (K=keys, N=nodes) instead of all keys. Virtual nodes balance load. Essential for elastic sharding.</div>
+          <div class="concept-tags">
+            <span class="ctag">Sharding</span>
+            <span class="ctag">Load Balancing</span>
+            <span class="ctag">Elasticity</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🌐</div>
+          <div class="concept-name">CAP Theorem</div>
+          <div class="concept-desc">In a distributed system, you can only guarantee 2 of 3: Consistency, Availability, Partition Tolerance. Networks always partition → choose CP (banks) or AP (social media). Twitter chooses AP.</div>
+          <div class="concept-tags">
+            <span class="ctag">Distributed Systems</span>
+            <span class="ctag">Consistency</span>
+            <span class="ctag">Availability</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🌊</div>
+          <div class="concept-name">Back Pressure</div>
+          <div class="concept-desc">When a consumer can't keep up with a producer, signal to slow down. Kafka consumers can lag behind, then catch up. Prevents OOM and cascading failures. Use bounded queues.</div>
+          <div class="concept-tags">
+            <span class="ctag">Resilience</span>
+            <span class="ctag">Kafka</span>
+            <span class="ctag">Flow Control</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🎯</div>
+          <div class="concept-name">Count-Min Sketch</div>
+          <div class="concept-desc">Probabilistic data structure for frequency estimation. Uses d×w bit matrix with d hash functions. O(1) insert/query, O(d×w) space. Perfect for counting hashtag occurrences for trending with bounded memory.</div>
+          <div class="concept-tags">
+            <span class="ctag">Probabilistic</span>
+            <span class="ctag">Trending</span>
+            <span class="ctag">Space-efficient</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🔒</div>
+          <div class="concept-name">Distributed Locks (Redlock)</div>
+          <div class="concept-desc">Redis-based distributed mutual exclusion. Acquire lock across N Redis nodes (majority). Used for cache stampede prevention, job deduplication. But: network partitions can cause issues — use with care.</div>
+          <div class="concept-tags">
+            <span class="ctag">Concurrency</span>
+            <span class="ctag">Redis</span>
+            <span class="ctag">Cache</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">📈</div>
+          <div class="concept-name">Read Replicas</div>
+          <div class="concept-desc">Route all reads to replica DBs, writes to primary. Reduces primary load by N replicas. Slight replication lag (eventual consistency). Replicas can be geographically distributed for lower latency.</div>
+          <div class="concept-tags">
+            <span class="ctag">Scalability</span>
+            <span class="ctag">PostgreSQL</span>
+            <span class="ctag">MySQL</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">⚡</div>
+          <div class="concept-name">CQRS Pattern</div>
+          <div class="concept-desc">Command Query Responsibility Segregation: separate write model (commands: post tweet) from read model (queries: get timeline). Allows independent scaling and optimization of each path. Twitter naturally follows this.</div>
+          <div class="concept-tags">
+            <span class="ctag">Architecture</span>
+            <span class="ctag">Pattern</span>
+            <span class="ctag">Scalability</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🔄</div>
+          <div class="concept-name">Saga Pattern</div>
+          <div class="concept-desc">Manage distributed transactions across microservices without 2-phase commit. Chain of local transactions, each publishing events. Compensating transactions handle rollbacks. Used for tweet deletion propagation.</div>
+          <div class="concept-tags">
+            <span class="ctag">Microservices</span>
+            <span class="ctag">Transactions</span>
+            <span class="ctag">Consistency</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🛡</div>
+          <div class="concept-name">Circuit Breaker</div>
+          <div class="concept-desc">Prevent cascading failures: CLOSED (normal) → OPEN (failures exceed threshold, fast-fail) → HALF-OPEN (test if service recovered). Used around downstream service calls. Netflix Hystrix popularized this.</div>
+          <div class="concept-tags">
+            <span class="ctag">Resilience</span>
+            <span class="ctag">Fault Tolerance</span>
+            <span class="ctag">Pattern</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🗜</div>
+          <div class="concept-name">Write-Ahead Log (WAL)</div>
+          <div class="concept-desc">All changes written to append-only log before applying to storage. Enables crash recovery, replication, CDC (change data capture). Kafka itself is essentially a distributed WAL. Used by PostgreSQL and Cassandra.</div>
+          <div class="concept-tags">
+            <span class="ctag">Durability</span>
+            <span class="ctag">Replication</span>
+            <span class="ctag">Recovery</span>
+          </div>
+        </div>
+
+        <div class="concept-card">
+          <div class="concept-icon">🎪</div>
+          <div class="concept-name">Service Mesh (Istio)</div>
+          <div class="concept-desc">Sidecar proxies (Envoy) handle service-to-service communication: mTLS, load balancing, circuit breaking, observability. Services communicate without knowing about infrastructure concerns. Reduces boilerplate in every service.</div>
+          <div class="concept-tags">
+            <span class="ctag">Kubernetes</span>
+            <span class="ctag">Microservices</span>
+            <span class="ctag">Observability</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         10. TRADE-OFFS
+    ══════════════════════════════════════ -->
+    <section class="section" id="tradeoffs">
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2 class="section-title">Key Trade-offs to Discuss</h2>
+        <span class="section-icon">⚖️</span>
+      </div>
+
+      <div class="alert alert-red">
+        <span class="alert-icon">🏆</span>
+        <span>The best candidates proactively bring up trade-offs <em>before</em> being asked. It shows senior-level thinking. Always say "I chose X because Y, but the trade-off is Z."</span>
+      </div>
+
+      <div class="card open" id="tradeoffs-card">
+        <div class="card-header" onclick="toggleCard('tradeoffs-card')">
+          <div class="card-header-icon" style="background:rgba(244,33,46,0.12)">⚖️</div>
+          <div class="card-title">Design Decision Trade-offs</div>
+          <span class="card-tag tag-counter">Trade-offs</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div style="overflow:hidden;border-radius:8px;border:1px solid var(--border)">
+            <table class="data-table">
+              <thead>
+                <tr><th>Decision</th><th>Option A ✅ Chosen</th><th>Option B</th><th>Key Trade-off</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Fan-out strategy</strong></td>
+                  <td>Hybrid push+pull</td>
+                  <td>Pure push / Pure pull</td>
+                  <td>Storage vs. Read latency vs. Write cost</td>
+                </tr>
+                <tr>
+                  <td><strong>Consistency model</strong></td>
+                  <td>Eventual (AP)</td>
+                  <td>Strong (CP)</td>
+                  <td>Availability vs. seeing 1-2s stale feed</td>
+                </tr>
+                <tr>
+                  <td><strong>Tweet storage</strong></td>
+                  <td>Cassandra</td>
+                  <td>MySQL / PostgreSQL</td>
+                  <td>Write throughput vs. complex queries / ACID</td>
+                </tr>
+                <tr>
+                  <td><strong>ID generation</strong></td>
+                  <td>Snowflake (distributed)</td>
+                  <td>DB auto-increment</td>
+                  <td>No coordination vs. perfect monotonicity</td>
+                </tr>
+                <tr>
+                  <td><strong>Search</strong></td>
+                  <td>Elasticsearch</td>
+                  <td>PostgreSQL FTS</td>
+                  <td>Dedicated search engine vs. simpler architecture</td>
+                </tr>
+                <tr>
+                  <td><strong>Message queue</strong></td>
+                  <td>Kafka</td>
+                  <td>RabbitMQ / SQS</td>
+                  <td>Replay / throughput vs. simpler ops</td>
+                </tr>
+                <tr>
+                  <td><strong>Timeline storage</strong></td>
+                  <td>Redis sorted sets</td>
+                  <td>Cassandra time-series</td>
+                  <td>Speed vs. cost (Redis RAM is expensive)</td>
+                </tr>
+                <tr>
+                  <td><strong>Media delivery</strong></td>
+                  <td>CDN + S3</td>
+                  <td>Self-hosted servers</td>
+                  <td>Cost + simplicity vs. control</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="alert alert-blue">
+              <span class="alert-icon">💡</span>
+              <span><strong>Pro tip for interviews:</strong> When mentioning a trade-off, always connect it back to the NFRs. "We chose AP because our NFR says 99.99% availability matters more than seeing the absolute latest tweet."</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Final checklist -->
+      <div class="card" id="checklist">
+        <div class="card-header" onclick="toggleCard('checklist')">
+          <div class="card-header-icon" style="background:rgba(0,186,124,0.12)">✅</div>
+          <div class="card-title">Interview Checklist — Before You Finish</div>
+          <span class="card-tag tag-functional">Review</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="req-grid">
+            <div class="req-item"><div class="req-bullet bullet-green"></div><div class="req-text"><strong>Clarified scope?</strong>Did you confirm what features to include and which to skip?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-green"></div><div class="req-text"><strong>Stated NFRs explicitly?</strong>Availability %, latency targets, consistency model?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-green"></div><div class="req-text"><strong>Did rough estimation?</strong>QPS, storage, bandwidth — even approximate is fine.</div></div>
+            <div class="req-item"><div class="req-bullet bullet-green"></div><div class="req-text"><strong>Explained celebrity problem?</strong>Hybrid fan-out strategy clearly articulated?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-blue"></div><div class="req-text"><strong>Justified DB choices?</strong>"I chose Cassandra because..." not just "use Cassandra."</div></div>
+            <div class="req-item"><div class="req-bullet bullet-blue"></div><div class="req-text"><strong>Addressed single points of failure?</strong>Replicas, multi-AZ, failover mentioned?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-gold"></div><div class="req-text"><strong>Brought up trade-offs proactively?</strong>Didn't wait for interviewer to ask?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-gold"></div><div class="req-text"><strong>Mentioned observability?</strong>Metrics, tracing, alerting — shows production-thinking.</div></div>
+            <div class="req-item"><div class="req-bullet bullet-purple"></div><div class="req-text"><strong>Summarized at the end?</strong>2-minute recap of architecture decisions?</div></div>
+            <div class="req-item"><div class="req-bullet bullet-purple"></div><div class="req-text"><strong>Asked what to dive deeper on?</strong>Shows awareness of time constraints.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top:40px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:0.08em;margin-bottom:8px">SYSTEM DESIGN — TWITTER-LIKE PLATFORM HLD</div>
+        <div style="font-size:13px;color:var(--text2);font-family:var(--serif);font-style:italic">"The best system design answer isn't the most complex one — it's the one that shows you understand <em>why</em> each decision was made."</div>
+        <div style="margin-top:16px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+          <span class="pill pill-accent">🏗 Microservices</span>
+          <span class="pill pill-green2">⚡ Event-Driven</span>
+          <span class="pill pill-gold2">📊 AP System</span>
+          <span class="pill pill-purple2">🔀 Hybrid Fan-out</span>
+          <span class="pill pill-red2">❄️ Snowflake IDs</span>
+          <span class="pill pill-gray2">☁️ Cloud-Native</span>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+  function toggleCard(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  function toggleQA(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  function setActive(el) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Intersection observer for active nav
+  const sections = document.querySelectorAll('section[id]');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navItems.forEach(item => {
+          item.classList.toggle('active', item.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Animate metric values on load
+  document.querySelectorAll('.metric-value').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      el.style.transition = 'all 0.4s ease';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 300 + Math.random() * 400);
+  });
+</script>
+
+</body>
+</html>

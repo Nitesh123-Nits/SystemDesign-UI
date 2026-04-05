@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Design: Video Streaming Platform (TikTok)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --surface2: #161b22;
+    --surface3: #21262d;
+    --border: #30363d;
+    --accent: #ff2d55;
+    --accent2: #00d4ff;
+    --accent3: #a8ff3e;
+    --accent4: #ff9500;
+    --accent5: #bf5af2;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --glow-red: 0 0 20px rgba(255,45,85,0.3);
+    --glow-blue: 0 0 20px rgba(0,212,255,0.3);
+    --glow-green: 0 0 20px rgba(168,255,62,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,12,16,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  nav {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  nav::-webkit-scrollbar { display: none; }
+
+  .nav-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0.8rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border-radius: 2px;
+  }
+
+  .nav-btn:hover, .nav-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255,45,85,0.08);
+  }
+
+  /* HERO */
+  .hero {
+    padding: 5rem 2rem 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 30px;
+    height: 1px;
+    background: var(--accent2);
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 .line1 { color: var(--text); display: block; }
+  h1 .line2 { color: var(--accent); display: block; }
+  h1 .line3 { color: var(--text3); display: block; font-size: 0.5em; font-weight: 400; font-family: 'Space Mono', monospace; margin-top: 0.5rem; }
+
+  .hero-stats {
+    display: flex;
+    gap: 3rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent3);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text2);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* SECTION LAYOUT */
+  .section {
+    display: none;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .section-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: rgba(255,45,85,0.1);
+    border: 1px solid rgba(255,45,85,0.3);
+    padding: 0.3rem 0.6rem;
+    border-radius: 3px;
+  }
+
+  .section-desc {
+    color: var(--text2);
+    margin-top: 0.75rem;
+    max-width: 700px;
+    font-size: 0.95rem;
+  }
+
+  /* HLD DIAGRAM */
+  .hld-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .hld-title-bar {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+
+  .hld-diagram {
+    padding: 2rem;
+    overflow-x: auto;
+  }
+
+  /* SVG DIAGRAM */
+  svg.arch {
+    width: 100%;
+    min-width: 900px;
+    height: auto;
+    display: block;
+  }
+
+  /* COMPONENTS GRID */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .component-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .component-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--accent));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+
+  .component-card:hover::before { transform: scaleX(1); }
+
+  .component-card:hover {
+    border-color: var(--card-accent, var(--accent));
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .card-header {
+    padding: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .card-subtitle {
+    font-size: 0.7rem;
+    color: var(--text2);
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.25rem;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .card-body p {
+    font-size: 0.85rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-tech {
+    background: rgba(0,212,255,0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+
+  .tag-scale {
+    background: rgba(168,255,62,0.1);
+    color: var(--accent3);
+    border: 1px solid rgba(168,255,62,0.2);
+  }
+
+  /* EXPANDABLE DETAIL */
+  .detail-panel {
+    display: none;
+    padding: 1rem 1.25rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    animation: slideDown 0.3s ease;
+  }
+
+  .detail-panel.open { display: block; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .detail-panel h4 {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent2);
+    margin-bottom: 0.75rem;
+  }
+
+  .detail-panel ul {
+    list-style: none;
+  }
+
+  .detail-panel ul li {
+    font-size: 0.82rem;
+    color: var(--text2);
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .detail-panel ul li::before {
+    content: '→';
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    margin-top: 0.1rem;
+  }
+
+  /* SCALABILITY SECTION */
+  .scale-pillars {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .pillar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pillar::after {
+    content: attr(data-num);
+    position: absolute;
+    right: -0.5rem;
+    bottom: -1rem;
+    font-size: 6rem;
+    font-weight: 800;
+    color: rgba(255,255,255,0.025);
+    font-family: 'Space Mono', monospace;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .pillar-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .pillar h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .pillar p {
+    font-size: 0.82rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* DEEP DIVE */
+  .deepdive-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+
+  .tab-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .tab-btn.active, .tab-btn:hover {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .tab-content { display: none; animation: fadeIn 0.3s ease; }
+  .tab-content.active { display: block; }
+
+  .deepdive-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .deepdive-grid { grid-template-columns: 1fr; }
+  }
+
+  .deepdive-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+  }
+
+  .deepdive-block h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .badge-hot { background: rgba(255,45,85,0.15); color: var(--accent); border: 1px solid rgba(255,45,85,0.3); }
+  .badge-core { background: rgba(0,212,255,0.15); color: var(--accent2); border: 1px solid rgba(0,212,255,0.3); }
+  .badge-opt { background: rgba(168,255,62,0.15); color: var(--accent3); border: 1px solid rgba(168,255,62,0.3); }
+
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin: 0.75rem 0;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+
+  .code-block .kw { color: var(--accent); }
+  .code-block .str { color: var(--accent3); }
+  .code-block .num { color: var(--accent2); }
+  .code-block .cm { color: var(--text3); }
+  .code-block .fn { color: var(--accent4); }
+
+  .flow-step {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    align-items: flex-start;
+  }
+
+  .flow-step:last-child { border-bottom: none; }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .step-num.blue { background: var(--accent2); color: var(--bg); }
+  .step-num.green { background: var(--accent3); color: var(--bg); }
+
+  .step-text {
+    font-size: 0.82rem;
+    color: var(--text2);
+    padding-top: 0.1rem;
+    line-height: 1.5;
+  }
+
+  .step-text strong { color: var(--text); font-weight: 600; }
+
+  /* COUNTER QUESTIONS */
+  .qa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .qa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .qa-card.open { border-color: var(--accent); }
+
+  .qa-question {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .qa-q-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .qa-level {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .lvl-hard { background: rgba(255,45,85,0.15); color: var(--accent); border: 1px solid rgba(255,45,85,0.3); }
+  .lvl-mid { background: rgba(255,149,0,0.15); color: var(--accent4); border: 1px solid rgba(255,149,0,0.3); }
+  .lvl-easy { background: rgba(168,255,62,0.15); color: var(--accent3); border: 1px solid rgba(168,255,62,0.3); }
+
+  .qa-chevron {
+    color: var(--text3);
+    transition: transform 0.3s;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .qa-card.open .qa-chevron { transform: rotate(180deg); color: var(--accent); }
+
+  .qa-answer {
+    display: none;
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.15);
+    animation: slideDown 0.3s ease;
+  }
+
+  .qa-answer.open { display: block; }
+
+  .qa-answer p {
+    font-size: 0.83rem;
+    color: var(--text2);
+    line-height: 1.7;
+    padding-top: 1rem;
+  }
+
+  .qa-answer p + p { margin-top: 0.75rem; }
+
+  .qa-answer strong { color: var(--text); font-weight: 600; }
+
+  .qa-answer .highlight-box {
+    background: rgba(0,212,255,0.05);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+    line-height: 1.6;
+  }
+
+  /* NUMBERS BAR */
+  .numbers-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .num-item {
+    padding: 1rem;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.2);
+  }
+
+  .num-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+    line-height: 1;
+  }
+
+  .num-desc {
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin-top: 0.4rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* TOOLTIP */
+  [data-tip] {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dashed var(--text3);
+  }
+
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.72rem;
+    color: var(--text);
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0;
+  }
+
+  /* FLOW DIAGRAM BARS */
+  .req-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .req-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .req-label {
+    width: 140px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text2);
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .req-bar-wrap {
+    flex: 1;
+    height: 24px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .req-bar {
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--bg);
+    transition: width 1s ease;
+  }
+
+  /* PULSE DOTS */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s infinite;
+    margin-right: 0.5rem;
+  }
+
+  /* SCROLL TO TOP */
+  .scroll-top {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 40px;
+    height: 40px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    color: var(--text2);
+    z-index: 50;
+  }
+
+  .scroll-top:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ARCH TABLE */
+  .arch-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 1rem;
+  }
+
+  .arch-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent2);
+    font-weight: 400;
+  }
+
+  .arch-table td {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text2);
+  }
+
+  .arch-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .arch-table td:first-child {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* TRADEOFF GRID */
+  .tradeoff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .tradeoff-grid { grid-template-columns: 1fr; }
+  }
+
+  .tradeoff-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .tradeoff-box h4 {
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tradeoff-box.pro h4 { color: var(--accent3); }
+  .tradeoff-box.con h4 { color: var(--accent); }
+
+  .tradeoff-box ul {
+    list-style: none;
+  }
+
+  .tradeoff-box ul li {
+    font-size: 0.8rem;
+    color: var(--text2);
+    padding: 0.3rem 0;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .tradeoff-box.pro li::before { content: '✓'; color: var(--accent3); }
+  .tradeoff-box.con li::before { content: '✗'; color: var(--accent); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    h1 { font-size: 2.2rem; }
+    .hero-stats { gap: 1.5rem; }
+  }
+
+  /* ANIMATED GRADIENT TEXT */
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .gradient-text {
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--accent));
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s linear infinite;
+  }
+
+  /* PROGRESS INDICATOR */
+  .progress-bar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    z-index: 99;
+    transition: width 0.1s;
+    width: 0%;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <div class="logo">SYS<span>.</span>DESIGN — <span>Video Streaming</span></div>
+  <nav id="mainNav">
+    <button class="nav-btn active" data-section="overview">Overview</button>
+    <button class="nav-btn" data-section="hld">HLD Diagram</button>
+    <button class="nav-btn" data-section="components">Components</button>
+    <button class="nav-btn" data-section="scalability">Scalability</button>
+    <button class="nav-btn" data-section="deepdive">Deep Dive</button>
+    <button class="nav-btn" data-section="questions">Counter Q&amp;A</button>
+  </nav>
+</header>
+
+<!-- OVERVIEW -->
+<section class="section active" id="overview">
+  <div class="hero">
+    <div class="hero-tag"><span class="live-dot"></span>System Design Interview — Production Grade</div>
+    <h1>
+      <span class="line1">Video Streaming</span>
+      <span class="line2 gradient-text">Platform @ Scale</span>
+      <span class="line3">// Like TikTok · 1B+ Users · 100M+ Videos/day</span>
+    </h1>
+    <p style="color:var(--text2);max-width:680px;font-size:0.95rem;line-height:1.7;margin-top:1rem;">
+      A complete system design breakdown covering architecture, data flow, scalability pillars, deep-dive concepts, and counter-questions an interviewer will throw at you. Navigate sections using the top menu.
+    </p>
+
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">1B+</div><div class="stat-label">Daily Active Users</div></div>
+      <div class="stat"><div class="stat-num">34M</div><div class="stat-label">Videos Uploaded / Day</div></div>
+      <div class="stat"><div class="stat-num">167M</div><div class="stat-label">Hours Watched / Day</div></div>
+      <div class="stat"><div class="stat-num">99ms</div><div class="stat-label">Target Feed Latency P99</div></div>
+      <div class="stat"><div class="stat-num">150PB+</div><div class="stat-label">Storage at Scale</div></div>
+    </div>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:0 2rem 4rem;">
+
+    <!-- Requirements -->
+    <div class="section-header">
+      <h2><span class="section-num">01</span> Requirements Scoping</h2>
+      <p class="section-desc">Always clarify functional vs non-functional requirements before designing. This signals structured thinking to the interviewer.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:3rem;">
+      <div class="deepdive-block">
+        <h3 style="color:var(--accent2);margin-bottom:1rem;font-size:0.9rem;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;">Functional Requirements</h3>
+        <div class="flow-step"><div class="step-num blue">1</div><div class="step-text"><strong>Upload video</strong> — users can upload short-form video (up to 60s/3min)</div></div>
+        <div class="flow-step"><div class="step-num blue">2</div><div class="step-text"><strong>Feed / Recommendations</strong> — personalized infinite scroll video feed</div></div>
+        <div class="flow-step"><div class="step-num blue">3</div><div class="step-text"><strong>Stream video</strong> — adaptive bitrate playback on mobile/web</div></div>
+        <div class="flow-step"><div class="step-num blue">4</div><div class="step-text"><strong>Interact</strong> — like, comment, share, follow</div></div>
+        <div class="flow-step"><div class="step-num blue">5</div><div class="step-text"><strong>Search</strong> — search by hashtag, sound, user, keyword</div></div>
+        <div class="flow-step"><div class="step-num blue">6</div><div class="step-text"><strong>Notifications</strong> — real-time push for likes, comments, follows</div></div>
+      </div>
+      <div class="deepdive-block">
+        <h3 style="color:var(--accent);margin-bottom:1rem;font-size:0.9rem;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;">Non-Functional Requirements</h3>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">A</div><div class="step-text"><strong>High Availability</strong> — 99.99% uptime (52 min downtime/year max)</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">B</div><div class="step-text"><strong>Low Latency</strong> — video starts in &lt;200ms, feed loads &lt;100ms P99</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">C</div><div class="step-text"><strong>Massive Scale</strong> — 1B DAU, 34M video uploads/day, 167M watch-hours</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">D</div><div class="step-text"><strong>Eventual Consistency</strong> — likes/views can lag; feed freshness &lt;5s</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">E</div><div class="step-text"><strong>Durability</strong> — zero video loss (3x replication, geo-redundant)</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">F</div><div class="step-text"><strong>Cost Efficiency</strong> — CDN tiering, cold storage for old content</div></div>
+      </div>
+    </div>
+
+    <!-- Back of Envelope -->
+    <div class="section-header">
+      <h2><span class="section-num">02</span> Back-of-Envelope Estimation</h2>
+      <p class="section-desc">Numbers ground your design decisions. Always estimate before proposing solutions.</p>
+    </div>
+
+    <div class="numbers-bar">
+      <div class="num-item"><div class="num-val">~400K</div><div class="num-desc">Uploads / sec peak</div></div>
+      <div class="num-item"><div class="num-val">~1.3TB/s</div><div class="num-desc">Ingestion bandwidth</div></div>
+      <div class="num-item"><div class="num-val">~11M</div><div class="num-desc">Concurrent streams</div></div>
+      <div class="num-item"><div class="num-val">500MB</div><div class="num-desc">Avg video (multi-res)</div></div>
+      <div class="num-item"><div class="num-val">~17PB</div><div class="num-desc">New storage / day</div></div>
+      <div class="num-item"><div class="num-val">~115K</div><div class="num-desc">Feed req/sec</div></div>
+      <div class="num-item"><div class="num-val">~50TB/s</div><div class="num-desc">CDN egress peak</div></div>
+    </div>
+
+    <div style="margin-top:2.5rem;" class="req-flow">
+      <div class="req-row"><div class="req-label">Read/Write Ratio</div><div class="req-bar-wrap"><div class="req-bar" style="width:92%;background:var(--accent2);">92% READS</div></div></div>
+      <div class="req-row"><div class="req-label">CDN Hit Rate</div><div class="req-bar-wrap"><div class="req-bar" style="width:85%;background:var(--accent3);">85% CACHE HIT</div></div></div>
+      <div class="req-row"><div class="req-label">Video Transcoding</div><div class="req-bar-wrap"><div class="req-bar" style="width:60%;background:var(--accent4);">60% OF STORAGE COST</div></div></div>
+      <div class="req-row"><div class="req-label">Recommendation CPU</div><div class="req-bar-wrap"><div class="req-bar" style="width:35%;background:var(--accent5);">35% OF COMPUTE COST</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HLD DIAGRAM -->
+<section class="section" id="hld">
+  <div class="section-header">
+    <h2><span class="section-num">02</span> High-Level Architecture Diagram</h2>
+    <p class="section-desc">End-to-end system flow from client upload through processing, storage, CDN, and feed delivery. Click on a layer to learn more.</p>
+  </div>
+
+  <div class="hld-container">
+    <div class="hld-title-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      &nbsp;&nbsp;architecture.svg — TikTok-style Video Streaming Platform
+    </div>
+    <div class="hld-diagram">
+      <svg class="arch" viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#30363d"/>
+          </marker>
+          <marker id="arrow-r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ff2d55"/>
+          </marker>
+          <marker id="arrow-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00d4ff"/>
+          </marker>
+          <marker id="arrow-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#a8ff3e"/>
+          </marker>
+          <filter id="glow-r">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-b">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- BG Zones -->
+        <rect x="10" y="10" width="200" height="700" rx="6" fill="#0d1117" stroke="#21262d"/>
+        <text x="110" y="32" font-family="Space Mono, monospace" font-size="9" fill="#484f58" text-anchor="middle" text-decoration="none">CLIENT LAYER</text>
+
+        <rect x="225" y="10" width="200" height="700" rx="6" fill="#0d1117" stroke="#21262d"/>
+        <text x="325" y="32" font-family="Space Mono, monospace" font-size="9" fill="#484f58" text-anchor="middle">API GATEWAY LAYER</text>
+
+        <rect x="440" y="10" width="220" height="700" rx="6" fill="#0d1117" stroke="#21262d"/>
+        <text x="550" y="32" font-family="Space Mono, monospace" font-size="9" fill="#484f58" text-anchor="middle">PROCESSING LAYER</text>
+
+        <rect x="675" y="10" width="210" height="700" rx="6" fill="#0d1117" stroke="#21262d"/>
+        <text x="780" y="32" font-family="Space Mono, monospace" font-size="9" fill="#484f58" text-anchor="middle">STORAGE LAYER</text>
+
+        <rect x="900" y="10" width="190" height="700" rx="6" fill="#0d1117" stroke="#21262d"/>
+        <text x="995" y="32" font-family="Space Mono, monospace" font-size="9" fill="#484f58" text-anchor="middle">DELIVERY LAYER</text>
+
+        <!-- ============ NODES ============ -->
+
+        <!-- Client -->
+        <rect x="30" y="55" width="160" height="50" rx="5" fill="#161b22" stroke="#ff2d55" stroke-width="1.5"/>
+        <text x="110" y="74" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📱 Mobile App</text>
+        <text x="110" y="90" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">iOS / Android / Web</text>
+
+        <rect x="30" y="130" width="160" height="50" rx="5" fill="#161b22" stroke="#ff2d55" stroke-width="1"/>
+        <text x="110" y="149" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🎬 Video Upload</text>
+        <text x="110" y="165" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Chunked multipart</text>
+
+        <rect x="30" y="205" width="160" height="50" rx="5" fill="#161b22" stroke="#ff2d55" stroke-width="1"/>
+        <text x="110" y="224" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📺 Feed Viewer</text>
+        <text x="110" y="240" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">HLS / DASH ABR</text>
+
+        <!-- API Gateway -->
+        <rect x="245" y="55" width="160" height="50" rx="5" fill="#161b22" stroke="#00d4ff" stroke-width="2"/>
+        <text x="325" y="74" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🌐 API Gateway</text>
+        <text x="325" y="90" font-family="Space Mono, monospace" font-size="8" fill="#00d4ff" text-anchor="middle">Rate limit · Auth · Route</text>
+
+        <rect x="245" y="130" width="160" height="50" rx="5" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="325" y="149" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🔐 Auth Service</text>
+        <text x="325" y="165" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">JWT · OAuth2 · SSO</text>
+
+        <rect x="245" y="205" width="160" height="50" rx="5" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="325" y="224" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">⚡ Load Balancer</text>
+        <text x="325" y="240" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">L4/L7 · Consistent Hash</text>
+
+        <!-- Upload Service -->
+        <rect x="460" y="55" width="180" height="50" rx="5" fill="#161b22" stroke="#ff9500" stroke-width="1.5"/>
+        <text x="550" y="74" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📤 Upload Service</text>
+        <text x="550" y="90" font-family="Space Mono, monospace" font-size="8" fill="#ff9500" text-anchor="middle">Resumable · Pre-signed URLs</text>
+
+        <rect x="460" y="130" width="180" height="50" rx="5" fill="#161b22" stroke="#bf5af2" stroke-width="1.5" filter="url(#glow-b)"/>
+        <text x="550" y="149" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🎞 Transcoding Worker</text>
+        <text x="550" y="165" font-family="Space Mono, monospace" font-size="8" fill="#bf5af2" text-anchor="middle">FFmpeg · 240/480/720/1080p</text>
+
+        <rect x="460" y="205" width="180" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="550" y="224" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🧠 Recommendation</text>
+        <text x="550" y="240" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">ML Model · Collaborative</text>
+
+        <rect x="460" y="280" width="180" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="550" y="299" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📊 Analytics Service</text>
+        <text x="550" y="315" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Flink · Kafka Streams</text>
+
+        <!-- Message Queue -->
+        <rect x="460" y="360" width="180" height="50" rx="5" fill="#161b22" stroke="#a8ff3e" stroke-width="1.5"/>
+        <text x="550" y="379" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📨 Kafka / Queue</text>
+        <text x="550" y="395" font-family="Space Mono, monospace" font-size="8" fill="#a8ff3e" text-anchor="middle">Video events · Actions</text>
+
+        <!-- Feed Service -->
+        <rect x="460" y="435" width="180" height="50" rx="5" fill="#161b22" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="550" y="454" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📋 Feed Service</text>
+        <text x="550" y="470" font-family="Space Mono, monospace" font-size="8" fill="#00d4ff" text-anchor="middle">Pre-compute · Push/Pull</text>
+
+        <!-- Search -->
+        <rect x="460" y="510" width="180" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="550" y="529" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🔍 Search Service</text>
+        <text x="550" y="545" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Elasticsearch · Inverted Index</text>
+
+        <!-- Social Graph -->
+        <rect x="460" y="585" width="180" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="550" y="604" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">👥 Social Graph</text>
+        <text x="550" y="620" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Graph DB · Follow/Fan</text>
+
+        <!-- STORAGE -->
+        <rect x="695" y="55" width="170" height="50" rx="5" fill="#161b22" stroke="#ff9500" stroke-width="1.5"/>
+        <text x="780" y="74" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🗄 Object Storage</text>
+        <text x="780" y="90" font-family="Space Mono, monospace" font-size="8" fill="#ff9500" text-anchor="middle">S3 / GCS — Raw + HLS</text>
+
+        <rect x="695" y="130" width="170" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="780" y="149" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">⚡ Redis Cache</text>
+        <text x="780" y="165" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Feed · Counts · Sessions</text>
+
+        <rect x="695" y="205" width="170" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="780" y="224" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🐘 Postgres / Sharded</text>
+        <text x="780" y="240" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">User · Video metadata</text>
+
+        <rect x="695" y="280" width="170" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="780" y="299" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🔵 Cassandra</text>
+        <text x="780" y="315" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">Likes · Views · Comments</text>
+
+        <rect x="695" y="360" width="170" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="780" y="379" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🧊 Cold Storage</text>
+        <text x="780" y="395" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">S3 Glacier · Old content</text>
+
+        <!-- CDN / DELIVERY -->
+        <rect x="920" y="55" width="155" height="50" rx="5" fill="#161b22" stroke="#a8ff3e" stroke-width="2"/>
+        <text x="997" y="74" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🌍 Global CDN</text>
+        <text x="997" y="90" font-family="Space Mono, monospace" font-size="8" fill="#a8ff3e" text-anchor="middle">CloudFront · Akamai · PoPs</text>
+
+        <rect x="920" y="130" width="155" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="997" y="149" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">📡 Edge Cache</text>
+        <text x="997" y="165" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">HLS segments cached</text>
+
+        <rect x="920" y="205" width="155" height="50" rx="5" fill="#161b22" stroke="#30363d"/>
+        <text x="997" y="224" font-family="Syne, sans-serif" font-size="11" fill="#e6edf3" text-anchor="middle" font-weight="700">🔔 Push / SSE</text>
+        <text x="997" y="240" font-family="Space Mono, monospace" font-size="8" fill="#8b949e" text-anchor="middle">WebSocket · FCM/APNS</text>
+
+        <!-- ARROWS — Upload flow -->
+        <line x1="190" y1="80" x2="242" y2="80" stroke="#ff2d55" stroke-width="1.5" marker-end="url(#arrow-r)"/>
+        <line x1="405" y1="80" x2="457" y2="80" stroke="#ff2d55" stroke-width="1.5" marker-end="url(#arrow-r)"/>
+        <line x1="640" y1="80" x2="692" y2="80" stroke="#ff9500" stroke-width="1.5" marker-end="url(#arrow-b)"/>
+        <line x1="865" y1="80" x2="917" y2="80" stroke="#a8ff3e" stroke-width="1.5" marker-end="url(#arrow-g)"/>
+
+        <!-- Upload → Transcoding -->
+        <line x1="550" y1="105" x2="550" y2="127" stroke="#bf5af2" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Transcoding → Object Storage -->
+        <line x1="640" y1="155" x2="692" y2="155" stroke="#bf5af2" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+        <!-- Transcoding → Kafka -->
+        <line x1="550" y1="180" x2="550" y2="355" stroke="#a8ff3e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-g)"/>
+
+        <!-- Kafka → Feed -->
+        <line x1="550" y1="410" x2="550" y2="432" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arrow-b)"/>
+
+        <!-- Feed viewer → Load Balancer → Feed -->
+        <line x1="190" y1="230" x2="242" y2="230" stroke="#00d4ff" stroke-width="1" marker-end="url(#arrow-b)"/>
+        <line x1="405" y1="230" x2="457" y2="460" stroke="#00d4ff" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-b)"/>
+
+        <!-- Feed → Redis -->
+        <line x1="640" y1="460" x2="692" y2="155" stroke="#00d4ff" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-b)"/>
+
+        <!-- Recommendation → Feed -->
+        <line x1="550" y1="255" x2="550" y2="280" stroke="#30363d" stroke-width="1" marker-end="url(#arrow)"/>
+
+        <!-- Object Storage → CDN -->
+        <line x1="780" y1="80" x2="917" y2="80" stroke="#a8ff3e" stroke-width="1.5" marker-end="url(#arrow-g)"/>
+
+        <!-- Auth flow label -->
+        <line x1="325" y1="105" x2="325" y2="127" stroke="#30363d" stroke-width="1" marker-end="url(#arrow)"/>
+
+        <!-- Labels -->
+        <text x="215" y="75" font-family="Space Mono, monospace" font-size="7" fill="#ff2d55" text-anchor="middle">HTTPS</text>
+        <text x="430" y="75" font-family="Space Mono, monospace" font-size="7" fill="#ff2d55" text-anchor="middle">route</text>
+        <text x="668" y="75" font-family="Space Mono, monospace" font-size="7" fill="#ff9500" text-anchor="middle">raw</text>
+        <text x="892" y="75" font-family="Space Mono, monospace" font-size="7" fill="#a8ff3e" text-anchor="middle">HLS</text>
+        <text x="563" y="118" font-family="Space Mono, monospace" font-size="7" fill="#bf5af2">transcode</text>
+        <text x="670" y="148" font-family="Space Mono, monospace" font-size="7" fill="#bf5af2">segments</text>
+        <text x="563" y="270" font-family="Space Mono, monospace" font-size="7" fill="#a8ff3e">event</text>
+        <text x="563" y="420" font-family="Space Mono, monospace" font-size="7" fill="#00d4ff">consume</text>
+        <text x="215" y="225" font-family="Space Mono, monospace" font-size="7" fill="#00d4ff" text-anchor="middle">feed req</text>
+
+        <!-- CDN → Client feedback -->
+        <path d="M997,130 Q997,640 110,640 Q110,280 110,262" stroke="#a8ff3e" stroke-width="1" stroke-dasharray="6,4" fill="none" marker-end="url(#arrow-g)"/>
+        <text x="600" y="660" font-family="Space Mono, monospace" font-size="8" fill="#a8ff3e" text-anchor="middle">CDN → Client video stream (HLS segments)</text>
+
+        <!-- LEGEND -->
+        <rect x="30" y="645" width="840" height="40" rx="4" fill="#0d1117" stroke="#21262d"/>
+        <rect x="44" y="658" width="18" height="2" fill="#ff2d55"/>
+        <text x="68" y="666" font-family="Space Mono, monospace" font-size="8" fill="#8b949e">Upload flow</text>
+        <rect x="140" y="658" width="18" height="2" fill="#a8ff3e"/>
+        <text x="164" y="666" font-family="Space Mono, monospace" font-size="8" fill="#8b949e">CDN / Delivery</text>
+        <rect x="260" y="658" width="18" height="2" fill="#00d4ff"/>
+        <text x="284" y="666" font-family="Space Mono, monospace" font-size="8" fill="#8b949e">Feed / Read</text>
+        <rect x="360" y="657" width="18" height="2" fill="#bf5af2"/>
+        <text x="384" y="666" font-family="Space Mono, monospace" font-size="8" fill="#8b949e">Transcoding</text>
+        <rect x="460" y="657" width="18" height="2" fill="#a8ff3e" stroke-dasharray="4,2"/>
+        <text x="484" y="666" font-family="Space Mono, monospace" font-size="8" fill="#8b949e">Async / Event</text>
+        <text x="44" y="680" font-family="Space Mono, monospace" font-size="8" fill="#484f58">// HLD diagram — tap components section for deep details</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Upload Flow walkthrough -->
+  <div class="section-header" style="margin-top:2.5rem;">
+    <h2><span class="section-num">2B</span> Data Flow Walkthrough</h2>
+    <p class="section-desc">Step-by-step trace of the two critical paths: Upload & Process, and Feed & Stream.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+    <div class="deepdive-block">
+      <h3 style="margin-bottom:1.25rem;">🔴 Upload & Process Path</h3>
+      <div class="flow-step"><div class="step-num">1</div><div class="step-text"><strong>Client chunks video</strong> into 5MB parts, requests pre-signed S3 URLs from Upload Service</div></div>
+      <div class="flow-step"><div class="step-num">2</div><div class="step-text"><strong>Direct upload to Object Storage</strong> — bypasses app servers, reduces backend load</div></div>
+      <div class="flow-step"><div class="step-num">3</div><div class="step-text"><strong>Upload Service confirms</strong> all chunks received, publishes <code>video.uploaded</code> event to Kafka</div></div>
+      <div class="flow-step"><div class="step-num">4</div><div class="step-text"><strong>Transcoding Workers</strong> (Kafka consumers) pick up event, run FFmpeg to create HLS segments at 240p/480p/720p/1080p</div></div>
+      <div class="flow-step"><div class="step-num">5</div><div class="step-text"><strong>Segments pushed to CDN origin</strong>, metadata (video_id, URLs, durations) saved to DB and cache</div></div>
+      <div class="flow-step"><div class="step-num">6</div><div class="step-text"><strong>Notification sent</strong> to creator via push + Recommendation model is triggered to index new video</div></div>
+    </div>
+    <div class="deepdive-block">
+      <h3 style="margin-bottom:1.25rem;">🔵 Feed & Stream Path</h3>
+      <div class="flow-step"><div class="step-num blue">1</div><div class="step-text"><strong>Client requests feed</strong> — authenticated request hits API Gateway → Feed Service</div></div>
+      <div class="flow-step"><div class="step-num blue">2</div><div class="step-text"><strong>Feed Service checks Redis</strong> for pre-computed feed for this user (push model for &lt;10K followers)</div></div>
+      <div class="flow-step"><div class="step-num blue">3</div><div class="step-text"><strong>Cache miss</strong> → ML Recommendation Service pulls candidate videos, applies ranking model, returns top-N</div></div>
+      <div class="flow-step"><div class="step-num blue">4</div><div class="step-text"><strong>Client receives feed</strong> (video IDs + CDN URLs), immediately starts prefetching next 3 videos</div></div>
+      <div class="flow-step"><div class="step-num blue">5</div><div class="step-text"><strong>HLS manifest fetched from CDN edge</strong> — client picks right bitrate segment based on bandwidth</div></div>
+      <div class="flow-step"><div class="step-num blue">6</div><div class="step-text"><strong>View event logged</strong> → Kafka → Analytics Service → updates recommendation signals for next feed</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section class="section" id="components">
+  <div class="section-header">
+    <h2><span class="section-num">03</span> Component Deep-Dives</h2>
+    <p class="section-desc">Click any card to expand the technical detail. Each component includes why it's chosen, how it scales, and key tradeoffs.</p>
+  </div>
+
+  <div class="components-grid" id="componentGrid"></div>
+</section>
+
+<!-- SCALABILITY -->
+<section class="section" id="scalability">
+  <div class="section-header">
+    <h2><span class="section-num">04</span> Scalability Architecture</h2>
+    <p class="section-desc">The 7 pillars that make a TikTok-scale platform possible. These are your key talking points in the interview.</p>
+  </div>
+
+  <div class="scale-pillars" id="scalePillars"></div>
+
+  <!-- CAP Theorem -->
+  <div class="section-header" style="margin-top:3rem;">
+    <h2><span class="section-num">4B</span> CAP Theorem Choices</h2>
+    <p class="section-desc">Different subsystems make different CAP tradeoffs. Know these cold.</p>
+  </div>
+
+  <table class="arch-table">
+    <thead>
+      <tr>
+        <th>Subsystem</th>
+        <th>CAP Choice</th>
+        <th>Rationale</th>
+        <th>Consistency Model</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Video Upload</td><td>CP</td><td>Must not lose a video chunk; can tolerate upload failure</td><td>Strong — idempotent chunk commits</td></tr>
+      <tr><td>Video Streaming / CDN</td><td>AP</td><td>Availability + partition tolerance over consistency; old segment OK</td><td>Eventual — CDN TTL based invalidation</td></tr>
+      <tr><td>Like / View Counts</td><td>AP</td><td>Approximate counters acceptable; losing a like is tolerable</td><td>Eventual — Redis HLL + Cassandra counters</td></tr>
+      <tr><td>Feed Service</td><td>AP</td><td>Slightly stale feed OK; downtime is not</td><td>Eventual — pre-computed, TTL-based refresh</td></tr>
+      <tr><td>Auth / Sessions</td><td>CP</td><td>Security requires accurate session state</td><td>Strong — synchronous replication</td></tr>
+      <tr><td>User Metadata</td><td>CP</td><td>Correct follower count, profile data matters</td><td>Strong — Postgres primary read</td></tr>
+      <tr><td>Search Index</td><td>AP</td><td>New videos appear in search within minutes, not seconds</td><td>Eventual — async Elasticsearch indexing</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- DEEP DIVE -->
+<section class="section" id="deepdive">
+  <div class="section-header">
+    <h2><span class="section-num">05</span> Deep Dive: Core Concepts</h2>
+    <p class="section-desc">The interviewer WILL go here. Master each concept: adaptive streaming, feed algorithms, transcoding, CDN, and the recommendation engine.</p>
+  </div>
+
+  <div class="deepdive-tabs" id="deepdiveTabs"></div>
+  <div id="deepdiveContents"></div>
+</section>
+
+<!-- COUNTER QUESTIONS -->
+<section class="section" id="questions">
+  <div class="section-header">
+    <h2><span class="section-num">06</span> Interviewer Counter-Questions</h2>
+    <p class="section-desc">Questions interviewers at FAANG/top companies regularly ask. Includes model answers. Click to expand.</p>
+  </div>
+  <div class="qa-list" id="qaList"></div>
+</section>
+
+<div class="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+<script>
+// ============ NAVIGATION ============
+const navBtns = document.querySelectorAll('.nav-btn');
+const sections = document.querySelectorAll('.section');
+
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    sections.forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.section).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+// Progress bar
+window.addEventListener('scroll', () => {
+  const doc = document.documentElement;
+  const pct = doc.scrollTop / (doc.scrollHeight - doc.clientHeight) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+});
+
+// ============ COMPONENTS DATA ============
+const components = [
+  {
+    icon:'🌐', title:'API Gateway', subtitle:'Entry Point',
+    accent:'#00d4ff', iconBg:'rgba(0,212,255,0.1)',
+    desc:'Single entry point for all client requests. Handles authentication, rate limiting, SSL termination, request routing, and load balancing before forwarding to microservices.',
+    tags:['Kong/Envoy','Rate Limiting','JWT Validation','Request Routing'],
+    tagTypes:['tech','tech','tech','tech'],
+    details:[
+      'Rate limiting: per-user token bucket (1000 req/min upload, 10K req/min read)',
+      'Circuit breaker pattern prevents cascade failures to downstream services',
+      'gRPC internally, REST/HTTP2 externally for mobile efficiency',
+      'Request deduplication using idempotency keys for uploads',
+      'Geographic routing: routes to nearest regional cluster',
+      'DDoS protection via WAF + IP-based throttling at edge layer'
+    ]
+  },
+  {
+    icon:'📤', title:'Upload Service', subtitle:'Resumable Chunked Upload',
+    accent:'#ff9500', iconBg:'rgba(255,149,0,0.1)',
+    desc:'Handles reliable video ingestion at scale. Uses chunked multipart upload with pre-signed URLs so the video data flows directly to object storage, bypassing application servers entirely.',
+    tags:['Pre-signed URLs','Resumable','Idempotent','TUS Protocol'],
+    tagTypes:['tech','tech','scale','tech'],
+    details:[
+      'Client splits video into 5MB chunks, requests pre-signed S3 URLs per chunk',
+      'Chunks uploaded directly to S3 — app server only tracks state, not bytes',
+      'Resumable: upload state stored in Redis with TTL=24h; client can resume on failure',
+      'After all chunks confirmed, Upload Service triggers Kafka event "video.uploaded"',
+      'Validation: file type, size, duration limits enforced before pre-signing',
+      'Concurrent chunk uploads (5 parallel) saturate client bandwidth for fastest upload'
+    ]
+  },
+  {
+    icon:'🎞', title:'Transcoding Pipeline', subtitle:'Async Media Processing',
+    accent:'#bf5af2', iconBg:'rgba(191,90,242,0.1)',
+    desc:'The most compute-intensive component. Converts raw uploaded video into multiple HLS-segmented renditions for adaptive bitrate streaming. Fully asynchronous via Kafka.',
+    tags:['FFmpeg','HLS / DASH','Kafka Consumer','Horizontal Scale'],
+    tagTypes:['tech','tech','tech','scale'],
+    details:[
+      'Kafka consumer group reads "video.uploaded" events; each worker picks one video',
+      'FFmpeg produces: 240p, 480p, 720p, 1080p + audio-only track',
+      'Each resolution split into 2-6 second HLS segments (.ts files)',
+      '.m3u8 master manifest references all variant playlists',
+      'Thumbnail extracted at 3 moments + ML-selected best frame',
+      'Workers are stateless, auto-scaling EC2 spot instances (cost: ~70% savings)',
+      'Priority queue: verified creators get fast-track transcoding queue',
+      'Completion triggers CDN cache population and metadata DB write'
+    ]
+  },
+  {
+    icon:'🌍', title:'Global CDN', subtitle:'Video Delivery at Edge',
+    accent:'#a8ff3e', iconBg:'rgba(168,255,62,0.1)',
+    desc:'The highest-leverage scalability lever. Serves video segments from 200+ global PoPs. ~85% of requests served from cache, dramatically reducing origin load and improving latency.',
+    tags:['CloudFront/Akamai','200+ PoPs','Cache TTL','85% Hit Rate'],
+    tagTypes:['tech','scale','tech','scale'],
+    details:[
+      'HLS segments cached at edge nodes globally (TTL = 1 year, immutable content)',
+      'Cache key = video_id + segment_number + resolution → perfect cache coherence',
+      'Origin shield layer reduces origin hits to <1% of total requests',
+      'Client ABR: bandwidth measured per-segment, bitrate ladder selected dynamically',
+      'Pre-warming: when a video starts going viral, CDN proactively pushes to hot PoPs',
+      'Signed URLs prevent hotlinking and unauthorized access to content',
+      'Video-specific optimizations: range requests, partial segment caching'
+    ]
+  },
+  {
+    icon:'⚡', title:'Redis Cache Layer', subtitle:'Sub-millisecond Reads',
+    accent:'#ff2d55', iconBg:'rgba(255,45,85,0.1)',
+    desc:'Multi-purpose caching layer. Handles pre-computed user feeds, session tokens, approximate counters, and social graph hot data. Critical for keeping DB pressure low.',
+    tags:['Redis Cluster','HLL Counters','Feed Cache','TTL-based Eviction'],
+    tagTypes:['tech','tech','tech','tech'],
+    details:[
+      'Feed cache: pre-computed ranked video list per user, TTL=30s, 200 videos stored',
+      'Like/view counts: HyperLogLog for unique viewers (~0.8% error, 12KB vs millions of IDs)',
+      'Counter increment batching: flush Redis counters to Cassandra every 5 seconds',
+      'Session tokens: Redis cluster with primary-replica, cross-region replication',
+      'Hot video cache: top 0.1% videos (by view velocity) pinned in memory indefinitely',
+      'Redis Pub/Sub for real-time notification fanout to connected WebSocket workers'
+    ]
+  },
+  {
+    icon:'📨', title:'Kafka Message Bus', subtitle:'Event-Driven Backbone',
+    accent:'#a8ff3e', iconBg:'rgba(168,255,62,0.1)',
+    desc:'The async backbone connecting all services. Decouples upload from processing, actions from analytics, and enables replay, fan-out, and back-pressure handling.',
+    tags:['Kafka','Consumer Groups','Event Sourcing','At-least-once'],
+    tagTypes:['tech','tech','tech','tech'],
+    details:[
+      'Key topics: video.uploaded, video.transcoded, user.action (like/follow/view), feed.refresh',
+      'Partitioned by user_id for ordered per-user event processing',
+      'Consumer groups: Transcoding, Analytics, Search Indexer, Feed Updater each independent',
+      'Retention: 7 days → allows replay for analytics re-processing and debugging',
+      'At-least-once delivery + idempotent consumers (check processed event_id in DB)',
+      'Kafka Streams for real-time view count aggregations (tumbling 1-minute windows)',
+      'Scales to 10M+ messages/second across 50 brokers with replication factor 3'
+    ]
+  },
+  {
+    icon:'🧠', title:'Recommendation Engine', subtitle:'The Secret Weapon',
+    accent:'#bf5af2', iconBg:'rgba(191,90,242,0.1)',
+    desc:'The core differentiator for TikTok. Two-stage retrieval + ranking pipeline that produces a personalized feed for 1B users in under 100ms. Combines collaborative filtering with real-time signals.',
+    tags:['Two-Stage ML','Embedding Store','Real-time Signals','Cold Start'],
+    tagTypes:['tech','tech','scale','tech'],
+    details:[
+      'Stage 1 — Candidate Generation: ANN (FAISS) on user/video embeddings, returns 1000 candidates',
+      'Stage 2 — Ranking: GBDT or DNN scores candidates on P(watch_full), P(like), P(share)',
+      'Features: watch history, completion rate, shares, re-watches, location, time-of-day',
+      'Real-time feature store (Feast/Redis) captures last-hour interaction signals',
+      'Cold start: new users get geo + age cohort collaborative filtering for first 10 videos',
+      'New video bootstrap: embed via content features (hashtags, sound, caption) from day 0',
+      'Model updated daily (batch) + served online with feature freshness <60 seconds'
+    ]
+  },
+  {
+    icon:'📋', title:'Feed Service', subtitle:'Push vs Pull Model',
+    accent:'#00d4ff', iconBg:'rgba(0,212,255,0.1)',
+    desc:'Manages feed construction and delivery. Uses a hybrid push-pull model: pre-computed feeds for regular users (pushed on new content), pull model for celebrity/viral accounts to avoid fan-out storms.',
+    tags:['Push-Pull Hybrid','Fan-out on Write','Fan-out on Read','Redis Sorted Set'],
+    tagTypes:['tech','tech','tech','tech'],
+    details:[
+      'Push (fan-out on write): creators with <10K followers → write to all follower feed caches on upload',
+      'Pull (fan-out on read): celebrities with >10K followers → merge at read time to avoid writing 10M cache entries',
+      'Feed stored as Redis Sorted Set: score = rank from ML model, member = video_id',
+      'Feed refresh triggered by: new video from followed creator, stale TTL, user scroll to end',
+      'Cursor-based pagination: client sends last_seen_video_id, server returns next 20',
+      'Deduplication: video IDs shown in last 24h excluded from feed reconstruction'
+    ]
+  },
+  {
+    icon:'🗄', title:'Storage Architecture', subtitle:'Polyglot Persistence',
+    accent:'#ff9500', iconBg:'rgba(255,149,0,0.1)',
+    desc:'Different data has radically different access patterns. Uses the right database for each job: sharded Postgres for metadata, Cassandra for time-series counters, Redis for cache, S3 for blobs.',
+    tags:['Sharded Postgres','Cassandra','S3 / GCS','Polyglot'],
+    tagTypes:['tech','tech','tech','tech'],
+    details:[
+      'S3: raw uploads (30-day lifecycle → Glacier), transcoded HLS segments (permanent)',
+      'Postgres (sharded by user_id): user profiles, video metadata, social graph edges',
+      'Cassandra: like_counts (video_id, timestamp), view_events — wide column, time-series optimized',
+      'Elasticsearch: video content index for search (hashtags, captions, ASR transcript)',
+      'Neo4j / TigerGraph: social graph traversals for friend recommendations',
+      'Cold storage tiering: videos with <100 views/month moved to S3 Glacier after 90 days'
+    ]
+  },
+  {
+    icon:'🔍', title:'Search Service', subtitle:'Full-Text at Scale',
+    accent:'#00d4ff', iconBg:'rgba(0,212,255,0.1)',
+    desc:'Real-time search across 100M+ videos, users, hashtags, and sounds. Built on Elasticsearch with custom tokenization for hashtags, multilingual support, and typo tolerance.',
+    tags:['Elasticsearch','Inverted Index','ASR Transcripts','Trending'],
+    tagTypes:['tech','tech','tech','scale'],
+    details:[
+      'Inverted index on: caption, hashtags, username, sound name, auto-generated transcript',
+      'ASR (Automatic Speech Recognition) run async on every video → searchable spoken content',
+      'Trending search powered by Kafka Streams: top-K hashtags in 5-min sliding window',
+      'Typeahead suggestions: Redis Sorted Set + ZRANGEBYLEX for prefix matching at <5ms',
+      'Index sharded by language cluster: avoids cross-language noise in ranking',
+      'Update lag: new videos indexed within 30 seconds of transcoding completion via Kafka consumer'
+    ]
+  },
+  {
+    icon:'👥', title:'Social Graph', subtitle:'Follow / Fan Relationships',
+    accent:'#ff9500', iconBg:'rgba(255,149,0,0.1)',
+    desc:'Manages follow relationships between 1B users. Powers feed construction, notification routing, and people-you-may-know features. Uses sharded adjacency lists + graph traversal for recommendations.',
+    tags:['Adjacency List','Sharded DB','Graph Traversal','Mutual Friends'],
+    tagTypes:['tech','scale','tech','tech'],
+    details:[
+      'Schema: (follower_id, followee_id, created_at) — sharded by follower_id',
+      'Dual-write: also indexed by followee_id for efficient "get all followers" queries',
+      'Bloom filter per user: O(1) "does user A follow user B?" check before DB hit',
+      'Friend-of-friend: graph BFS limited to depth 2, cached per user for 1 hour',
+      'Notification routing: "get followers of video creator" query → fan-out to notification queue',
+      'Soft-block / mute: bitfield stored per user, checked at feed filtering layer'
+    ]
+  },
+  {
+    icon:'🔔', title:'Notification Service', subtitle:'Real-time Push at Scale',
+    accent:'#ff2d55', iconBg:'rgba(255,45,85,0.1)',
+    desc:'Delivers real-time notifications for likes, comments, follows, and live events. Uses WebSocket for in-app and FCM/APNS for push. Handles 100K+ notifications per second with priority queues.',
+    tags:['WebSocket','FCM/APNS','Priority Queue','Fan-out'],
+    tagTypes:['tech','tech','tech','scale'],
+    details:[
+      'Event consumed from Kafka "user.action" topic → Notification Service determines recipients',
+      'Priority: direct @ mention → highest; likes on old videos → batched, delivered 1/hour',
+      'WebSocket server pool: user connection pinned to single server via consistent hash on user_id',
+      'FCM/APNS: grouped by device token, sent via Google/Apple push infrastructure',
+      'Notification deduplication: Redis SETNX with 60s TTL prevents duplicate delivery',
+      'Unsubscription / DND hours respected via user preference store lookup'
+    ]
+  }
+];
+
+// Render components
+const grid = document.getElementById('componentGrid');
+components.forEach((c, i) => {
+  const card = document.createElement('div');
+  card.className = 'component-card';
+  card.style.setProperty('--card-accent', c.accent);
+
+  const tags = c.tags.map((t, j) => `<span class="tag ${c.tagTypes[j]==='scale'?'tag-scale':'tag-tech'}">${t}</span>`).join('');
+  const items = c.details.map(d => `<li>${d}</li>`).join('');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-icon" style="background:${c.iconBg}">${c.icon}</div>
+      <div>
+        <div class="card-title">${c.title}</div>
+        <div class="card-subtitle">${c.subtitle}</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>${c.desc}</p>
+      <div class="tag-list">${tags}</div>
+    </div>
+    <div class="detail-panel" id="detail-${i}">
+      <h4>Technical Details</h4>
+      <ul>${items}</ul>
+    </div>`;
+
+  card.addEventListener('click', () => {
+    const panel = document.getElementById('detail-'+i);
+    panel.classList.toggle('open');
+  });
+  grid.appendChild(card);
+});
+
+// ============ SCALABILITY PILLARS ============
+const pillars = [
+  { num:'01', icon:'📦', title:'Horizontal Sharding', color:'#ff2d55',
+    body:'Every stateful service is sharded. Postgres sharded by user_id (consistent hashing). Kafka partitioned by user_id. Redis cluster with 16384 hash slots. No single-node bottleneck anywhere in the write path.' },
+  { num:'02', icon:'🌍', title:'CDN-First Architecture', color:'#a8ff3e',
+    body:'85%+ of all bytes leave from CDN edges, never touching origin. Video segments are immutable content-addressed blobs — perfect cache keys. Origin only handles <1% of total traffic. CDN is your biggest cost-saver AND latency-reducer.' },
+  { num:'03', icon:'⚡', title:'Async Everything', color:'#ff9500',
+    body:'Upload → Transcoding, Transcoding → Feed Update, Action → Analytics are all async via Kafka. No synchronous chain longer than 3 services. Back-pressure handled by Kafka consumer lag + autoscaling workers.' },
+  { num:'04', icon:'🧊', title:'Multi-Tier Caching', color:'#00d4ff',
+    body:'L1: CDN edge (video segments). L2: Redis cluster (feeds, counts, sessions). L3: Application-level in-process LRU (hot metadata). L4: Read replicas (DB read scaling). Each tier handles 10x the layer above.' },
+  { num:'05', icon:'🔄', title:'Microservices + Event Sourcing', color:'#bf5af2',
+    body:'Each service owns its data and exposes events. Services communicate via Kafka events, not synchronous HTTP chains. This enables independent scaling, deployment, and failure isolation per service.' },
+  { num:'06', icon:'📊', title:'Read Replica Scaling', color:'#ff2d55',
+    body:'Postgres has 1 primary, 5 read replicas per shard. Cassandra uses replication factor 3 with LOCAL_QUORUM reads. 95% of queries are reads — handled by replicas. Primary only takes writes.' },
+  { num:'07', icon:'🤖', title:'Predictive Pre-Computation', color:'#a8ff3e',
+    body:'Feed pre-computed every 30s for active users, stored in Redis. Video segments pre-warmed to CDN PoPs when view velocity spikes. Recommendation model runs batch daily. Pre-computation shifts work to off-peak, reduces hot-path latency.' },
+];
+
+const pillarGrid = document.getElementById('scalePillars');
+pillars.forEach(p => {
+  const el = document.createElement('div');
+  el.className = 'pillar';
+  el.setAttribute('data-num', p.num);
+  el.style.borderTopColor = p.color;
+  el.style.borderTopWidth = '3px';
+  el.style.borderTopStyle = 'solid';
+  el.innerHTML = `<div class="pillar-icon">${p.icon}</div><h3>${p.title}</h3><p>${p.body}</p>`;
+  pillarGrid.appendChild(el);
+});
+
+// ============ DEEP DIVE DATA ============
+const deepdives = [
+  {
+    label:'HLS / ABR',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>HLS Adaptive Bitrate Streaming <span class="badge badge-core">CORE</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">HTTP Live Streaming (HLS) splits video into small chunks (2-6s) served over standard HTTP. The player dynamically selects quality based on available bandwidth.</p>
+        <div class="flow-step"><div class="step-num blue">1</div><div class="step-text"><strong>Transcoding</strong> produces 4 renditions: 240p@300kbps, 480p@1Mbps, 720p@3Mbps, 1080p@8Mbps</div></div>
+        <div class="flow-step"><div class="step-num blue">2</div><div class="step-text"><strong>Master manifest (.m3u8)</strong> lists all variant playlists with bandwidth hints</div></div>
+        <div class="flow-step"><div class="step-num blue">3</div><div class="step-text"><strong>Variant playlist</strong> lists all segment URLs for that resolution</div></div>
+        <div class="flow-step"><div class="step-num blue">4</div><div class="step-text"><strong>Player downloads 3-5 segments ahead</strong>, measures throughput, switches rendition if bandwidth changes</div></div>
+        <div class="flow-step"><div class="step-num blue">5</div><div class="step-text"><strong>Switching point</strong>: only at segment boundary. No visible glitch. Average startup: &lt;200ms from CDN</div></div>
+      </div>
+      <div class="deepdive-block">
+        <h3>Why HLS over DASH? <span class="badge badge-opt">TRADEOFF</span></h3>
+        <div class="tradeoff-grid" style="grid-template-columns:1fr;gap:1rem;margin:0;">
+          <div class="tradeoff-box pro"><h4>✦ HLS Advantages</h4><ul><li>Native iOS support — no extra player library</li><li>Better CDN compatibility (standard HTTP caching)</li><li>Broad device support at TikTok's mobile-first scale</li><li>Simpler DRM integration (FairPlay/Widevine)</li></ul></div>
+          <div class="tradeoff-box con"><h4>✦ DASH Advantages</h4><ul><li>Codec-agnostic (better for AV1 adoption)</li><li>More flexible multi-period streams for ads</li><li>Open standard, less Apple-specific</li></ul></div>
+        </div>
+        <div class="code-block">
+<span class="cm">// master.m3u8 example</span>
+#EXTM3U
+#EXT-X-STREAM-INF:<span class="kw">BANDWIDTH</span>=<span class="num">300000</span>,<span class="kw">RESOLUTION</span>=<span class="str">426x240</span>
+240p/playlist.m3u8
+#EXT-X-STREAM-INF:<span class="kw">BANDWIDTH</span>=<span class="num">1000000</span>,<span class="kw">RESOLUTION</span>=<span class="str">854x480</span>
+480p/playlist.m3u8
+#EXT-X-STREAM-INF:<span class="kw">BANDWIDTH</span>=<span class="num">3000000</span>,<span class="kw">RESOLUTION</span>=<span class="str">1280x720</span>
+720p/playlist.m3u8
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    label:'Feed Algorithm',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>Two-Stage ML Pipeline <span class="badge badge-hot">KEY DIFFERENTIATOR</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">TikTok's feed algorithm is its moat. The two-stage architecture balances recall quality with speed.</p>
+        <div class="flow-step"><div class="step-num">1</div><div class="step-text"><strong>Candidate Generation</strong> — Approximate Nearest Neighbor (FAISS) on 256-dim user + video embeddings. Returns top 1000 candidates from 100M+ video corpus in &lt;10ms</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div class="step-text"><strong>Feature Assembly</strong> — Real-time feature store (last 1-hour signals: watch %, likes, shares) merged with historical features</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div class="step-text"><strong>Ranking Model</strong> — Gradient Boosted Trees or DNN predicts: P(watch_full), P(like), P(comment), P(share). Multi-objective optimization</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div class="step-text"><strong>Score Fusion</strong> — Weighted combination: 0.4×watch + 0.3×share + 0.2×like + 0.1×comment = final score</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div class="step-text"><strong>Post-Filtering</strong> — Dedup seen videos, apply content safety scores, diversity re-ranking to avoid echo chambers</div></div>
+      </div>
+      <div class="deepdive-block">
+        <h3>Cold Start Problem <span class="badge badge-hot">INTERVIEW TRAP</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;">New users have no history. New videos have no engagement signals. Two different problems, two solutions.</p>
+        <div class="highlight-box" style="margin-bottom:1rem;">NEW USER COLD START
+→ Show geo-cohort trending content first 10 videos
+→ Infer interests from account-following choices at signup
+→ Rapid feedback loop: 3-video completion = strong signal
+→ Profile converges to personalized in ~20-30 videos</div>
+        <div class="highlight-box">NEW VIDEO COLD START
+→ Content-based embedding from: caption, hashtags, sound, visual features (ResNet)
+→ Show to small "seed" audience (1000 users) similar to creator's existing fans
+→ If P(watch_full) > threshold, expand audience 10x iteratively
+→ Viral cascade: view velocity triggers CDN pre-warming</div>
+      </div>
+    </div>`
+  },
+  {
+    label:'Fan-out Problem',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>Fan-out on Write vs Read <span class="badge badge-hot">CLASSIC PROBLEM</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">When a celebrity with 100M followers posts a video, naively writing to all 100M feed caches = 100M Redis writes = fan-out storm.</p>
+        <div class="flow-step"><div class="step-num">1</div><div class="step-text"><strong>Fan-out on Write (Push)</strong> — Works for users with &lt;10K followers. Write new video_id to each follower's feed cache immediately. Reads are O(1). Writes are O(followers).</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div class="step-text"><strong>Fan-out on Read (Pull)</strong> — For celebrities (&gt;10K followers). At read time, merge: (user's pre-computed feed) + (latest N videos from followed celebs). Write once, merge at read.</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div class="step-text"><strong>Hybrid</strong> — Regular accounts: push. Celebrities: pull with cache. Threshold is dynamic (can tune 10K based on system load).</div></div>
+        <div class="code-block">
+<span class="cm">// Hybrid fan-out pseudocode</span>
+<span class="kw">def</span> <span class="fn">on_video_upload</span>(video_id, creator_id):
+  follower_count = <span class="fn">get_follower_count</span>(creator_id)
+  <span class="kw">if</span> follower_count &lt; <span class="num">10_000</span>:
+    <span class="cm"># Push to all follower caches (async Kafka workers)</span>
+    <span class="fn">fanout_write_to_followers</span>(video_id, creator_id)
+  <span class="kw">else</span>:
+    <span class="cm"># Only write to creator's own timeline</span>
+    <span class="cm"># Feed service pulls + merges at read time</span>
+    <span class="fn">write_to_creator_timeline</span>(video_id, creator_id)
+        </div>
+      </div>
+      <div class="deepdive-block">
+        <h3>Thundering Herd Prevention <span class="badge badge-core">SCALE</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">When a viral video or a cache key expires for a hot celebrity, thousands of simultaneous cache misses can hammer the DB.</p>
+        <div class="flow-step"><div class="step-num green">1</div><div class="step-text"><strong>Mutex / Probabilistic Early Expiry</strong> — On cache miss, only 1 thread rebuilds. Others wait behind a mutex (Redis SETNX lock). Or: randomly pre-expire at 90-95% of TTL to spread rebuild.</div></div>
+        <div class="flow-step"><div class="step-num green">2</div><div class="step-text"><strong>Cache Aside with Jitter</strong> — TTL = base_ttl + random(0, 10s). Prevents synchronized expiry across 1000s of keys.</div></div>
+        <div class="flow-step"><div class="step-num green">3</div><div class="step-text"><strong>Background Refresh</strong> — Async worker pre-refreshes cache at 80% TTL. Cache never actually expires for hot keys.</div></div>
+        <div class="flow-step"><div class="step-num green">4</div><div class="step-text"><strong>Circuit Breaker</strong> — If DB response time &gt; 500ms, return stale cached data rather than letting slow queries pile up.</div></div>
+      </div>
+    </div>`
+  },
+  {
+    label:'Storage & DB',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>Database Selection Strategy <span class="badge badge-core">CORE</span></h3>
+        <table class="arch-table" style="margin-top:0.5rem;">
+          <thead><tr><th>Data</th><th>DB</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>User profiles</td><td>Postgres (sharded)</td><td>ACID, complex queries, JOIN with video metadata</td></tr>
+            <tr><td>Video metadata</td><td>Postgres (sharded)</td><td>Structured, FK relationships, low write rate</td></tr>
+            <tr><td>Like/View counts</td><td>Cassandra</td><td>High write throughput, wide-column, time-series</td></tr>
+            <tr><td>Comments</td><td>Cassandra</td><td>Append-only, partition by video_id, paginated reads</td></tr>
+            <tr><td>Feed cache</td><td>Redis Sorted Set</td><td>Score-based ranking, O(log N) insert, O(1) range</td></tr>
+            <tr><td>Video blobs</td><td>S3 / GCS</td><td>Object storage, 99.999999999% durability, CDN origin</td></tr>
+            <tr><td>Search index</td><td>Elasticsearch</td><td>Full-text, inverted index, multilingual tokenization</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="deepdive-block">
+        <h3>Sharding Strategy <span class="badge badge-hot">INTERVIEW DEEP DIVE</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;">Postgres sharding by user_id using consistent hashing. 256 virtual shards, distributed across 16 physical nodes (16 vnodes per physical node).</p>
+        <div class="highlight-box">shard_id = hash(user_id) % 256
+physical_node = consistent_hash_ring[shard_id]</div>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-top:0.75rem;margin-bottom:0.75rem;"><strong style="color:var(--text)">Hotspot Prevention:</strong> Celebrity user_ids get dedicated shards. HotKey detection via monitoring query rate per shard — auto-split if QPS exceeds threshold.</p>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:0.75rem;"><strong style="color:var(--text)">Cross-shard queries:</strong> Video feed requires data from multiple user shards. Solution: denormalize creator name/avatar into video table — avoid cross-shard JOINs entirely.</p>
+        <div class="highlight-box">Rebalancing: consistent hashing means only K/N keys move when adding node N+1 (vs naive mod which moves all keys)</div>
+      </div>
+    </div>`
+  },
+  {
+    label:'Rate Limiting',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>Rate Limiting Algorithms <span class="badge badge-core">CORE</span></h3>
+        <div class="flow-step"><div class="step-num">1</div><div class="step-text"><strong>Token Bucket</strong> — Bucket of N tokens, refilled at rate R/sec. Request consumes 1 token. Best for: upload API (bursty OK). Redis DECRBY + TTL implements this at scale.</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div class="step-text"><strong>Sliding Window Log</strong> — Store timestamp of each request in sorted set. Count requests in last window_size seconds. Expensive but precise. Best for: strict SLA enforcement.</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div class="step-text"><strong>Sliding Window Counter</strong> — Blend fixed window counts with fractional weighting. ~0.003% error, O(1) space. Best for: high-volume read APIs.</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div class="step-text"><strong>Leaky Bucket</strong> — Requests enter queue, processed at constant rate. Smooths burst but adds latency. Best for: video processing queue throttling.</div></div>
+        <div class="code-block">
+<span class="cm">// Token bucket in Redis (Lua atomic script)</span>
+<span class="kw">local</span> tokens = redis.<span class="fn">call</span>(<span class="str">'GET'</span>, key)
+<span class="kw">if</span> tokens == <span class="kw">nil</span> <span class="kw">then</span>
+  tokens = MAX_TOKENS
+<span class="kw">end</span>
+<span class="kw">if</span> tokens &gt; <span class="num">0</span> <span class="kw">then</span>
+  redis.<span class="fn">call</span>(<span class="str">'DECRBY'</span>, key, <span class="num">1</span>)
+  redis.<span class="fn">call</span>(<span class="str">'EXPIRE'</span>, key, WINDOW_SECONDS)
+  <span class="kw">return</span> <span class="num">1</span> <span class="cm">-- allowed</span>
+<span class="kw">else</span>
+  <span class="kw">return</span> <span class="num">0</span> <span class="cm">-- throttled → 429</span>
+<span class="kw">end</span>
+        </div>
+      </div>
+      <div class="deepdive-block">
+        <h3>Distributed Rate Limiting <span class="badge badge-hot">SCALE CHALLENGE</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">With 100 API gateway instances, per-instance rate limiting is inaccurate. A user could hit 100× the limit by round-robining across servers.</p>
+        <div class="flow-step"><div class="step-num green">1</div><div class="step-text"><strong>Centralized Redis</strong> — All gateways write to a shared Redis cluster. Single source of truth. Adds ~1ms latency per request. Suitable for strict limits.</div></div>
+        <div class="flow-step"><div class="step-num green">2</div><div class="step-text"><strong>Sticky Sessions</strong> — Load balancer routes user to same gateway via consistent hash on user_id. Per-instance limiting is accurate. Risk: gateway failure = loss of state.</div></div>
+        <div class="flow-step"><div class="step-num green">3</div><div class="step-text"><strong>Approximate Local + Sync</strong> — Each instance tracks locally, syncs with Redis every 100ms. Allows burst up to (limit × num_instances) briefly but averages correctly. Best performance-accuracy tradeoff.</div></div>
+        <div class="highlight-box">TikTok uses approach 3 for read APIs (10M+ RPS) and approach 1 for write APIs (upload, comment) where strict limits matter.</div>
+      </div>
+    </div>`
+  },
+  {
+    label:'Consistency',
+    content: `
+    <div class="deepdive-grid">
+      <div class="deepdive-block">
+        <h3>Eventual Consistency Patterns <span class="badge badge-core">CORE</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">Most of TikTok's data can tolerate eventual consistency. Understanding where it's safe vs unsafe is key.</p>
+        <div class="flow-step"><div class="step-num">1</div><div class="step-text"><strong>Like Count</strong> — Increment in Redis (in-memory, fast), async flush to Cassandra every 5s. Stale by up to 5s. Totally fine — user can't tell.</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div class="step-text"><strong>Feed Freshness</strong> — Pre-computed every 30s. User may not see a new video for up to 30s. Acceptable: TikTok's value is in depth of catalog, not recency.</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div class="step-text"><strong>View Count</strong> — HyperLogLog approximate unique views. Up to 0.8% error. Nobody checks if a video has exactly 1,234,567 vs 1,244,567 views.</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div class="step-text"><strong>Follow relationship</strong> — Read-your-own-writes via Redis: after following, Redis updated immediately; Postgres eventually consistent. Your own UI always shows correct state.</div></div>
+      </div>
+      <div class="deepdive-block">
+        <h3>Strong Consistency Requirements <span class="badge badge-hot">CRITICAL</span></h3>
+        <p style="font-size:0.82rem;color:var(--text2);line-height:1.6;margin-bottom:1rem;">Some operations MUST be strongly consistent — getting these wrong breaks trust or has financial consequences.</p>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">!</div><div class="step-text"><strong>User Auth / Session</strong> — Session tokens are strongly consistent. You must not be able to use a revoked token due to replication lag.</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">!</div><div class="step-text"><strong>Payment / Tipping</strong> — Creator fund payouts require ACID transactions. Uses a separate financial service with strict 2PC.</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">!</div><div class="step-text"><strong>Content Moderation</strong> — Once a video is banned, ALL users must stop seeing it immediately. Requires synchronous cache invalidation across CDN + Redis.</div></div>
+        <div class="flow-step"><div class="step-num" style="background:var(--accent)">!</div><div class="step-text"><strong>Video Deduplication</strong> — Prevent same chunk uploaded twice. Requires distributed lock (Redis SETNX) during upload commit window.</div></div>
+      </div>
+    </div>`
+  }
+];
+
+const tabsContainer = document.getElementById('deepdiveTabs');
+const contentsContainer = document.getElementById('deepdiveContents');
+
+deepdives.forEach((d, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn' + (i===0?' active':'');
+  btn.textContent = d.label;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tc-'+i).classList.add('active');
+  });
+  tabsContainer.appendChild(btn);
+
+  const content = document.createElement('div');
+  content.className = 'tab-content' + (i===0?' active':'');
+  content.id = 'tc-'+i;
+  content.innerHTML = d.content;
+  contentsContainer.appendChild(content);
+});
+
+// ============ QA DATA ============
+const qaData = [
+  {
+    level:'hard', lvlClass:'lvl-hard',
+    q:'How would you handle a celebrity with 100M followers posting a video? Walk through the fan-out.',
+    a:`<p>This is the classic <strong>fan-out storm</strong> problem. Naively, posting to 100M follower feeds requires 100M Redis writes simultaneously — this is catastrophic.</p>
+    <p><strong>Solution: Hybrid push-pull model with a threshold.</strong> For users under ~10K followers, we use fan-out on write (push model): when they post, Kafka workers asynchronously write the video_id to each follower's Redis feed sorted set. Read time is O(1).</p>
+    <p>For celebrities over the threshold, we switch to fan-out on read (pull model): we only write the new video to the creator's own timeline. At feed read time, the Feed Service merges the user's pre-computed personal feed with the latest N videos from any followed celebrities (a bounded pull per celebrity). We cache this merge result for 30 seconds.</p>
+    <div class="highlight-box">Threshold tuning: the 10K threshold is configurable. Under system load, we raise it to reduce push writes. During off-peak, we can lower it for better read latency. Monitor: fan-out queue depth as the key signal.</div>`
+  },
+  {
+    level:'hard', lvlClass:'lvl-hard',
+    q:'How do you design the recommendation feed to serve 1B users in under 100ms?',
+    a:`<p>The two-stage architecture is the key. <strong>Stage 1: Candidate Generation</strong> uses ANN (Approximate Nearest Neighbor) search with FAISS on pre-computed user and video embeddings (256 dimensions). This retrieves ~1000 candidates from a 100M+ corpus in under 10ms. The embeddings are updated via collaborative filtering daily.</p>
+    <p><strong>Stage 2: Ranking</strong> applies a lightweight GBDT or DNN that scores each candidate on multiple objectives: P(watch_full), P(like), P(share), P(comment). Real-time features (last-hour watch history) are merged from a low-latency feature store (Redis). This whole stage runs in ~20ms.</p>
+    <p>But the real secret is <strong>pre-computation</strong>: for active users, we pre-run the full pipeline every 30 seconds and cache the result in Redis. The live endpoint just reads from cache in &lt;1ms. The 100ms budget is only consumed on cache miss.</p>
+    <div class="highlight-box">Key metric: cache hit rate for feed. Target >90%. If below, increase pre-computation frequency or expand TTL. The 10ms ANN + 20ms ranking = 30ms budget; well within 100ms even on miss.</div>`
+  },
+  {
+    level:'hard', lvlClass:'lvl-hard',
+    q:'How would you design the transcoding pipeline to handle 34 million video uploads per day?',
+    a:`<p>34M videos/day = ~400 uploads/second at peak. Transcoding is async and embarrassingly parallel — perfect for Kafka + worker pool architecture.</p>
+    <p>The flow: Upload completes → S3 event triggers Kafka message to <code>video.uploaded</code> topic → Pool of transcoding workers (stateless EC2 Spot instances, autoscaled by Kafka consumer lag) pull jobs → Each worker runs FFmpeg to produce 4 HLS renditions + thumbnail + generates .m3u8 manifest → Output segments pushed to S3 → Completion event triggers CDN cache warming and metadata DB update.</p>
+    <p><strong>Scaling:</strong> Workers autoscale based on Kafka consumer lag metric. At 400 uploads/sec, if each video takes 2 minutes to transcode and we run 4 parallel FFmpeg workers per machine, we need ~400 × 120s / 4 = ~12,000 concurrent workers at peak. Spot instances keep cost at ~30% of on-demand.</p>
+    <div class="highlight-box">Priority queues: verified creators get a fast-track queue with dedicated workers. New creator videos go through standard queue. This is a 2-topic Kafka setup with separate consumer groups and different worker pool sizes.</div>`
+  },
+  {
+    level:'mid', lvlClass:'lvl-mid',
+    q:'How would you implement distributed rate limiting across 100 API gateway nodes?',
+    a:`<p>Per-node rate limiting is inaccurate — a user could hit each of 100 nodes for 100× the intended limit. Three approaches:</p>
+    <p><strong>Centralized Redis (Approach 1):</strong> All nodes write to one Redis cluster using a token bucket Lua script (atomic DECRBY + EXPIRE). Adds ~1ms per request but perfectly accurate. Use for write APIs (upload, comment) where strict limits matter.</p>
+    <p><strong>Local + Async Sync (Approach 3, preferred for reads):</strong> Each node tracks a local counter. Every 100ms, each node syncs with Redis via a INCRBY of its local delta and reads the global total. Allows brief overshoot by up to (limit × num_nodes / sync_interval) but averages correctly. Zero added latency on the hot path. Use for read APIs at 10M+ RPS.</p>
+    <div class="highlight-box">TikTok's real architecture: approach 1 (centralized) for upload/auth/payment APIs. Approach 3 (local+sync) for feed/search/profile reads. The sync interval (100ms) is tuned based on acceptable overshoot tolerance.</div>`
+  },
+  {
+    level:'mid', lvlClass:'lvl-mid',
+    q:'How do you prevent a viral video from crashing your CDN origin?',
+    a:`<p>When a video goes viral, millions of concurrent users hit the CDN simultaneously. If CDN segments aren't cached yet, all those requests hit origin — this is the <strong>thundering herd / cache stampede</strong> problem.</p>
+    <p><strong>Solution 1 — CDN Pre-warming:</strong> Monitor view velocity in real-time (Kafka + 5-minute sliding window). When a video crosses a view-velocity threshold (e.g., 10K views/min), proactively push all its HLS segments to the top 50 CDN PoPs before demand arrives.</p>
+    <p><strong>Solution 2 — Origin Shield:</strong> CDN configured with a single "origin shield" region. Even on cache miss, the 200+ PoPs all query the shield, not origin directly. Shield handles de-duplication — only 1 request to origin per segment, even if 10K PoPs miss simultaneously.</p>
+    <div class="highlight-box">Immutable content-addressed keys: HLS segment URLs include the video_id and segment number. These never change → TTL can be set to 1 year → perfect cache efficiency → viral video served 100% from CDN after first viewer in each region.</div>`
+  },
+  {
+    level:'mid', lvlClass:'lvl-mid',
+    q:'How would you design the like counter system that can handle 10M likes per second?',
+    a:`<p>Direct Postgres increments at 10M/sec would destroy the database. The solution is a <strong>counter tiering architecture</strong>.</p>
+    <p><strong>Layer 1 — Redis:</strong> INCR on <code>likes:{video_id}</code>. In-memory, handles millions of ops/sec. Redis persistence (AOF) provides durability. This is the hot path — all like increments go here.</p>
+    <p><strong>Layer 2 — Batch flush to Cassandra:</strong> A background worker reads Redis counters every 5 seconds and writes the delta to a Cassandra counter column (<code>UPDATE likes SET count = count + delta WHERE video_id = ?</code>). Cassandra handles high write throughput with its LSM-tree storage engine.</p>
+    <p><strong>Layer 3 — Postgres sync:</strong> Every hour, the final count from Cassandra is synced to the canonical video metadata record in Postgres for reporting/consistency.</p>
+    <div class="highlight-box">For unique viewers: use HyperLogLog (HLL) in Redis. PFADD per view event, PFCOUNT for estimated unique viewers. 12KB per counter regardless of cardinality. ~0.8% error — acceptable for view counts shown to users.</div>`
+  },
+  {
+    level:'hard', lvlClass:'lvl-hard',
+    q:'Your recommendation model takes 500ms to generate a feed. How do you get it to 50ms?',
+    a:`<p>500ms is purely synchronous model inference on the hot path. The fix is pre-computation + smarter architecture.</p>
+    <p><strong>1. Pre-compute for active users:</strong> Run the full recommendation pipeline for DAUs every 30 seconds. Store result in Redis as a sorted set (score = rank, member = video_id). Feed request = Redis ZRANGE = 1ms. This handles 90%+ of traffic.</p>
+    <p><strong>2. Separate candidate generation from ranking:</strong> ANN search (FAISS, 10ms) runs on a GPU-enabled service. Ranking (GBDT, 20ms) runs on CPU-optimized instances. Parallelize where possible — e.g., run candidate generation while fetching user features simultaneously.</p>
+    <p><strong>3. Feature store optimization:</strong> Move real-time feature lookups from Redis to in-process cache (last-N interaction features as a hot struct in the ranking service memory). Eliminates network round trips for the hottest features.</p>
+    <div class="highlight-box">Target architecture: Pre-computed path (90% traffic) = &lt;5ms. Cache-miss path = ANN(10ms) + Features(5ms parallel) + Rank(20ms) = ~35ms. P99 target: 50ms. Model quantization (INT8) can cut ranking inference from 20ms to 8ms.</div>`
+  },
+  {
+    level:'easy', lvlClass:'lvl-easy',
+    q:'How would you handle video upload failure and retries without creating duplicate videos?',
+    a:`<p>Reliability in uploads requires idempotency — retrying a failed upload must not create a duplicate video.</p>
+    <p><strong>Solution: Idempotency key + chunk tracking.</strong> When the client initiates an upload, the server generates a unique <code>upload_session_id</code> (UUID) and returns it to the client. This is stored in Redis with TTL=24h.</p>
+    <p>Each chunk upload includes the <code>upload_session_id</code> + <code>chunk_number</code>. The server records which chunks are received (<code>SET upload:{session_id}:chunk:{n} = 1</code>). On retry, the client first queries which chunks are missing, then only re-uploads those. Truly resumable.</p>
+    <div class="highlight-box">Finalization: only when ALL chunks are received does the server trigger the "video.uploaded" Kafka event. If the finalization event fires twice (at-least-once delivery), the Kafka consumer checks if video_id already exists in DB before processing — idempotent consumer pattern.</div>`
+  },
+  {
+    level:'mid', lvlClass:'lvl-mid',
+    q:'How do you handle content moderation at 34M uploads per day without human review for every video?',
+    a:`<p>34M videos/day = ~400/second. Pure human review is impossible. The architecture is a <strong>multi-stage automated + selective human review funnel</strong>.</p>
+    <p><strong>Stage 1 — Upload-time hash check:</strong> Compute perceptual hash (pHash) of uploaded video. Compare against database of known-banned content hashes. Block instantly, zero latency, no ML required. Handles re-uploads of previously removed content.</p>
+    <p><strong>Stage 2 — Async ML classifiers:</strong> After transcoding, run multiple specialized models in parallel: NSFW classifier (frame sampling), violence detector, hate speech detector on ASR transcript, spam/watermark detector. Videos flagged with confidence &gt; 0.9 auto-removed. Medium confidence (0.5-0.9) queued for human review.</p>
+    <p><strong>Stage 3 — Community flagging + human review:</strong> User reports trigger priority re-analysis. Human reviewers (contractor network across timezones for 24/7 coverage) handle the flagged queue.</p>
+    <div class="highlight-box">Key metric: recall vs precision tradeoff. False positive (removing good content) hurts creators. False negative (missing bad content) hurts safety. Threshold tuned per category: stricter for CSAM (0.1 confidence = remove), looser for spam (0.95 confidence = remove).</div>`
+  }
+];
+
+const qaList = document.getElementById('qaList');
+qaData.forEach((qa, i) => {
+  const card = document.createElement('div');
+  card.className = 'qa-card';
+  card.innerHTML = `
+    <div class="qa-question">
+      <div class="qa-q-text">${qa.q}</div>
+      <span class="qa-level ${qa.lvlClass}">${qa.level}</span>
+      <span class="qa-chevron">▼</span>
+    </div>
+    <div class="qa-answer" id="qa-${i}">${qa.a}</div>`;
+  card.querySelector('.qa-question').addEventListener('click', () => {
+    const answer = document.getElementById('qa-'+i);
+    const isOpen = answer.classList.contains('open');
+    document.querySelectorAll('.qa-answer').forEach(a=>a.classList.remove('open'));
+    document.querySelectorAll('.qa-card').forEach(c=>c.classList.remove('open'));
+    if (!isOpen) {
+      answer.classList.add('open');
+      card.classList.add('open');
+    }
+  });
+  qaList.appendChild(card);
+});
+</script>
+</body>
+</html>

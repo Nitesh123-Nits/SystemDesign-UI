@@ -2228,15 +2228,6 @@ const GUIDES_DATA = [
     url: "dns-journey.html"
   },
   {
-    id: "g5",
-    icon: "🎯",
-    title: "HLD Interview Guide",
-    desc: "A high-level framework and strategy manual to crush FAANG system design interviews.",
-    tags: ["Interview Prep", "HLD", "Strategy"],
-    color: "#00f0ff",
-    url: "hld-interview-guide.html"
-  },
-  {
     id: "g6",
     icon: "📬",
     title: "Kafka vs RabbitMQ (Enhanced)",
@@ -2307,6 +2298,42 @@ const GUIDES_DATA = [
     tags: ["LLD", "Object Oriented", "Design Patterns", "SOLID"],
     color: "#6c63ff",
     url: "lld-interview-prep.html"
+  },
+  {
+    id: "g14",
+    icon: "🛒",
+    title: "Ecommerce HLD Interview Guide",
+    desc: "A comprehensive high-level design for an online delivery platform like Amazon, covering orders, inventory, and fulfillment.",
+    tags: ["Ecommerce", "HLD", "Scalability", "System Design"],
+    color: "#f97316",
+    url: "ecommerce-hld-interview.html"
+  },
+  {
+    id: "g15",
+    icon: "🔎",
+    title: "Search Platform HLD",
+    desc: "Designing a scalable search platform with indexing, ranking, and retrieval for massive datasets.",
+    tags: ["Search", "Indexing", "HLD", "Elasticsearch"],
+    color: "#3b82f6",
+    url: "search-platform-hld.html"
+  },
+  {
+    id: "g16",
+    icon: "📱",
+    title: "TikTok System Design",
+    desc: "Architecture of a short-video social platform covering feed generation, video processing, and low-latency delivery.",
+    tags: ["Social Media", "Video", "TikTok", "Feed"],
+    color: "#ff0050",
+    url: "tiktok-system-design.html"
+  },
+  {
+    id: "g17",
+    icon: "🐦",
+    title: "Twitter HLD Deep Dive",
+    desc: "An in-depth look at Twitter's architecture, including the feed service, fan-out strategy, and real-time updates.",
+    tags: ["Twitter", "HLD", "Microservices", "Fan-out"],
+    color: "#1da1f2",
+    url: "twitter-hld.html"
   }
 ];
 

@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLD Interview — Online Delivery Platform | Amazon SDE</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --bg2: #0f1218;
+  --bg3: #141820;
+  --surface: #1a1f2e;
+  --surface2: #212736;
+  --border: #252c3d;
+  --border2: #2e3650;
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --accent3: #fde68a;
+  --blue: #60a5fa;
+  --blue2: #3b82f6;
+  --green: #34d399;
+  --green2: #10b981;
+  --purple: #a78bfa;
+  --red: #f87171;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Syne', sans-serif;
+  --body: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* SCANLINE TEXTURE */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.012) 2px, rgba(255,255,255,0.012) 4px);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* SIDEBAR NAV */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 240px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.sidebar-header {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.sidebar-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+}
+
+.nav-section {
+  padding: 12px 8px 4px;
+}
+
+.nav-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  transition: all 0.15s;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.nav-item:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.nav-item.active {
+  background: rgba(249,115,22,0.12);
+  color: var(--accent);
+  border-color: rgba(249,115,22,0.25);
+}
+
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+
+.nav-item.active .nav-dot { background: var(--accent); }
+
+/* MAIN CONTENT */
+.main {
+  margin-left: 240px;
+  min-height: 100vh;
+}
+
+/* TOP BAR */
+.topbar {
+  position: sticky; top: 0;
+  background: rgba(10,12,16,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 50;
+}
+
+.topbar-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
+.topbar-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 10px;
+  background: rgba(249,115,22,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(249,115,22,0.3);
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+/* SECTIONS */
+.section {
+  padding: 48px 32px;
+  border-bottom: 1px solid var(--border);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.section-desc {
+  font-size: 14px;
+  color: var(--text2);
+  max-width: 700px;
+  margin-bottom: 32px;
+  line-height: 1.65;
+}
+
+/* HERO */
+#hero {
+  padding: 56px 32px;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 60%, #0f1520 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+#hero::after {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: rgba(52,211,153,0.08);
+  border: 1px solid rgba(52,211,153,0.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.hero-tag::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hero-title {
+  font-family: var(--display);
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.hero-title span { color: var(--accent); }
+
+.hero-sub {
+  font-size: 15px;
+  color: var(--text2);
+  max-width: 600px;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 20px;
+  text-align: center;
+}
+
+.hero-stat-num {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.hero-stat-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.card:hover { border-color: var(--border2); }
+
+.card-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* GRID LAYOUTS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+}
+
+/* HLD DIAGRAM SVG */
+.diagram-container {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+
+.diagram-container svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* FRAMEWORK BOXES */
+.framework-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+
+.framework-step {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.framework-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.framework-body {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* Q&A */
+.qa-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.qa-question {
+  padding: 14px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--surface);
+  transition: background 0.15s;
+}
+
+.qa-question:hover { background: var(--surface2); }
+
+.qa-q-icon {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.qa-q-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+
+.qa-toggle {
+  font-size: 16px;
+  color: var(--text3);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.qa-answer {
+  display: none;
+  padding: 16px 18px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+.qa-answer.open { display: block; }
+.qa-item.open .qa-toggle { transform: rotate(45deg); }
+
+/* TAGS */
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 2px;
+}
+
+.tag-blue { background: rgba(96,165,250,0.12); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.tag-green { background: rgba(52,211,153,0.1); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
+.tag-orange { background: rgba(249,115,22,0.1); color: var(--accent); border: 1px solid rgba(249,115,22,0.2); }
+.tag-purple { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+.tag-red { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+/* TABLES */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(255,255,255,0.015); }
+
+.table-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* CODE BLOCKS */
+.code-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #c9d1d9;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.code-block .kw { color: #ff7b72; }
+.code-block .str { color: #a5d6ff; }
+.code-block .num { color: #f8c555; }
+.code-block .cmt { color: #8b949e; font-style: italic; }
+.code-block .fn { color: #d2a8ff; }
+
+/* CHIPS ROW */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+
+/* CALLOUT */
+.callout {
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  font-size: 13px;
+  display: flex;
+  gap: 10px;
+}
+
+.callout-info { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.2); color: #93c5fd; }
+.callout-warn { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); color: #fdba74; }
+.callout-success { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); color: #6ee7b7; }
+.callout-danger { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #fca5a5; }
+
+.callout-icon { font-size: 16px; flex-shrink: 0; }
+.callout-body { line-height: 1.6; }
+
+/* METRIC CARD */
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.metric-val {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.metric-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+/* DEEP DIVE TABS */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+
+.tab-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  background: var(--surface);
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+
+.tab-btn:hover { border-color: var(--border2); color: var(--text); }
+.tab-btn.active {
+  background: rgba(249,115,22,0.15);
+  border-color: rgba(249,115,22,0.4);
+  color: var(--accent);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* FLOW STEPS */
+.flow-steps { display: flex; flex-direction: column; gap: 0; }
+
+.flow-step {
+  display: flex;
+  gap: 16px;
+  position: relative;
+}
+
+.flow-step::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 32px;
+  bottom: -4px;
+  width: 2px;
+  background: linear-gradient(var(--border2), transparent);
+}
+
+.flow-step:last-child::before { display: none; }
+
+.flow-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.flow-content {
+  padding: 4px 0 24px;
+  flex: 1;
+}
+
+.flow-content-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.flow-content-body {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* COMPONENT PILL */
+.component-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  margin: 3px;
+}
+
+/* PROGRESS BAR */
+.progress-row { margin-bottom: 12px; }
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 1s ease;
+}
+
+/* INLINE FORMULA */
+.formula {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  color: var(--accent3);
+}
+
+/* SECTION DIVIDER */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 20px;
+}
+
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+/* INTERVIEW TIP BOX */
+.tip-box {
+  background: linear-gradient(135deg, rgba(167,139,250,0.06), rgba(96,165,250,0.06));
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+
+.tip-box-header {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tip-box-body {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+/* COMPONENT LIST */
+.comp-list { list-style: none; padding: 0; }
+.comp-list li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.comp-list li:last-child { border-bottom: none; }
+
+.comp-list-bullet {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* SCALE PILLARS */
+.pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pillar {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: 3px solid;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.pillar:nth-child(1) { border-top-color: var(--accent); }
+.pillar:nth-child(2) { border-top-color: var(--blue2); }
+.pillar:nth-child(3) { border-top-color: var(--green2); }
+.pillar:nth-child(4) { border-top-color: var(--purple); }
+.pillar:nth-child(5) { border-top-color: var(--red); }
+.pillar:nth-child(6) { border-top-color: var(--accent3); }
+
+.pillar-title {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.pillar-body {
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .pillar-grid { grid-template-columns: 1fr; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* COPY BUTTON */
+.copy-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text3);
+  cursor: pointer;
+  float: right;
+  transition: all 0.15s;
+  margin-top: -4px;
+}
+
+.copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ARCH LAYERS */
+.arch-layer {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.arch-layer-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.arch-layer-body { font-size: 12px; color: var(--text2); }
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 6px; bottom: 6px;
+  width: 2px;
+  background: linear-gradient(var(--accent), var(--blue2), var(--green2));
+  border-radius: 1px;
+}
+
+.timeline-item { position: relative; padding: 0 0 24px 24px; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -5px; top: 6px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+}
+
+.timeline-phase {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.timeline-body {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">HLD Prep</div>
+    <div class="sidebar-sub">// Amazon SDE Interview</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <a class="nav-item active" href="#hero" onclick="setActive(this)"><span class="nav-dot"></span>Introduction</a>
+    <a class="nav-item" href="#framework" onclick="setActive(this)"><span class="nav-dot"></span>Answer Framework</a>
+    <a class="nav-item" href="#requirements" onclick="setActive(this)"><span class="nav-dot"></span>Requirements</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Estimation</div>
+    <a class="nav-item" href="#bote" onclick="setActive(this)"><span class="nav-dot"></span>Back of Envelope</a>
+    <a class="nav-item" href="#capacity" onclick="setActive(this)"><span class="nav-dot"></span>Capacity Planning</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Architecture</div>
+    <a class="nav-item" href="#hld-diagram" onclick="setActive(this)"><span class="nav-dot"></span>HLD Diagram</a>
+    <a class="nav-item" href="#core-services" onclick="setActive(this)"><span class="nav-dot"></span>Core Services</a>
+    <a class="nav-item" href="#data-models" onclick="setActive(this)"><span class="nav-dot"></span>Data Models</a>
+    <a class="nav-item" href="#apis" onclick="setActive(this)"><span class="nav-dot"></span>Key APIs</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Deep Dives</div>
+    <a class="nav-item" href="#order-flow" onclick="setActive(this)"><span class="nav-dot"></span>Order Flow</a>
+    <a class="nav-item" href="#search" onclick="setActive(this)"><span class="nav-dot"></span>Search & Catalog</a>
+    <a class="nav-item" href="#scaling" onclick="setActive(this)"><span class="nav-dot"></span>Scaling</a>
+    <a class="nav-item" href="#reliability" onclick="setActive(this)"><span class="nav-dot"></span>Reliability</a>
+    <a class="nav-item" href="#caching" onclick="setActive(this)"><span class="nav-dot"></span>Caching Strategy</a>
+    <a class="nav-item" href="#traffic-spikes" onclick="setActive(this)"><span class="nav-dot"></span>Traffic Spikes</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Interview</div>
+    <a class="nav-item" href="#counter-questions" onclick="setActive(this)"><span class="nav-dot"></span>Counter Questions</a>
+    <a class="nav-item" href="#tradeoffs" onclick="setActive(this)"><span class="nav-dot"></span>Trade-offs</a>
+    <a class="nav-item" href="#amazon-lp" onclick="setActive(this)"><span class="nav-dot"></span>Amazon LPs</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">Online Delivery Platform — System Design</div>
+    <div class="topbar-badge">Amazon SDE-II / SDE-III</div>
+  </div>
+
+  <!-- HERO -->
+  <section id="hero" class="section visible">
+    <div class="hero-tag">Interview Ready</div>
+    <h1 class="hero-title">Design an<br><span>Online Delivery</span><br>Platform</h1>
+    <p class="hero-sub">
+      A complete HLD interview guide covering architecture, scalability, back-of-envelope calculations, deep dives, and counter-questions for designing an Amazon/Flipkart/Instacart-scale e-commerce delivery platform.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">10M+</div>
+        <div class="hero-stat-label">Daily Orders</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">500M+</div>
+        <div class="hero-stat-label">Products</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">100M+</div>
+        <div class="hero-stat-label">DAU</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">99.99%</div>
+        <div class="hero-stat-label">Uptime SLA</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">&lt;200ms</div>
+        <div class="hero-stat-label">P99 Latency</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRAMEWORK -->
+  <section id="framework" class="section">
+    <div class="section-label">// step 0</div>
+    <h2 class="section-title">Answer Framework</h2>
+    <p class="section-desc">
+      Amazon HLD interviews follow a structured arc. Never jump to solutions. This is the exact framework to ace it.
+    </p>
+
+    <div class="tip-box">
+      <div class="tip-box-header">🎯 Amazon Interview Signal</div>
+      <div class="tip-box-body">
+        Interviewers assess: Breadth (do you know the components), Depth (can you deep-dive), Trade-offs (do you justify choices), Scale awareness, and LP alignment (Customer Obsession, Think Big, Dive Deep).
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-content-title">Clarify Requirements (3–5 min)</div>
+          <div class="flow-content-body">
+            "Before I start designing, let me clarify scope." Ask: What's the scale? Geo distribution? Are we building the catalog, checkout, fulfillment, or delivery tracking? Are we handling payments? What's the SLA? What's read vs write ratio? — <em>This shows leadership, not just execution.</em>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-content-title">Back-of-Envelope Estimates (3–4 min)</div>
+          <div class="flow-content-body">
+            Quantify the system before designing it. Derive QPS, storage, bandwidth. This grounds the design in reality and forces you to justify choices like "we need a CDN" or "we need sharding."
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-content-title">High-Level Design (8–10 min)</div>
+          <div class="flow-content-body">
+            Draw the architecture: client → load balancer → API gateway → services → databases. Walk through the primary happy path (user places an order). Keep it high-level first, let the interviewer guide the depth.
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <div class="flow-content-title">Deep Dive on Critical Components (10–15 min)</div>
+          <div class="flow-content-body">
+            Interviewers will direct: "Tell me more about inventory management" or "How does your search scale?" Have prepared deep-dives for: Order Service, Search, Inventory, Notification, Delivery Tracking.
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <div class="flow-content-title">Scalability & Bottlenecks (5 min)</div>
+          <div class="flow-content-body">
+            Proactively address: single points of failure, hot partitions, N+1 queries, thundering herd, noisy neighbor, and how your design handles 10x traffic spikes (Prime Day, Black Friday).
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">6</div>
+        <div class="flow-content">
+          <div class="flow-content-title">Trade-offs & Alternatives (3 min)</div>
+          <div class="flow-content-body">
+            Always compare your choice against the alternative: "I chose Kafka over SQS here because…" / "I'm using eventual consistency for the cart because strong consistency would add 40ms…" This is where senior candidates shine.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUIREMENTS -->
+  <section id="requirements" class="section">
+    <div class="section-label">// step 1</div>
+    <h2 class="section-title">Requirements Gathering</h2>
+    <p class="section-desc">Always start by carving out scope. This is what you say and what you clarify.</p>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span class="tag tag-green">Functional</span> Requirements
+          </div>
+          <ul class="comp-list">
+            <li><span class="comp-list-bullet"></span>Users can browse and search products across millions of SKUs</li>
+            <li><span class="comp-list-bullet"></span>Users can add to cart, apply coupons, and checkout</li>
+            <li><span class="comp-list-bullet"></span>Platform supports multiple payment methods</li>
+            <li><span class="comp-list-bullet"></span>Real-time inventory updates prevent overselling</li>
+            <li><span class="comp-list-bullet"></span>Order status tracking with push/SMS/email notifications</li>
+            <li><span class="comp-list-bullet"></span>Sellers can list, update, and manage products</li>
+            <li><span class="comp-list-bullet"></span>Delivery slot selection and real-time tracking</li>
+            <li><span class="comp-list-bullet"></span>Reviews and ratings on products</li>
+            <li><span class="comp-list-bullet"></span>Personalized recommendations (ML-driven)</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span class="tag tag-orange">Non-Functional</span> Requirements
+          </div>
+          <ul class="comp-list">
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Availability:</strong> 99.99% uptime — max ~52 min/year downtime</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Latency:</strong> P99 &lt;200ms for product pages, &lt;500ms checkout</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Consistency:</strong> Strong for payments/inventory, eventual for catalog</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Scalability:</strong> Handle 10x spike during sales events</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Durability:</strong> Zero data loss for orders, payments, inventory</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Global:</strong> Multi-region, geo-distributed, CDN for assets</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Security:</strong> PCI-DSS for payments, GDPR for user data</li>
+          </ul>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="card-title">🚫 Out of Scope (say this!)</div>
+          <div class="chips">
+            <span class="tag tag-red">Ad Platform</span>
+            <span class="tag tag-red">Fraud Detection ML</span>
+            <span class="tag tag-red">Seller Analytics</span>
+            <span class="tag tag-red">Returns UI</span>
+            <span class="tag tag-red">Warehouse Robotics</span>
+          </div>
+          <div class="callout callout-info" style="margin-top:10px">
+            <span class="callout-icon">💡</span>
+            <span class="callout-body">Explicitly stating out-of-scope items shows you can triage scope. Amazon interviewers reward this. Say: "I'll note these as extensions we can discuss after the core design."</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BACK OF ENVELOPE -->
+  <section id="bote" class="section">
+    <div class="section-label">// step 2</div>
+    <h2 class="section-title">Back-of-Envelope Calculations</h2>
+    <p class="section-desc">Ground your design in numbers. These estimates drive every architectural decision that follows.</p>
+
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">Assumptions</div><div class="divider-line"></div></div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Parameter</th><th>Value</th><th>Reasoning</th></tr></thead>
+        <tbody>
+          <tr><td>Monthly Active Users (MAU)</td><td style="color:var(--accent);font-family:var(--mono)">300M</td><td>Amazon-scale; 100M DAU (33% daily active)</td></tr>
+          <tr><td>Daily Active Users (DAU)</td><td style="color:var(--accent);font-family:var(--mono)">100M</td><td>Peak traffic window: 8am–10pm (14h)</td></tr>
+          <tr><td>Orders/day</td><td style="color:var(--accent);font-family:var(--mono)">10M</td><td>~10% of DAU places an order</td></tr>
+          <tr><td>Product catalog size</td><td style="color:var(--accent);font-family:var(--mono)">500M SKUs</td><td>Amazon has ~350M listings; we plan for growth</td></tr>
+          <tr><td>Avg page views/user/day</td><td style="color:var(--accent);font-family:var(--mono)">10</td><td>Browse, search, product detail, cart</td></tr>
+          <tr><td>Read:Write ratio</td><td style="color:var(--accent);font-family:var(--mono)">100:1</td><td>Reads dominate; writes are order/inventory updates</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">Traffic</div><div class="divider-line"></div></div>
+
+    <div class="grid-2">
+      <div>
+        <div class="formula">Total reads/day = 100M × 10 = 1 Billion</div>
+        <div class="formula">Avg read QPS = 1B / 86,400 ≈ 11,500 req/s</div>
+        <div class="formula">Peak read QPS (3× avg) ≈ 35,000 req/s</div>
+        <div class="formula">Write QPS (orders) = 10M / 86,400 ≈ 115 order/s</div>
+        <div class="formula">Inventory write QPS ≈ 1,150 / s (10× orders)</div>
+        <div class="formula">Peak day (Prime Day 10×) = 350,000 peak reads/s</div>
+      </div>
+      <div>
+        <div class="callout callout-warn">
+          <span class="callout-icon">⚡</span>
+          <span class="callout-body"><strong>Key insight:</strong> Peak QPS is 350K reads/s on Prime Day. This justifies: multi-layer caching, read replicas, CDN for product images, horizontal autoscaling, and pre-warming caches before sale events.</span>
+        </div>
+        <div class="callout callout-success">
+          <span class="callout-icon">✓</span>
+          <span class="callout-body">At 115 orders/s avg and 1,150/s peak inventory writes — these require strong consistency. Use synchronous writes with optimistic locking for inventory.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">Storage</div><div class="divider-line"></div></div>
+
+    <div class="grid-3">
+      <div class="metric-card">
+        <div class="metric-val">250TB</div>
+        <div class="metric-unit">Product Catalog DB</div>
+        <div class="metric-label">500M SKUs × 500 bytes avg metadata</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">~5TB</div>
+        <div class="metric-unit">Orders / Year</div>
+        <div class="metric-label">10M orders/day × 365 × 1.5KB avg</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">2PB</div>
+        <div class="metric-unit">Product Images (CDN)</div>
+        <div class="metric-label">500M SKUs × 5 images × 800KB avg</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">50TB</div>
+        <div class="metric-unit">User & Session Data</div>
+        <div class="metric-label">300M users × 150 bytes base + sessions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">10TB</div>
+        <div class="metric-unit">Search Index (ES)</div>
+        <div class="metric-label">500M docs × 20 bytes inverted index</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">500GB</div>
+        <div class="metric-unit">Redis Cache (hot)</div>
+        <div class="metric-label">Top 1M products + sessions + cart</div>
+      </div>
+    </div>
+
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">Bandwidth</div><div class="divider-line"></div></div>
+
+    <div class="formula">Product page response = 50KB HTML + 500KB images (CDN) = ~550KB</div>
+    <div class="formula">API response size (JSON) ≈ 10KB avg</div>
+    <div class="formula">Bandwidth = 35,000 req/s × 10KB = 350 MB/s ≈ 2.8 Gbps (API only)</div>
+    <div class="formula">CDN bandwidth = 35,000 × 500KB = 17.5 GB/s offloaded to CDN</div>
+  </section>
+
+  <!-- CAPACITY PLANNING -->
+  <section id="capacity" class="section">
+    <div class="section-label">// step 2b</div>
+    <h2 class="section-title">Capacity Planning</h2>
+    <p class="section-desc">Translate estimates into actual server counts and infrastructure units.</p>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Component</th><th>Config</th><th>Count (normal)</th><th>Count (peak 10×)</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>API Servers</td>
+            <td style="font-family:var(--mono);font-size:11px">32 vCPU, 1000 req/s/node</td>
+            <td style="color:var(--green);font-family:var(--mono)">36</td>
+            <td style="color:var(--accent);font-family:var(--mono)">360 (auto-scaled)</td>
+            <td>35K req/s ÷ 1000 = 35 + headroom</td>
+          </tr>
+          <tr>
+            <td>Order DB (Primary)</td>
+            <td style="font-family:var(--mono);font-size:11px">r6g.8xlarge, 256GB RAM</td>
+            <td style="color:var(--green);font-family:var(--mono)">3 shards</td>
+            <td style="color:var(--accent);font-family:var(--mono)">6 shards</td>
+            <td>Sharded by user_id, 1 primary + 2 read replicas</td>
+          </tr>
+          <tr>
+            <td>Catalog DB (PostgreSQL)</td>
+            <td style="font-family:var(--mono);font-size:11px">r6g.16xlarge</td>
+            <td style="color:var(--green);font-family:var(--mono)">5 shards</td>
+            <td style="color:var(--accent);font-family:var(--mono)">10 shards</td>
+            <td>Sharded by category hash, cached aggressively</td>
+          </tr>
+          <tr>
+            <td>Redis Cache Cluster</td>
+            <td style="font-family:var(--mono);font-size:11px">r6g.4xlarge, 100K req/s</td>
+            <td style="color:var(--green);font-family:var(--mono)">5 nodes</td>
+            <td style="color:var(--accent);font-family:var(--mono)">15 nodes</td>
+            <td>Cache hit ratio ~95%, reduces DB load massively</td>
+          </tr>
+          <tr>
+            <td>Elasticsearch Cluster</td>
+            <td style="font-family:var(--mono);font-size:11px">16 vCPU, 64GB</td>
+            <td style="color:var(--green);font-family:var(--mono)">15 nodes</td>
+            <td style="color:var(--accent);font-family:var(--mono)">30 nodes</td>
+            <td>10TB index, 6 shards × 2 replicas = 18 shards</td>
+          </tr>
+          <tr>
+            <td>Kafka (Event Bus)</td>
+            <td style="font-family:var(--mono);font-size:11px">8 vCPU, 1M msg/s/broker</td>
+            <td style="color:var(--green);font-family:var(--mono)">9 brokers</td>
+            <td style="color:var(--accent);font-family:var(--mono)">18 brokers</td>
+            <td>Decouple order events, replication factor 3</td>
+          </tr>
+          <tr>
+            <td>CDN Nodes (images)</td>
+            <td style="font-family:var(--mono);font-size:11px">CloudFront PoPs</td>
+            <td style="color:var(--green);font-family:var(--mono)">Global</td>
+            <td style="color:var(--accent);font-family:var(--mono)">Global</td>
+            <td>90%+ cache hit, eliminates origin bandwidth</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">📐</span>
+      <span class="callout-body"><strong>Interview tip:</strong> Don't memorize exact numbers. Show the method: "I need to serve 35K req/s. Each app server handles ~1K req/s. That's 35 servers + 30% headroom = ~50. With auto-scaling, I configure min=10, max=500." The reasoning matters more than the exact figure.</span>
+    </div>
+  </section>
+
+  <!-- HLD DIAGRAM -->
+  <section id="hld-diagram" class="section">
+    <div class="section-label">// step 3</div>
+    <h2 class="section-title">High-Level Architecture Diagram</h2>
+    <p class="section-desc">The complete system — clients, edge, API gateway, microservices, data stores, async flows.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 720" width="100%" style="max-width:1000px" font-family="IBM Plex Mono, monospace">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/>
+          </marker>
+          <marker id="arr-accent" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#f97316"/>
+          </marker>
+          <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#60a5fa"/>
+          </marker>
+          <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#34d399"/>
+          </marker>
+          <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <!-- BACKGROUND -->
+        <rect width="1000" height="720" fill="#0a0c10" rx="8"/>
+
+        <!-- LAYER LABELS -->
+        <text x="10" y="62" fill="#334155" font-size="9" letter-spacing="2">CLIENT</text>
+        <text x="10" y="152" fill="#334155" font-size="9" letter-spacing="2">EDGE</text>
+        <text x="10" y="252" fill="#334155" font-size="9" letter-spacing="2">GATEWAY</text>
+        <text x="10" y="362" fill="#334155" font-size="9" letter-spacing="2">SERVICES</text>
+        <text x="10" y="532" fill="#334155" font-size="9" letter-spacing="2">DATA</text>
+        <text x="10" y="652" fill="#334155" font-size="9" letter-spacing="2">ASYNC</text>
+
+        <!-- LAYER BANDS -->
+        <rect x="55" y="28" width="935" height="54" rx="4" fill="rgba(96,165,250,0.04)" stroke="rgba(96,165,250,0.08)" stroke-width="1"/>
+        <rect x="55" y="108" width="935" height="54" rx="4" fill="rgba(249,115,22,0.04)" stroke="rgba(249,115,22,0.08)" stroke-width="1"/>
+        <rect x="55" y="188" width="935" height="54" rx="4" fill="rgba(167,139,250,0.04)" stroke="rgba(167,139,250,0.08)" stroke-width="1"/>
+        <rect x="55" y="268" width="935" height="134" rx="4" fill="rgba(52,211,153,0.03)" stroke="rgba(52,211,153,0.06)" stroke-width="1"/>
+        <rect x="55" y="428" width="935" height="154" rx="4" fill="rgba(249,115,22,0.03)" stroke="rgba(249,115,22,0.06)" stroke-width="1"/>
+        <rect x="55" y="608" width="935" height="68" rx="4" fill="rgba(248,113,113,0.03)" stroke="rgba(248,113,113,0.06)" stroke-width="1"/>
+
+        <!-- CLIENTS -->
+        <g id="clients">
+          <!-- Web App -->
+          <rect x="100" y="38" width="100" height="34" rx="6" fill="#1a1f2e" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="150" y="55" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">Web App</text>
+          <text x="150" y="65" text-anchor="middle" fill="#475569" font-size="8">React / Next.js</text>
+
+          <!-- Mobile -->
+          <rect x="230" y="38" width="100" height="34" rx="6" fill="#1a1f2e" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="280" y="55" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">Mobile App</text>
+          <text x="280" y="65" text-anchor="middle" fill="#475569" font-size="8">iOS / Android</text>
+
+          <!-- Seller Portal -->
+          <rect x="360" y="38" width="110" height="34" rx="6" fill="#1a1f2e" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="415" y="55" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">Seller Portal</text>
+          <text x="415" y="65" text-anchor="middle" fill="#475569" font-size="8">Web / API</text>
+
+          <!-- Driver App -->
+          <rect x="500" y="38" width="110" height="34" rx="6" fill="#1a1f2e" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="555" y="55" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">Driver App</text>
+          <text x="555" y="65" text-anchor="middle" fill="#475569" font-size="8">Mobile GPS</text>
+
+          <!-- 3rd Party -->
+          <rect x="640" y="38" width="110" height="34" rx="6" fill="#1a1f2e" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="695" y="55" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="600">3P Partners</text>
+          <text x="695" y="65" text-anchor="middle" fill="#475569" font-size="8">Webhooks / API</text>
+        </g>
+
+        <!-- EDGE -->
+        <g id="edge">
+          <!-- CDN -->
+          <rect x="100" y="118" width="150" height="34" rx="6" fill="#1a2030" stroke="#f97316" stroke-width="1.5"/>
+          <text x="175" y="133" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">CDN / CloudFront</text>
+          <text x="175" y="143" text-anchor="middle" fill="#475569" font-size="8">Images, JS, CSS assets</text>
+
+          <!-- WAF / DDoS -->
+          <rect x="280" y="118" width="140" height="34" rx="6" fill="#1a2030" stroke="#f97316" stroke-width="1.5"/>
+          <text x="350" y="133" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">WAF + DDoS Shield</text>
+          <text x="350" y="143" text-anchor="middle" fill="#475569" font-size="8">AWS Shield, rate limiting</text>
+
+          <!-- Global LB -->
+          <rect x="450" y="118" width="140" height="34" rx="6" fill="#1a2030" stroke="#f97316" stroke-width="1.5"/>
+          <text x="520" y="133" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Global Load Balancer</text>
+          <text x="520" y="143" text-anchor="middle" fill="#475569" font-size="8">GeoDNS, Route53</text>
+
+          <!-- DNS -->
+          <rect x="620" y="118" width="120" height="34" rx="6" fill="#1a2030" stroke="#f97316" stroke-width="1.5"/>
+          <text x="680" y="133" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Auth (OAuth2/JWT)</text>
+          <text x="680" y="143" text-anchor="middle" fill="#475569" font-size="8">Cognito / AuthN svc</text>
+        </g>
+
+        <!-- API GATEWAY -->
+        <rect x="250" y="198" width="500" height="34" rx="6" fill="#211a3a" stroke="#a78bfa" stroke-width="2" filter="url(#glow)"/>
+        <text x="500" y="214" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="700">API Gateway</text>
+        <text x="500" y="225" text-anchor="middle" fill="#7c3aed" font-size="8">Rate Limiting · Auth · Routing · Circuit Breaker · Request Aggregation</text>
+
+        <!-- SERVICES ROW 1 -->
+        <g id="services">
+          <!-- Product / Catalog -->
+          <rect x="65" y="278" width="110" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="120" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Product</text>
+          <text x="120" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="120" y="320" text-anchor="middle" fill="#334155" font-size="8">catalog, SKUs</text>
+
+          <!-- Search -->
+          <rect x="195" y="278" width="110" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="250" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Search</text>
+          <text x="250" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="250" y="320" text-anchor="middle" fill="#334155" font-size="8">Elasticsearch</text>
+
+          <!-- Cart -->
+          <rect x="325" y="278" width="100" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="375" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Cart</text>
+          <text x="375" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="375" y="320" text-anchor="middle" fill="#334155" font-size="8">Redis store</text>
+
+          <!-- Order -->
+          <rect x="445" y="278" width="100" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="2" filter="url(#glow)"/>
+          <text x="495" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="700">Order</text>
+          <text x="495" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="700">Service</text>
+          <text x="495" y="320" text-anchor="middle" fill="#334155" font-size="8">SAGA pattern</text>
+
+          <!-- Inventory -->
+          <rect x="565" y="278" width="110" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="620" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Inventory</text>
+          <text x="620" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="620" y="320" text-anchor="middle" fill="#334155" font-size="8">Optimistic lock</text>
+
+          <!-- Payment -->
+          <rect x="695" y="278" width="100" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="745" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Payment</text>
+          <text x="745" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="745" y="320" text-anchor="middle" fill="#334155" font-size="8">Stripe/Braintree</text>
+
+          <!-- Delivery -->
+          <rect x="815" y="278" width="110" height="48" rx="6" fill="#1a2e20" stroke="#34d399" stroke-width="1.5"/>
+          <text x="870" y="298" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Delivery</text>
+          <text x="870" y="309" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="600">Service</text>
+          <text x="870" y="320" text-anchor="middle" fill="#334155" font-size="8">routing, ETA</text>
+        </g>
+
+        <!-- DATA STORES -->
+        <g id="datastores">
+          <!-- Product DB -->
+          <rect x="65" y="438" width="110" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="120" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Product DB</text>
+          <text x="120" y="469" text-anchor="middle" fill="#475569" font-size="8">PostgreSQL + sharded</text>
+          <text x="120" y="478" text-anchor="middle" fill="#475569" font-size="7">500M SKUs</text>
+
+          <!-- Elasticsearch -->
+          <rect x="195" y="438" width="110" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="250" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Elasticsearch</text>
+          <text x="250" y="469" text-anchor="middle" fill="#475569" font-size="8">search index</text>
+          <text x="250" y="478" text-anchor="middle" fill="#475569" font-size="7">10TB, 6 shards</text>
+
+          <!-- Redis -->
+          <rect x="325" y="438" width="100" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="375" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Redis Cluster</text>
+          <text x="375" y="469" text-anchor="middle" fill="#475569" font-size="8">cart, session</text>
+          <text x="375" y="478" text-anchor="middle" fill="#475569" font-size="7">500GB hot data</text>
+
+          <!-- Orders DB -->
+          <rect x="445" y="438" width="100" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="2" filter="url(#glow)"/>
+          <text x="495" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="700">Orders DB</text>
+          <text x="495" y="469" text-anchor="middle" fill="#475569" font-size="8">PostgreSQL</text>
+          <text x="495" y="478" text-anchor="middle" fill="#475569" font-size="7">ACID + sharded</text>
+
+          <!-- Inventory DB -->
+          <rect x="565" y="438" width="110" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="620" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Inventory DB</text>
+          <text x="620" y="469" text-anchor="middle" fill="#475569" font-size="8">PostgreSQL</text>
+          <text x="620" y="478" text-anchor="middle" fill="#475569" font-size="7">Optimistic lock</text>
+
+          <!-- Payment Store -->
+          <rect x="695" y="438" width="100" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="745" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Txn Ledger</text>
+          <text x="745" y="469" text-anchor="middle" fill="#475569" font-size="8">Append-only DB</text>
+          <text x="745" y="478" text-anchor="middle" fill="#475569" font-size="7">Immutable events</text>
+
+          <!-- Location DB -->
+          <rect x="815" y="438" width="110" height="44" rx="6" fill="#201820" stroke="#f97316" stroke-width="1.5"/>
+          <text x="870" y="457" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="600">Location DB</text>
+          <text x="870" y="469" text-anchor="middle" fill="#475569" font-size="8">Cassandra / DDB</text>
+          <text x="870" y="478" text-anchor="middle" fill="#475569" font-size="7">geo-queries</text>
+        </g>
+
+        <!-- CACHING LAYER -->
+        <rect x="65" y="500" width="890" height="22" rx="4" fill="rgba(248,197,85,0.06)" stroke="rgba(248,197,85,0.15)" stroke-width="1"/>
+        <text x="510" y="515" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="600" letter-spacing="3">REDIS / MEMCACHED CACHE LAYER — 95% HIT RATIO — HOT PATH ACCELERATION</text>
+
+        <!-- ASYNC / KAFKA -->
+        <g id="async">
+          <rect x="200" y="618" width="600" height="42" rx="6" fill="#201020" stroke="#f87171" stroke-width="1.5"/>
+          <text x="500" y="635" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="700">Kafka Event Bus</text>
+          <text x="500" y="648" text-anchor="middle" fill="#475569" font-size="8">order.placed · inventory.reserved · payment.captured · shipment.created · notification.send</text>
+          <text x="500" y="657" text-anchor="middle" fill="#475569" font-size="7">Notification Svc · Analytics · Recommendation Engine · Fulfillment Svc · Audit Log</text>
+        </g>
+
+        <!-- ARROWS: Clients → CDN/Edge -->
+        <line x1="150" y1="72" x2="175" y2="118" stroke="#3b82f6" stroke-width="1" marker-end="url(#arr-blue)" stroke-dasharray="3,2"/>
+        <line x1="280" y1="72" x2="350" y2="118" stroke="#3b82f6" stroke-width="1" marker-end="url(#arr-blue)" stroke-dasharray="3,2"/>
+        <line x1="415" y1="72" x2="450" y2="118" stroke="#3b82f6" stroke-width="1" marker-end="url(#arr-blue)" stroke-dasharray="3,2"/>
+        <line x1="555" y1="72" x2="520" y2="118" stroke="#3b82f6" stroke-width="1" marker-end="url(#arr-blue)" stroke-dasharray="3,2"/>
+        <line x1="695" y1="72" x2="680" y2="118" stroke="#3b82f6" stroke-width="1" marker-end="url(#arr-blue)" stroke-dasharray="3,2"/>
+
+        <!-- Edge → API GW -->
+        <line x1="350" y1="152" x2="420" y2="198" stroke="#f97316" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+        <line x1="520" y1="152" x2="500" y2="198" stroke="#f97316" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+
+        <!-- API GW → Services -->
+        <line x1="380" y1="232" x2="280" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+        <line x1="430" y1="232" x2="370" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+        <line x1="480" y1="232" x2="480" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+        <line x1="520" y1="232" x2="520" y2="278" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="570" y1="232" x2="600" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+        <line x1="610" y1="232" x2="700" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+        <line x1="640" y1="232" x2="840" y2="278" stroke="#a78bfa" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Services → DBs -->
+        <line x1="120" y1="326" x2="120" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+        <line x1="250" y1="326" x2="250" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+        <line x1="375" y1="326" x2="375" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+        <line x1="495" y1="326" x2="495" y2="438" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+        <line x1="620" y1="326" x2="620" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+        <line x1="745" y1="326" x2="745" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+        <line x1="870" y1="326" x2="870" y2="438" stroke="#34d399" stroke-width="1" marker-end="url(#arr-green)"/>
+
+        <!-- Order → Kafka -->
+        <line x1="495" y1="526" x2="495" y2="618" stroke="#f87171" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+      </svg>
+    </div>
+
+    <div class="grid-3">
+      <div class="callout callout-info">
+        <span class="callout-icon">🔵</span>
+        <span class="callout-body"><strong>Client layer:</strong> Web/mobile/seller/driver apps hit the CDN + WAF first. Static assets never reach origin servers.</span>
+      </div>
+      <div class="callout callout-success">
+        <span class="callout-icon">🟢</span>
+        <span class="callout-body"><strong>Services layer:</strong> Microservices, each owning its database. No shared DB. Order Service is the critical path; runs SAGA for distributed transactions.</span>
+      </div>
+      <div class="callout callout-danger">
+        <span class="callout-icon">🔴</span>
+        <span class="callout-body"><strong>Kafka async:</strong> Everything after order.placed is async — notifications, fulfillment, analytics, recommendations. Decouples latency from correctness.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CORE SERVICES DEEP DIVE -->
+  <section id="core-services" class="section">
+    <div class="section-label">// step 4</div>
+    <h2 class="section-title">Core Services — Architecture</h2>
+    <p class="section-desc">Each microservice owns its data, exposes APIs, and publishes/consumes events.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('svc', 'order-svc', this)">Order Service</button>
+      <button class="tab-btn" onclick="switchTab('svc', 'inv-svc', this)">Inventory</button>
+      <button class="tab-btn" onclick="switchTab('svc', 'search-svc', this)">Search</button>
+      <button class="tab-btn" onclick="switchTab('svc', 'notif-svc', this)">Notification</button>
+      <button class="tab-btn" onclick="switchTab('svc', 'delivery-svc', this)">Delivery Tracking</button>
+      <button class="tab-btn" onclick="switchTab('svc', 'rec-svc', this)">Recommendations</button>
+    </div>
+
+    <div id="svc-order-svc" class="tab-panel active">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">📦 Order Service — Design</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Pattern: SAGA (choreography-based)</strong> — Order orchestrates inventory reservation, payment charge, fulfillment trigger via events</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">State machine:</strong> PENDING → CONFIRMED → PAID → FULFILLING → SHIPPED → DELIVERED → COMPLETED</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Idempotency:</strong> Every order request carries a client-generated idempotency key. Prevents duplicate orders on retry</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Database:</strong> PostgreSQL, sharded by user_id hash. Each shard has 1 primary + 2 read replicas</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Outbox pattern:</strong> Write order to DB and event to outbox table atomically. Separate relay process publishes to Kafka</li>
+            </ul>
+          </div>
+          <div class="callout callout-warn">
+            <span class="callout-icon">⚠️</span>
+            <span class="callout-body"><strong>SAGA compensation:</strong> If payment fails after inventory reserved, publish inventory.release event. If fulfillment fails, publish payment.refund event. Design for failure.</span>
+          </div>
+        </div>
+        <div>
+          <div class="code-block">
+<span class="cmt">// Order state machine transitions</span>
+<span class="kw">PENDING</span>
+  → inventory.reserved → <span class="kw">CONFIRMED</span>
+  → payment.captured → <span class="kw">PAID</span>
+  → fulfillment.accepted → <span class="kw">FULFILLING</span>
+  → carrier.picked_up → <span class="kw">SHIPPED</span>
+  → delivery.confirmed → <span class="kw">DELIVERED</span>
+
+<span class="cmt">// Compensation (rollback) flows</span>
+payment.failed
+  → inventory.<span class="fn">release</span>(orderId)
+  → order.status = <span class="str">CANCELLED</span>
+
+fulfillment.rejected
+  → payment.<span class="fn">refund</span>(paymentId)
+  → inventory.<span class="fn">release</span>(orderId)
+  → order.status = <span class="str">CANCELLED</span>
+
+<span class="cmt">// Outbox pattern (atomicity)</span>
+BEGIN TRANSACTION
+  INSERT INTO orders (<span class="str">...</span>)
+  INSERT INTO outbox (event_type, payload)
+COMMIT <span class="cmt">-- single atomic write</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="svc-inv-svc" class="tab-panel">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">📊 Inventory Service — Concurrency</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Challenge:</strong> Flash sale — 50K concurrent users try to buy last 1,000 units. Race conditions cause overselling</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Solution 1 — Optimistic Locking:</strong> Read inventory with version number. Update only if version matches. Retry on conflict. Works well for low-contention items</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Solution 2 — Redis Atomic DECR:</strong> Pre-load hot inventory into Redis. Use DECR + Lua script atomically. Sync to DB asynchronously. Works for flash sale spikes</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Solution 3 — Token Bucket:</strong> For ultra-hot items, pre-issue purchase tokens. Only token holders can buy. Reduces DB load entirely</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div class="code-block">
+<span class="cmt">-- Optimistic locking</span>
+UPDATE inventory
+SET quantity = quantity - <span class="num">1</span>,
+    version = version + <span class="num">1</span>
+WHERE sku_id = <span class="str">'SKU123'</span>
+  AND quantity > <span class="num">0</span>
+  AND version = <span class="num">42</span>;
+<span class="cmt">-- If 0 rows affected: conflict, retry</span>
+
+<span class="cmt">-- Redis atomic reservation (Lua)</span>
+<span class="kw">local</span> qty = redis.<span class="fn">call</span>(<span class="str">'GET'</span>, KEYS[1])
+<span class="kw">if</span> tonumber(qty) >= tonumber(ARGV[1]) <span class="kw">then</span>
+  redis.<span class="fn">call</span>(<span class="str">'DECRBY'</span>, KEYS[1], ARGV[1])
+  <span class="kw">return</span> <span class="num">1</span> <span class="cmt">-- success</span>
+<span class="kw">end</span>
+<span class="kw">return</span> <span class="num">0</span> <span class="cmt">-- insufficient stock</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="svc-search-svc" class="tab-panel">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">🔍 Search Service Architecture</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Stack:</strong> Elasticsearch 8.x with custom analyzers. BM25 relevance scoring</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Index design:</strong> 6 primary shards × 2 replicas. Each shard ~2TB. Sharded by hash routing</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Write path:</strong> Product updates → Kafka topic → Flink stream job → incremental ES index updates. Near-real-time (~5s delay)</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Query path:</strong> API → Search Service → ES. Results merged with personalization scores (ML model in Redis)</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Facets:</strong> Pre-aggregated facet counts cached. Avoids expensive aggregation queries at read time</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Spelling correction:</strong> Did-you-mean using fuzzy matching + query log mining</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title">Search Ranking Signals</div>
+            <div class="progress-row"><div class="progress-label"><span>Textual relevance (BM25)</span><span>35%</span></div><div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div></div>
+            <div class="progress-row"><div class="progress-label"><span>Click-through rate (CTR)</span><span>25%</span></div><div class="progress-bar"><div class="progress-fill" style="width:25%"></div></div></div>
+            <div class="progress-row"><div class="progress-label"><span>Conversion rate</span><span>20%</span></div><div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div></div>
+            <div class="progress-row"><div class="progress-label"><span>Price competitiveness</span><span>10%</span></div><div class="progress-bar"><div class="progress-fill" style="width:10%"></div></div></div>
+            <div class="progress-row"><div class="progress-label"><span>User personalization</span><span>10%</span></div><div class="progress-bar"><div class="progress-fill" style="width:10%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="svc-notif-svc" class="tab-panel">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">🔔 Notification Service</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Channels:</strong> Push (FCM/APNs), SMS (Twilio), Email (SES), In-app</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Architecture:</strong> Event-driven. Consumes from Kafka. Fan-out per user preference</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">User preferences:</strong> Stored in Redis. "User X wants SMS only, no push after 10pm"</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Deduplication:</strong> Redis SETNX with TTL prevents duplicate notifications on retry</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Scale:</strong> 10M orders/day → 30M+ notifications (order.placed, shipped, delivered). Use worker pools</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Failures:</strong> Failed notifications queued in dead letter queue (DLQ). Retry with exponential backoff</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div class="arch-layer">
+            <div class="arch-layer-name">Event Source</div>
+            <div class="arch-layer-body">Kafka: order.* / shipment.* / delivery.* events</div>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-layer-name">Consumer</div>
+            <div class="arch-layer-body">Notification consumer group, 20 partitions, 20 consumers</div>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-layer-name">Preference Engine</div>
+            <div class="arch-layer-body">Redis lookup: user preferences, do-not-disturb windows</div>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-layer-name">Template Engine</div>
+            <div class="arch-layer-body">Localized templates per channel; i18n support</div>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-layer-name">Dispatch</div>
+            <div class="arch-layer-body">FCM / APNs / Twilio / SES — async with DLQ fallback</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="svc-delivery-svc" class="tab-panel">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">🚚 Delivery Tracking Service</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Driver location:</strong> Driver app sends GPS every 5s → WebSocket gateway → Pub/Sub (Redis) → customer app</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Storage:</strong> Apache Cassandra / DynamoDB for time-series location data. Write-heavy, geo-queries</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">ETA calculation:</strong> Microservice using Google Maps API / HERE Maps. Re-calculated every 30s when driver is active</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Route optimization:</strong> Separate batch job (every 2 min) assigns optimal routes to drivers with multiple deliveries</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Scale:</strong> 1M active deliveries × 1 update/5s = 200K writes/s to location store. Cassandra handles this natively</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div class="code-block">
+<span class="cmt">// Driver location write (WebSocket)</span>
+driver_app → WS Gateway
+  → location event {
+      driver_id: <span class="str">"D-123"</span>,
+      order_id: <span class="str">"O-456"</span>,
+      lat: <span class="num">12.9716</span>,
+      lng: <span class="num">77.5946</span>,
+      timestamp: <span class="num">1703000000</span>
+    }
+  → Redis PUBLISH channel:<span class="str">"order:O-456"</span>
+  → Cassandra INSERT (async)
+
+<span class="cmt">// Customer reads via SSE / long-poll</span>
+GET /orders/{orderId}/tracking
+→ Subscribe Redis channel
+→ Stream location updates to customer
+→ Disconnect on delivery.completed
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="svc-rec-svc" class="tab-panel">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">🤖 Recommendations Engine</div>
+            <ul class="comp-list">
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Offline:</strong> Spark ML job (daily) generates user-item collaborative filtering embeddings. Stored in feature store</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Near-realtime:</strong> Flink streaming job updates "similar users also bought" in near-realtime from click/purchase events</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Serving:</strong> Pre-computed recommendations cached in Redis per user. TTL = 1 hour</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Cold start:</strong> New users get popularity-based and category-based recs until enough signal collected</li>
+              <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">A/B testing:</strong> Feature flags determine which model variant a user cohort sees</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Data Pipeline</div>
+          <div class="flow-steps">
+            <div class="flow-step">
+              <div class="flow-num" style="width:24px;height:24px;font-size:9px">1</div>
+              <div class="flow-content" style="padding-bottom:16px">
+                <div class="flow-content-title" style="font-size:12px">Clickstream Events → Kafka</div>
+                <div class="flow-content-body">view, click, purchase, add-to-cart events</div>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num" style="width:24px;height:24px;font-size:9px">2</div>
+              <div class="flow-content" style="padding-bottom:16px">
+                <div class="flow-content-title" style="font-size:12px">S3 Data Lake (raw)</div>
+                <div class="flow-content-body">Kafka → S3 via Kafka Connect. Partitioned by date</div>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num" style="width:24px;height:24px;font-size:9px">3</div>
+              <div class="flow-content" style="padding-bottom:16px">
+                <div class="flow-content-title" style="font-size:12px">Spark ML Training (daily)</div>
+                <div class="flow-content-body">ALS collaborative filtering, embeddings</div>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-num" style="width:24px;height:24px;font-size:9px">4</div>
+              <div class="flow-content" style="padding-bottom:0">
+                <div class="flow-content-title" style="font-size:12px">Redis Feature Store</div>
+                <div class="flow-content-body">Pre-computed top-50 recs per user, served &lt;5ms</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA MODELS -->
+  <section id="data-models" class="section">
+    <div class="section-label">// deep dive</div>
+    <h2 class="section-title">Data Models</h2>
+    <p class="section-desc">Core entities and their schema design decisions.</p>
+
+    <div class="grid-2">
+      <div>
+        <div class="code-block">
+<span class="cmt">-- Order (PostgreSQL, sharded by user_id)</span>
+<span class="kw">CREATE TABLE</span> orders (
+  order_id    UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  user_id     BIGINT <span class="kw">NOT NULL</span>,
+  status      order_status_enum <span class="kw">NOT NULL</span>,
+  total_price DECIMAL(<span class="num">12,2</span>) <span class="kw">NOT NULL</span>,
+  currency    CHAR(<span class="num">3</span>) <span class="kw">DEFAULT</span> <span class="str">'USD'</span>,
+  address_id  BIGINT,
+  idempotency_key UUID <span class="kw">UNIQUE NOT NULL</span>,
+  created_at  TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>(),
+  updated_at  TIMESTAMPTZ
+);
+
+<span class="kw">CREATE TABLE</span> order_items (
+  item_id    UUID <span class="kw">PRIMARY KEY</span>,
+  order_id   UUID <span class="kw">REFERENCES</span> orders(order_id),
+  sku_id     VARCHAR(<span class="num">64</span>) <span class="kw">NOT NULL</span>,
+  quantity   INT <span class="kw">CHECK</span>(quantity > <span class="num">0</span>),
+  unit_price DECIMAL(<span class="num">10,2</span>)
+);
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+<span class="cmt">-- Inventory (PostgreSQL, optimistic locking)</span>
+<span class="kw">CREATE TABLE</span> inventory (
+  sku_id      VARCHAR(<span class="num">64</span>) <span class="kw">PRIMARY KEY</span>,
+  warehouse_id INT <span class="kw">NOT NULL</span>,
+  quantity    INT <span class="kw">NOT NULL CHECK</span>(quantity >= <span class="num">0</span>),
+  reserved    INT <span class="kw">NOT NULL DEFAULT</span> <span class="num">0</span>,
+  version     BIGINT <span class="kw">NOT NULL DEFAULT</span> <span class="num">0</span>, <span class="cmt">-- OCC</span>
+  updated_at  TIMESTAMPTZ
+);
+
+<span class="cmt">-- Product (sharded, denormalized for reads)</span>
+<span class="kw">CREATE TABLE</span> products (
+  sku_id       VARCHAR(<span class="num">64</span>) <span class="kw">PRIMARY KEY</span>,
+  seller_id    BIGINT <span class="kw">NOT NULL</span>,
+  title        TEXT <span class="kw">NOT NULL</span>,
+  description  TEXT,
+  category_path VARCHAR(<span class="num">512</span>), <span class="cmt">-- /Electronics/Phones</span>
+  attributes   JSONB,          <span class="cmt">-- flexible attrs</span>
+  price        DECIMAL(<span class="num">10,2</span>),
+  images       TEXT[],
+  rating_avg   DECIMAL(<span class="num">3,2</span>),
+  review_count INT
+);
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">💡</span>
+      <span class="callout-body"><strong>JSONB for product attributes:</strong> Products have vastly different attributes (phones have RAM/storage, shirts have size/color). JSONB allows flexible schema without ALTER TABLE migrations for every new product category. Index with GIN index for attribute queries.</span>
+    </div>
+  </section>
+
+  <!-- KEY APIs -->
+  <section id="apis" class="section">
+    <div class="section-label">// api design</div>
+    <h2 class="section-title">Key API Design</h2>
+    <p class="section-desc">REST API design for the critical paths. Always discuss API before diving into DB design.</p>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-green">GET</span></td><td style="font-family:var(--mono);font-size:11px">/products/{sku_id}</td><td>Get product detail</td><td>Cached in CDN + Redis, TTL=5min</td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td style="font-family:var(--mono);font-size:11px">/search?q=&category=&page=</td><td>Full-text search with filters</td><td>ES backend, cursor pagination</td></tr>
+          <tr><td><span class="tag tag-blue">POST</span></td><td style="font-family:var(--mono);font-size:11px">/cart/{userId}/items</td><td>Add item to cart</td><td>Redis store, TTL=7days</td></tr>
+          <tr><td><span class="tag tag-orange">PUT</span></td><td style="font-family:var(--mono);font-size:11px">/cart/{userId}/items/{skuId}</td><td>Update cart quantity</td><td>Redis HSET, atomic</td></tr>
+          <tr><td><span class="tag tag-blue">POST</span></td><td style="font-family:var(--mono);font-size:11px">/orders</td><td>Place order (checkout)</td><td>Idempotency-Key header required</td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td style="font-family:var(--mono);font-size:11px">/orders/{orderId}/status</td><td>Get order status + tracking</td><td>Read replica, eventual consistency OK</td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td style="font-family:var(--mono);font-size:11px">/orders/{orderId}/tracking</td><td>Live driver tracking (SSE)</td><td>Server-Sent Events stream</td></tr>
+          <tr><td><span class="tag tag-blue">POST</span></td><td style="font-family:var(--mono);font-size:11px">/inventory/reserve</td><td>Reserve inventory</td><td>Internal service call, idempotent</td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td style="font-family:var(--mono);font-size:11px">/recommendations/{userId}</td><td>Personalized product recs</td><td>Redis cache, ML-powered</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ORDER FLOW -->
+  <section id="order-flow" class="section">
+    <div class="section-label">// critical path</div>
+    <h2 class="section-title">End-to-End Order Flow</h2>
+    <p class="section-desc">Walk through every hop from "Place Order" click to "Order Confirmed" — the critical happy path interviewers ask about.</p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-phase">T+0ms</div>
+        <div class="timeline-title">User clicks "Place Order"</div>
+        <div class="timeline-body">Mobile/Web app sends <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px">POST /orders</code> with Idempotency-Key header. Client shows optimistic loading state.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+5ms</div>
+        <div class="timeline-title">WAF + Load Balancer + API Gateway</div>
+        <div class="timeline-body">WAF validates request (rate limit, IP reputation). LB routes to least-loaded API Gateway node. Gateway validates JWT, extracts userId, routes to Order Service. Circuit breaker checked — if Order Service unhealthy, returns 503 immediately.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+15ms</div>
+        <div class="timeline-title">Order Service — Validation</div>
+        <div class="timeline-body">Checks idempotency key in Redis (SETNX). If duplicate: return cached response. Validates cart items exist. Calls Pricing Service to confirm prices (prevents cart price tampering).</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+30ms</div>
+        <div class="timeline-title">Inventory Reservation</div>
+        <div class="timeline-body">Calls Inventory Service synchronously (internal gRPC). Redis Lua script atomically decrements inventory. If insufficient stock → 409 Conflict to user. On success, inventory status = RESERVED (not deducted yet).</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+60ms</div>
+        <div class="timeline-title">Payment Authorization</div>
+        <div class="timeline-body">Calls Payment Service. Payment Service calls Stripe/Braintree with authorize-only (not capture). Stores payment token. If payment fails, publish inventory.release event → compensating transaction.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+80ms</div>
+        <div class="timeline-title">Order Persisted + Event Published</div>
+        <div class="timeline-body">Order written to DB + outbox table in a single ACID transaction. Relay process reads outbox and publishes <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px">order.placed</code> to Kafka topic. Payment captured asynchronously.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+85ms</div>
+        <div class="timeline-title">Response to Client</div>
+        <div class="timeline-body">Order Service returns HTTP 201 with orderId and status=CONFIRMED. Client shows "Order placed!" state. Everything after this is async.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-phase">T+500ms (async)</div>
+        <div class="timeline-title">Downstream Events (Async)</div>
+        <div class="timeline-body">Kafka consumers: (1) Notification Service → push + email to user. (2) Fulfillment Service → assigns warehouse, picks, packs. (3) Analytics → updates dashboards. (4) Recommendations → re-trains user profile. None of these block the user.</div>
+      </div>
+    </div>
+
+    <div class="callout callout-success">
+      <span class="callout-icon">✓</span>
+      <span class="callout-body"><strong>Why this design scales:</strong> The synchronous critical path is only: Gateway → Validation → Inventory → Payment → DB write → respond. Everything else (notifications, fulfillment, analytics) is decoupled via Kafka. The user gets &lt;100ms response even if notification service is down.</span>
+    </div>
+  </section>
+
+  <!-- SEARCH DEEP DIVE -->
+  <section id="search" class="section">
+    <div class="section-label">// deep dive</div>
+    <h2 class="section-title">Search & Product Catalog at Scale</h2>
+    <p class="section-desc">Search is the most critical path for revenue. 40% of purchases start from search.</p>
+
+    <div class="grid-2">
+      <div>
+        <div class="framework-box">
+          <div class="framework-step">Write Path</div>
+          <div class="framework-title">Product Update → Search Index Sync</div>
+          <div class="framework-body">
+            Seller updates product → Product DB → CDC (Debezium) captures WAL changes → Kafka <code style="font-family:var(--mono);font-size:11px">product.updated</code> event → Elasticsearch indexer consumer → Bulk upsert to ES index. Latency: ~5s eventual consistency. Acceptable for catalog; not needed for inventory.
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Read Path</div>
+          <div class="framework-title">Search Query Execution</div>
+          <div class="framework-body">
+            Client query → API Gateway → Search Service → Redis check (popular queries cached 60s) → If miss: ES multi_match query with filters + personalization boost → Merge with ML ranking signal → Return paginated results (cursor-based, not offset).
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Scale Problem</div>
+          <div class="framework-title">500M Products, 35K QPS Search</div>
+          <div class="framework-body">
+            Single ES node can handle ~5K QPS. Need 6 primary shards × 2 replicas = 18 shards across 15+ nodes. Route reads to replicas only. All writes go to primary, auto-replicated. Use routing parameter to collocate related docs on same shard (by category).
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Typeahead / Autocomplete</div>
+          <ul class="comp-list">
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Trie in Redis:</strong> Top 1M queries stored as Redis sorted sets with prefix keys. O(1) lookup for prefix suggestions</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Debounce:</strong> Client waits 200ms after keystroke before firing autocomplete API. Reduces QPS by 5×</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">Personalized:</strong> Top-k suggestions re-ranked by user's past categories using user embedding similarity</li>
+            <li><span class="comp-list-bullet"></span><strong style="color:var(--text)">ES Completion suggester:</strong> Fallback for long-tail queries not in Redis trie</li>
+          </ul>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="card-title">Why Not SQL Full-Text Search?</div>
+          <div class="callout callout-warn" style="margin:0">
+            <span class="callout-icon">⚡</span>
+            <span class="callout-body">PostgreSQL full-text search degrades at 500M rows. No native faceting, no fuzzy matching, no ranking. Elasticsearch is purpose-built: inverted indices, BM25, aggregations, sharding — all built-in at petabyte scale.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCALING -->
+  <section id="scaling" class="section">
+    <div class="section-label">// core concept</div>
+    <h2 class="section-title">Why This Platform Scales</h2>
+    <p class="section-desc">Six architectural pillars that make an e-commerce platform handle Amazon-level scale. These are the "why" questions interviewers probe.</p>
+
+    <div class="pillar-grid">
+      <div class="pillar">
+        <div class="pillar-title">1. Stateless Services + Horizontal Scaling</div>
+        <div class="pillar-body">All API services are stateless (no sticky sessions). User state lives in Redis/DB, not in-process. Any instance can serve any request. Auto Scaling Groups add/remove instances in seconds based on CPU/RPS. 10× capacity in ~3 minutes.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-title">2. Read-Heavy Caching</div>
+        <div class="pillar-body">100:1 read/write ratio means caching is king. Multi-layer: CDN (static assets, 90%+ hit), Redis L1 (hot products/sessions, 95% hit), DB read replicas (remaining reads). Only writes and cache misses hit primary DB.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-title">3. Database Sharding</div>
+        <div class="pillar-body">Orders sharded by user_id (consistent hash). Products sharded by category hash. Each shard is independently scalable. No cross-shard joins in hot paths. Shard count pre-planned to allow splits without resharding (consistent hashing with virtual nodes).</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-title">4. Async Event-Driven Architecture</div>
+        <div class="pillar-body">Kafka decouples producers from consumers. Order Service doesn't wait for Notification, Fulfillment, or Analytics. Downstream services can be slow, fail, or be upgraded without affecting the checkout path. Back-pressure naturally handled by consumer lag.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-title">5. Microservices Domain Isolation</div>
+        <div class="pillar-body">Each service owns its DB — no shared state means each service scales independently. A spike in search doesn't affect checkout. Catalog Service can be read-scaled to 100 instances without touching Order Service. Failure isolation prevents cascading.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-title">6. CDN + Edge Offloading</div>
+        <div class="pillar-body">Product images (2PB!) and static assets served from CDN. 90%+ traffic never reaches origin. GeoDNS routes users to nearest edge PoP. P99 latency drops from 200ms to &lt;20ms for cached content globally. Origin servers only handle dynamic API calls.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELIABILITY -->
+  <section id="reliability" class="section">
+    <div class="section-label">// non-functional</div>
+    <h2 class="section-title">Reliability & Fault Tolerance</h2>
+    <p class="section-desc">How to achieve 99.99% uptime — the patterns that prevent and contain failures.</p>
+
+    <div class="grid-2">
+      <div>
+        <div class="framework-box">
+          <div class="framework-step">Pattern 1</div>
+          <div class="framework-title">Circuit Breaker (Resilience4j / Hystrix)</div>
+          <div class="framework-body">
+            If Payment Service fails 5 consecutive times in 10s, circuit opens. All subsequent calls fast-fail for 30s. Prevents cascading — a slow payment gateway doesn't bring down checkout. Auto-recovers (half-open probe after timeout).
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Pattern 2</div>
+          <div class="framework-title">Bulkhead Isolation</div>
+          <div class="framework-body">
+            Separate thread pools for different downstream calls. If Recommendation Service is overwhelmed, it can't exhaust the thread pool used by Order Service. Each service gets a fixed resource budget.
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Pattern 3</div>
+          <div class="framework-title">Retry with Exponential Backoff + Jitter</div>
+          <div class="framework-body">
+            Transient failures (network blip, DB hiccup) auto-retried. Base delay 100ms × 2^attempt + random jitter (0–100ms) prevents thundering herd on retry storms. Max 3 retries; non-idempotent calls (payment) only retried with idempotency key.
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Pattern 4</div>
+          <div class="framework-title">Multi-Region Active-Active</div>
+          <div class="framework-body">
+            Deployed in 3 AWS regions (us-east-1, eu-west-1, ap-south-1). Route53 latency routing. If us-east-1 has an outage, GeoDNS shifts traffic to eu-west-1 within 60s. Data replication: Order DB uses synchronous replication within region, async cross-region.
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Graceful Degradation — What Degrades First</div>
+          <div class="timeline" style="padding-left:16px;margin-top:8px">
+            <div class="timeline-item" style="padding-left:16px;padding-bottom:12px">
+              <div class="timeline-phase">DEGRADE 1</div>
+              <div class="timeline-title" style="font-size:12px">Recommendations offline → Show popular items</div>
+              <div class="timeline-body">User still browses and buys. Revenue impact minimal.</div>
+            </div>
+            <div class="timeline-item" style="padding-left:16px;padding-bottom:12px">
+              <div class="timeline-phase">DEGRADE 2</div>
+              <div class="timeline-title" style="font-size:12px">Reviews/Ratings unavailable → Hide section</div>
+              <div class="timeline-body">Product pages still load fully without review panel.</div>
+            </div>
+            <div class="timeline-item" style="padding-left:16px;padding-bottom:12px">
+              <div class="timeline-phase">DEGRADE 3</div>
+              <div class="timeline-title" style="font-size:12px">Real-time tracking down → Show last known ETA</div>
+              <div class="timeline-body">Stale ETA better than error. User experience preserved.</div>
+            </div>
+            <div class="timeline-item" style="padding-left:16px;padding-bottom:0">
+              <div class="timeline-phase">NEVER DEGRADE</div>
+              <div class="timeline-title" style="font-size:12px">Checkout, Payments, Order confirmation</div>
+              <div class="timeline-body">These are revenue-critical. Circuit break anything around them before touching core order flow.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="card-title">SLA Math — 99.99% = 52 min/year</div>
+          <div class="formula">99.99% uptime = 0.01% downtime</div>
+          <div class="formula">Per year: 0.0001 × 365 × 24 × 60 = 52.6 min downtime budget</div>
+          <div class="formula">Per month: ~4.4 minutes</div>
+          <div class="callout callout-warn" style="margin:8px 0 0">
+            <span class="callout-icon">📐</span>
+            <span class="callout-body">To hit 99.99%, you need: redundant everything (N+1 min), automated failover &lt;30s, chaos engineering, RTO &lt;1min, RPO=0 for orders.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CACHING -->
+  <section id="caching" class="section">
+    <div class="section-label">// performance</div>
+    <h2 class="section-title">Multi-Layer Caching Strategy</h2>
+    <p class="section-desc">Caching is the single biggest lever for read-heavy platforms. Get this right and you need 10× fewer DB servers.</p>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Layer</th><th>Technology</th><th>What's Cached</th><th>TTL</th><th>Hit Ratio</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tag-blue">L0 — Browser</span></td>
+            <td style="font-family:var(--mono);font-size:11px">HTTP Cache Headers</td>
+            <td>JS/CSS bundles, images</td>
+            <td style="font-family:var(--mono)">365d</td>
+            <td style="color:var(--green);font-family:var(--mono)">~60%</td>
+            <td>Cache-busting via content hash</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-orange">L1 — CDN</span></td>
+            <td style="font-family:var(--mono);font-size:11px">CloudFront PoPs</td>
+            <td>Product images, static HTML shells</td>
+            <td style="font-family:var(--mono)">24h</td>
+            <td style="color:var(--green);font-family:var(--mono)">~90%</td>
+            <td>2PB image storage offloaded</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-green">L2 — Redis</span></td>
+            <td style="font-family:var(--mono);font-size:11px">Redis Cluster</td>
+            <td>Product detail pages, top search results, user sessions, cart, inventory counts</td>
+            <td style="font-family:var(--mono)">5min–1h</td>
+            <td style="color:var(--green);font-family:var(--mono)">~95%</td>
+            <td>LRU eviction, 500GB cluster</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-purple">L3 — DB Replicas</span></td>
+            <td style="font-family:var(--mono);font-size:11px">PgSQL read replicas</td>
+            <td>All read queries routed to replicas</td>
+            <td>N/A</td>
+            <td style="color:var(--blue);font-family:var(--mono)">N/A</td>
+            <td>~1s replication lag (acceptable)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">Cache Invalidation Strategy</div><div class="divider-line"></div></div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Write-Through Cache</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2)">
+          On product update: write to DB AND update Redis simultaneously. Always consistent. Slight write latency increase. Used for: product prices (must be accurate), inventory counts.
+        </div>
+        <div class="chips" style="margin-top:8px">
+          <span class="tag tag-green">Consistent</span>
+          <span class="tag tag-orange">Slower writes</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Cache-Aside (Lazy)</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2)">
+          Read hits cache → return. Miss → read from DB → populate cache → return. Write → DB only, invalidate cache key. Used for: product catalog, reviews (eventual consistency OK).
+        </div>
+        <div class="chips" style="margin-top:8px">
+          <span class="tag tag-blue">Flexible</span>
+          <span class="tag tag-orange">First miss cold</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Event-Driven Invalidation</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2)">
+          Product update → Kafka event → Cache invalidation consumer deletes/updates Redis keys across all regions. Ensures global cache consistency after a product update propagates in &lt;2s.
+        </div>
+        <div class="chips" style="margin-top:8px">
+          <span class="tag tag-purple">Global</span>
+          <span class="tag tag-green">Eventually consistent</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-box" style="margin-top:16px">
+      <div class="tip-box-header">⚠️ Cache Stampede / Thundering Herd</div>
+      <div class="tip-box-body">
+        When a popular product's cache entry expires, 10,000 simultaneous requests miss and all hit the DB. <strong>Solution:</strong> Use a mutex lock (Redis SETNX) — first request gets the lock, fetches from DB, populates cache. Others wait and serve the populated cache. Alternatively, use "probabilistic early expiration" — randomly re-compute cache slightly before TTL expires in background.
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAFFIC SPIKES -->
+  <section id="traffic-spikes" class="section">
+    <div class="section-label">// prime day / black friday</div>
+    <h2 class="section-title">Handling Traffic Spikes</h2>
+    <p class="section-desc">Prime Day 2023: 375 million items sold. 10× normal traffic in minutes. How do you prepare?</p>
+
+    <div class="grid-2">
+      <div>
+        <div class="framework-box">
+          <div class="framework-step">Pre-Event Preparation (Days Before)</div>
+          <div class="framework-title">Pre-Scaling & Pre-Warming</div>
+          <div class="framework-body">
+            1. Scale up minimum instances to 3× normal (don't rely on autoscale lag). 2. Pre-warm Redis caches with anticipated hot products. 3. Pre-provision Kafka partitions (easier to add before peak than during). 4. Run load tests at 5× projected peak. 5. Freeze deployments 48h before event.
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">During Event</div>
+          <div class="framework-title">Load Shedding + Queuing</div>
+          <div class="framework-body">
+            1. API Gateway enforces per-user rate limits (100 req/min for browse, 10 req/min for checkout). 2. Virtual waiting room queue for checkout during extreme spikes — users get a position number, enter checkout sequentially. 3. Read-only mode: if inventory service is overwhelmed, disable stock level display (show "In Stock" vs exact count). 4. Drop analytics events before dropping orders.
+          </div>
+        </div>
+        <div class="framework-box">
+          <div class="framework-step">Flash Sale Architecture</div>
+          <div class="framework-title">Token-Based Purchase Control</div>
+          <div class="framework-body">
+            For limited-quantity items (1,000 units, 1M trying to buy): 1. Pre-generate 1,000 purchase tokens. 2. On "Buy Now" click, atomically claim a token from Redis (SPOP). 3. Only token holders proceed to checkout. 4. Others see "Sold Out" immediately. 5. Eliminates inventory contention entirely — 999,000 users don't even reach the DB.
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Autoscaling Strategy</div>
+          <div class="table-wrapper" style="margin:8px 0 0">
+            <table class="data-table">
+              <thead><tr><th>Trigger</th><th>Action</th><th>Time</th></tr></thead>
+              <tbody>
+                <tr><td>CPU &gt; 70%</td><td>Scale out +2 instances</td><td style="font-family:var(--mono)">~90s</td></tr>
+                <tr><td>CPU &gt; 85%</td><td>Scale out +5 instances</td><td style="font-family:var(--mono)">~90s</td></tr>
+                <tr><td>Request queue &gt; 1000</td><td>Scale out immediately</td><td style="font-family:var(--mono)">~60s</td></tr>
+                <tr><td>P99 latency &gt; 500ms</td><td>Alert + scale + circuit break</td><td style="font-family:var(--mono)">~30s</td></tr>
+                <tr><td>CPU &lt; 30% for 10min</td><td>Scale in (gradual)</td><td style="font-family:var(--mono)">~10min</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="card-title">The Queue Everything Pattern</div>
+          <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+            During spikes, instead of synchronously calling every downstream service, enqueue jobs. Checkout writes to an "order intake" queue (SQS/Kafka). Workers drain the queue at max DB throughput. Users see "Processing your order..." screen. Orders processed in FIFO order. Decouples user experience latency from backend throughput — <strong style="color:var(--text)">the queue absorbs the spike</strong>.
+          </div>
+        </div>
+
+        <div class="callout callout-info" style="margin-top:8px">
+          <span class="callout-icon">📊</span>
+          <span class="callout-body"><strong>Key metric to cite:</strong> "Our checkout service handles 1,150 orders/s in steady state. Prime Day 10× = 11,500 orders/s. With a queue buffer and pre-scaled workers at 5×, we handle 5,750/s. The queue absorbs the remaining burst over ~2 minutes without customer-visible errors."</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COUNTER QUESTIONS -->
+  <section id="counter-questions" class="section">
+    <div class="section-label">// interview</div>
+    <h2 class="section-title">Counter Questions & Answers</h2>
+    <p class="section-desc">The follow-up questions Amazon interviewers always ask. Be ready for all of these.</p>
+
+    <div id="qa-list">
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How do you prevent overselling when 10,000 users try to buy the last unit simultaneously?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          Three approaches, I'd use based on contention level: <br><br>
+          <strong>1. Optimistic locking (low-medium contention):</strong> Read inventory with version number. UPDATE WHERE version=N. If 0 rows affected, retry. Works when concurrent buyers are in hundreds.<br><br>
+          <strong>2. Redis atomic DECR with Lua (high contention):</strong> Pre-load hot inventory counts in Redis. Atomic DECRBY via Lua script (check + decrement is atomic). Sync to DB asynchronously. Handles 50K+ concurrent buyers on a single item — Redis does 1M ops/sec.<br><br>
+          <strong>3. Pre-issued tokens (flash sales):</strong> For ultra-hot items like limited-edition drops, pre-generate N tokens. Buyers atomically claim tokens via Redis SPOP (atomic set pop). Zero inventory DB writes until token claimed. Eliminates race condition entirely.<br><br>
+          <em>Trade-off to mention:</em> Redis approach risks inconsistency if Redis fails before DB sync — use Redis persistence (AOF) + periodic reconciliation job.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How do you ensure an order is not placed twice (duplicate prevention)?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Idempotency key pattern.</strong> Client generates a UUID before sending POST /orders and includes it as Idempotency-Key header. Order Service does:<br><br>
+          1. Redis SETNX("idem:{key}", "processing", TTL=24h) — if returns 0, key already exists<br>
+          2. If exists: return cached response (don't process again)<br>
+          3. If new: process order, store result in Redis with same key<br>
+          4. Any retry (network timeout, client crash) hits the cached response<br><br>
+          Also store idempotency key as UNIQUE constraint in Orders DB as second line of defense — handles Redis failure.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How does search stay consistent when sellers update products frequently?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>CDC + Kafka + ES incremental update pipeline.</strong> I accept eventual consistency (~5s delay) for catalog data — it's not critical path.<br><br>
+          1. Debezium (CDC tool) reads PostgreSQL WAL → publishes product.updated events to Kafka<br>
+          2. ES Indexer Service consumes from Kafka, batches 1,000 doc updates, bulk-upserts to Elasticsearch<br>
+          3. For price changes specifically: synchronous write-through to both DB and ES (more important to be fast)<br><br>
+          <strong>Why not sync ES write on every product save?</strong> ES bulk indexing throughput is high, but if we synchronously block seller's save on ES write success, a slow ES cluster degrades seller experience. Async is better here.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">What happens if the payment service is down during checkout?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Circuit breaker + fallback strategy.</strong><br><br>
+          1. API Gateway has circuit breaker on Payment Service endpoint (Resilience4j). After 5 failures, circuit opens for 30s.<br>
+          2. During open circuit: show user "Payment processing is temporarily slow, your order is being held." — enqueue payment retry in Kafka.<br>
+          3. Order goes to PAYMENT_PENDING state, inventory stays reserved (with TTL = 30 min).<br>
+          4. Separate payment retry worker processes pending payments when circuit closes.<br>
+          5. If payment fails after 3 retries: cancel order, release inventory, notify user.<br><br>
+          <strong>Key insight:</strong> Don't return 500 to user. Show a graceful message and hold the order. This preserves UX and Amazon LP "Customer Obsession."
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How do you handle multi-item orders where one item is out of stock after the order is placed?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>SAGA with partial fulfillment option.</strong><br><br>
+          Before order submission: inventory reservation is atomic for the batch. If any item fails to reserve, the entire reservation is rolled back — user shown "Item X is out of stock." This is the simplest path.<br><br>
+          For post-payment discovery (rare, item physically missing at warehouse):<br>
+          1. Fulfillment service publishes item.unavailable event<br>
+          2. Order Service transitions to PARTIAL_FULFILLMENT state<br>
+          3. Business rule: if item is &lt;10% of order value → ship rest, partial refund automatically<br>
+          4. If &gt;10% → contact user with options: wait for restock, substitute, or refund<br><br>
+          This maps to Amazon's actual "We're sorry, one item in your order is delayed" experience.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How would you handle a database hotspot on a popular product?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Hot partition problem — three solutions:</strong><br><br>
+          <strong>1. Read replicas + aggressive caching:</strong> Route all reads for popular products to Redis cache (TTL=5min). Only cache miss hits DB. A product with 100K views/min → 5K hits/min to DB (cache miss rate 5%). Acceptable.<br><br>
+          <strong>2. Write serialization for inventory:</strong> Hot product inventory updates go through a single-thread Redis Lua queue. Redis serializes the operations. DB gets batched writes every 100ms instead of 100K concurrent writes.<br><br>
+          <strong>3. Read-your-writes relaxation:</strong> For cart and inventory display, accept eventual consistency. User sees "~500 remaining" instead of exact count. Dramatically reduces write pressure.<br><br>
+          <strong>Shard splitting:</strong> If a product category becomes a consistent hotspot (e.g., "Electronics"), split that shard. Plan for this upfront with consistent hashing so splits are possible without full resharding.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How do you scale the cart service for 100M DAU?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Redis Hash with user_id as key.</strong><br><br>
+          Cart data structure: Redis Hash — key = "cart:{userId}", field = skuId, value = JSON{qty, price, addedAt}<br><br>
+          Operations: HSET (add item), HGET (get item), HDEL (remove), HGETALL (view cart) — all O(1) or O(N items)<br><br>
+          <strong>Scale:</strong> 100M active carts × 500 bytes avg = 50GB. Fits in Redis cluster. Cart reads are user-scoped (no cross-user aggregation), so hash-slot sharding by user_id distributes perfectly.<br><br>
+          <strong>Persistence:</strong> Redis AOF enabled. If Redis fails, carts are recovered. Additionally, sync carts to PostgreSQL every 5 min for durability — users never lose cart even if Redis cluster fails.<br><br>
+          <strong>Guest carts:</strong> Session ID as key. TTL=7 days. On login, merge guest cart with user cart.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How would you design real-time order tracking that scales to 1M concurrent deliveries?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>WebSocket gateway + Redis Pub/Sub + Cassandra.</strong><br><br>
+          Driver app sends location every 5s via WebSocket. WS Gateway publishes to Redis Pub/Sub channel "location:{orderId}". Customer's browser subscribes to same channel via WS or SSE.<br><br>
+          <strong>Scale math:</strong> 1M active deliveries × 1 update/5s = 200K events/sec. Redis Pub/Sub handles 1M+ msg/sec on a single node. WS Gateway is horizontally scalable (stateless with shared Redis channel awareness).<br><br>
+          <strong>Storage:</strong> Cassandra stores time-series location data. Partition key = (driver_id, date). Clustering key = timestamp. Supports efficient time-range queries for trip playback.<br><br>
+          <strong>Long polling fallback:</strong> For customers on weak mobile connections, provide /orders/{id}/location REST endpoint (long-poll, 30s timeout). Less efficient but more compatible.
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">Why microservices over a monolith for this system?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Honest trade-off answer — don't just say microservices are better.</strong><br><br>
+          <strong>In favor of microservices here:</strong><br>
+          1. Independent scaling: Search Service needs 30 ES nodes; Order Service needs 10 app servers. With a monolith, you scale everything together — wasteful.<br>
+          2. Independent deployment: 500-engineer org. Team A deploys catalog updates without coordinating with Team B (payments). Conway's Law in action.<br>
+          3. Technology fit: Cart → Redis, Search → ES, Orders → PostgreSQL, Location → Cassandra. Each data store is best-of-breed for its access pattern.<br>
+          4. Failure isolation: Payment gateway outage doesn't crash the browse experience.<br><br>
+          <strong>Costs to acknowledge:</strong> Distributed system complexity (distributed transactions, eventual consistency), network latency overhead between services, operational complexity (service mesh, observability). "I'd start with a modular monolith in early-stage, extract to microservices when team/scale demands it."
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How do you handle the CAP theorem for this system? Where do you choose consistency vs availability?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          <strong>Different components choose differently — context-driven.</strong><br><br>
+          <strong>CP (Consistency over Availability):</strong><br>
+          • Payment processing — must not double-charge. Use 2-phase commit within payment service. Accept brief unavailability over incorrect charge.<br>
+          • Inventory reservation — must not oversell. Synchronous DB write with locking. Accept higher latency.<br><br>
+          <strong>AP (Availability over Consistency):</strong><br>
+          • Product catalog — eventual consistency fine. Stale price for 5s is acceptable. Use Redis cache + eventual DB sync.<br>
+          • Search index — 5–10s delay OK. Seller cares about eventual indexing, not 0ms.<br>
+          • Cart contents — eventual is fine. Cart synced to DB asynchronously.<br>
+          • Review counts — "1,234 reviews" vs "1,235 reviews" doesn't matter. Eventual.<br><br>
+          <strong>Key phrase to say:</strong> "I apply strong consistency selectively — only where incorrect data has a direct financial or correctness consequence. Everything else gets eventual consistency for availability."
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-question" onclick="toggleQA(this)">
+          <span class="qa-q-icon">Q</span>
+          <span class="qa-q-text">How would you improve this design if you had 6 months?</span>
+          <span class="qa-toggle">+</span>
+        </div>
+        <div class="qa-answer">
+          This is a "Think Big" Amazon LP question. Show you can envision the future state.<br><br>
+          <strong>1. ML-powered dynamic pricing:</strong> Real-time price optimization based on demand signals. Requires event stream from browsing, competitor data, inventory level — Flink streaming job feeding a pricing model.<br><br>
+          <strong>2. Predictive pre-scaling:</strong> Instead of reactive autoscaling, predict traffic spikes from historical patterns + external signals (marketing campaigns, weather). Pre-scale 30 min before spike, not during.<br><br>
+          <strong>3. GraphQL API Gateway:</strong> Replace REST with GraphQL for frontend. Eliminates N+1 fetch problem on product pages (single query fetches product + inventory + reviews + recommendations). Reduces mobile data usage 40%.<br><br>
+          <strong>4. Event sourcing for Orders:</strong> Instead of mutable order state, store immutable event log. Full audit trail. Easy replayability. Enables time-travel debugging.<br><br>
+          <strong>5. CQRS for high-read services:</strong> Separate read and write models. Write model normalized for integrity; read model denormalized for speed (pre-joined, pre-aggregated).
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- TRADE-OFFS -->
+  <section id="tradeoffs" class="section">
+    <div class="section-label">// senior signal</div>
+    <h2 class="section-title">Key Trade-offs to Articulate</h2>
+    <p class="section-desc">Senior candidates are evaluated on trade-off reasoning. For every choice, know the alternative and why you rejected it.</p>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Decision</th><th>Choice Made</th><th>Alternative</th><th>Why This One</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Cart storage</td>
+            <td><span class="tag tag-green">Redis Hash</span></td>
+            <td>PostgreSQL table</td>
+            <td>Cart ops are pure key-value. Redis is 10× faster, TTL native, no schema migration needed</td>
+          </tr>
+          <tr>
+            <td>Order transactions</td>
+            <td><span class="tag tag-green">SAGA (choreography)</span></td>
+            <td>2PC / Orchestrator SAGA</td>
+            <td>Choreography = no single point of failure. Each service self-heals. 2PC is blocking and fragile</td>
+          </tr>
+          <tr>
+            <td>Search engine</td>
+            <td><span class="tag tag-green">Elasticsearch</span></td>
+            <td>PostgreSQL FTS / Solr</td>
+            <td>ES handles 500M docs, native facets, fuzzy match, real-time partial updates, geosearch built-in</td>
+          </tr>
+          <tr>
+            <td>Event streaming</td>
+            <td><span class="tag tag-green">Apache Kafka</span></td>
+            <td>AWS SQS/SNS</td>
+            <td>Kafka: replay, multi-consumer, ordering within partition, 7-day retention. SQS: simpler but no replay</td>
+          </tr>
+          <tr>
+            <td>DB sharding strategy</td>
+            <td><span class="tag tag-green">Hash sharding</span></td>
+            <td>Range sharding</td>
+            <td>Hash = even distribution, no hot partitions. Range = easy range queries but risk of hot shard on new data</td>
+          </tr>
+          <tr>
+            <td>Location time-series</td>
+            <td><span class="tag tag-green">Cassandra</span></td>
+            <td>PostgreSQL / DynamoDB</td>
+            <td>Cassandra = write-optimized, wide-column, perfect for time-series. PG struggles at 200K writes/s</td>
+          </tr>
+          <tr>
+            <td>API pagination</td>
+            <td><span class="tag tag-green">Cursor-based</span></td>
+            <td>Offset/limit</td>
+            <td>Offset = slow at page 500 (OFFSET 10000 requires reading 10K rows). Cursor = O(1) consistent performance</td>
+          </tr>
+          <tr>
+            <td>Payment flow</td>
+            <td><span class="tag tag-green">Auth then Capture</span></td>
+            <td>Auth + Capture atomically</td>
+            <td>Auth-only allows cancel window without charge. Capture happens at fulfillment. Better UX, lower chargeback risk</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- AMAZON LPs -->
+  <section id="amazon-lp" class="section">
+    <div class="section-label">// amazon specific</div>
+    <h2 class="section-title">Amazon Leadership Principles in HLD</h2>
+    <p class="section-desc">Weave these naturally into your design explanation. Amazon interviewers explicitly score LP alignment.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏆 Customer Obsession</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "I prioritize the checkout path above everything else. If Recommendations fail, users still buy. If notifications are delayed, users still buy. The system degrades gracefully from least customer-impacting components first — recommendations, then reviews, then tracking. Checkout is the last thing to touch."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔍 Dive Deep</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "Let me be specific about the inventory reservation race condition. With 50K concurrent buyers and 1,000 units, a naive SELECT/UPDATE has a 50× over-reservation risk. The Lua script solution solves this because Redis executes it as a single atomic unit — no other command can interleave between the GET and DECR."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💡 Invent and Simplify</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "Rather than building a complex orchestrator for flash sales, the token pre-issuance pattern eliminates the inventory contention problem entirely. It's simpler — 1,000 tokens in Redis, atomic SPOP per buyer — and handles any concurrency level without a single DB lock contention."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📐 Think Big</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "I'm designing this for 10× current scale from day one — schema sharding keys chosen for future splits, Kafka partition count set high, cache layer architected before it's needed. Over-engineering? No — under-engineering a platform like this means a painful rewrite at 10M orders/day."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Are Right, A Lot</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "My estimate of 35K peak QPS is based on 100M DAU × 10 page views × 3× peak factor. That drives every sizing decision. If I'm wrong by 2×, autoscaling handles it. If I'm wrong by 10×, we have architecture conversations — but the approach doesn't change."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ Bias for Action</div>
+        <div class="framework-body" style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Say this:</strong> "I'd start with a modular monolith for first 6 months — ship faster, learn where actual bottlenecks are. Extract microservices where real scaling pain exists, not prematurely. The architecture I described is where we'd be at maturity, not day 1."
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-box" style="margin-top:16px">
+      <div class="tip-box-header">🎯 Final Interview Checklist</div>
+      <div class="tip-box-body">
+        <div class="chips">
+          <span class="tag tag-green">✓ Clarified requirements & scope</span>
+          <span class="tag tag-green">✓ Did back-of-envelope math</span>
+          <span class="tag tag-green">✓ Drew full HLD diagram</span>
+          <span class="tag tag-green">✓ Explained order happy path</span>
+          <span class="tag tag-green">✓ Addressed consistency model</span>
+          <span class="tag tag-green">✓ Covered caching strategy</span>
+          <span class="tag tag-green">✓ Discussed failure modes</span>
+          <span class="tag tag-green">✓ Spoke to traffic spike handling</span>
+          <span class="tag tag-green">✓ Justified every major choice</span>
+          <span class="tag tag-green">✓ Mentioned trade-offs proactively</span>
+          <span class="tag tag-green">✓ Showed depth on at least 2 components</span>
+          <span class="tag tag-green">✓ Connected to Amazon LPs</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div style="padding: 24px 32px; border-top: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">HLD Interview Prep — Online Delivery Platform</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Amazon SDE-II / SDE-III System Design</div>
+  </div>
+
+</main>
+
+<script>
+// Intersection observer for section animations
+const sections = document.querySelectorAll('.section');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.05, rootMargin: '0px 0px -40px 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+// QA toggle
+function toggleQA(el) {
+  const item = el.parentElement;
+  const answer = item.querySelector('.qa-answer');
+  const isOpen = item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.qa-item.open').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.qa-answer').classList.remove('open');
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    answer.classList.add('open');
+  }
+}
+
+// Tab switching
+function switchTab(group, id, btn) {
+  document.querySelectorAll(`[id^="svc-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById('svc-' + id).classList.add('active');
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Nav active state
+function setActive(el) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Update nav on scroll
+const allSections = document.querySelectorAll('section[id]');
+const navItems = document.querySelectorAll('.nav-item[href^="#"]');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  allSections.forEach(s => {
+    const top = s.getBoundingClientRect().top;
+    if (top <= 100) current = s.id;
+  });
+  navItems.forEach(item => {
+    item.classList.remove('active');
+    if (item.getAttribute('href') === '#' + current) {
+      item.classList.add('active');
+    }
+  });
+});
+
+// Animate progress bars when visible
+const progressObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.progress-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => { bar.style.width = w; }, 100);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.card').forEach(c => progressObs.observe(c));
+</script>
+</body>
+</html>
