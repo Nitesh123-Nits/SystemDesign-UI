@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Comparison — Quick Guide</title>
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="shared-guides.js" defer></script>
+<script>window.GUIDE_ID = 'g20';</script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    margin-bottom: 64px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .label {
+    display: inline-block;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(79,158,255,0.08);
+    border: 1px solid rgba(79,158,255,0.2);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 800;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #e8eef8 30%, #4f9eff 70%, #7b5fff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.7s 0.15s ease both;
+  }
+
+  .legend-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+
+  .chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── DIAGRAM SECTION ── */
+  .diagram-section {
+    margin-bottom: 64px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .diagram-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .diagram-cell {
+    background: var(--card);
+    padding: 22px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    position: relative;
+    transition: background 0.25s, transform 0.2s;
+    cursor: default;
+  }
+
+  .diagram-cell:hover {
+    background: #1a2040;
+    z-index: 2;
+  }
+
+  .diagram-cell .proto-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .diagram-cell .proto-comm {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .diagram-cell .proto-badge {
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
+  .diagram-cell .proto-icon {
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  /* ── MAIN TABLE ── */
+  .table-section {
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(79,158,255,0.05);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    background: #0e1322;
+  }
+
+  thead th {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 18px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th:last-child { text-align: center; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    animation: rowIn 0.5s ease both;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(79,158,255,0.04); }
+
+  tbody td {
+    padding: 16px 20px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  /* Protocol name column */
+  .col-proto {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .proto-icon-sm {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .proto-tag {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* Communication column */
+  .col-comm {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+
+  .comm-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 5px 11px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #c0ccdd;
+  }
+
+  /* Best For column */
+  .best-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+
+  /* Speed column */
+  .col-speed {
+    text-align: center;
+  }
+
+  .speed-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .speed-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .speed-dots {
+    display: flex;
+    gap: 4px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .dot.filled { background: var(--accent3); box-shadow: 0 0 6px rgba(0,229,160,0.5); }
+
+  /* ── SPEED COLORS ── */
+  .speed-medium .speed-label { color: #f0a030; }
+  .speed-medium .dot.filled { background: #f0a030; box-shadow: 0 0 6px rgba(240,160,48,0.5); }
+
+  .speed-fast .speed-label { color: #4f9eff; }
+  .speed-fast .dot.filled { background: #4f9eff; box-shadow: 0 0 6px rgba(79,158,255,0.5); }
+
+  .speed-vfast .speed-label { color: #00e5a0; }
+
+  .speed-light .speed-label { color: #7b5fff; }
+  .speed-light .dot.filled { background: #7b5fff; box-shadow: 0 0 6px rgba(123,95,255,0.5); }
+
+  .speed-reliable .speed-label { color: #ff6b9d; }
+  .speed-reliable .dot.filled { background: #ff6b9d; box-shadow: 0 0 6px rgba(255,107,157,0.5); }
+
+  .speed-heavy .speed-label { color: var(--muted); }
+  .speed-heavy .dot.filled { background: var(--muted); box-shadow: none; }
+
+  /* ── PROTOCOL COLOR SETS ── */
+  .p-rest    { background: rgba(79,158,255,0.12); }
+  .p-gql     { background: rgba(232,70,190,0.12); }
+  .p-wh      { background: rgba(0,229,160,0.12); }
+  .p-ws      { background: rgba(79,158,255,0.1); }
+  .p-grpc    { background: rgba(0,229,160,0.12); }
+  .p-mqtt    { background: rgba(123,95,255,0.12); }
+  .p-amqp    { background: rgba(255,107,157,0.12); }
+  .p-sse     { background: rgba(240,160,48,0.12); }
+  .p-soap    { background: rgba(150,150,150,0.1); }
+
+  .b-rest    { background: rgba(79,158,255,0.1);   color: #4f9eff;   border: 1px solid rgba(79,158,255,0.2); }
+  .b-gql     { background: rgba(232,70,190,0.1);   color: #e846be;   border: 1px solid rgba(232,70,190,0.2); }
+  .b-wh      { background: rgba(0,229,160,0.1);    color: #00e5a0;   border: 1px solid rgba(0,229,160,0.2); }
+  .b-ws      { background: rgba(79,158,255,0.08);  color: #7ab8ff;   border: 1px solid rgba(79,158,255,0.15); }
+  .b-grpc    { background: rgba(0,229,160,0.1);    color: #00e5a0;   border: 1px solid rgba(0,229,160,0.2); }
+  .b-mqtt    { background: rgba(123,95,255,0.1);   color: #a080ff;   border: 1px solid rgba(123,95,255,0.2); }
+  .b-amqp    { background: rgba(255,107,157,0.1);  color: #ff8fb8;   border: 1px solid rgba(255,107,157,0.2); }
+  .b-sse     { background: rgba(240,160,48,0.1);   color: #f0a030;   border: 1px solid rgba(240,160,48,0.2); }
+  .b-soap    { background: rgba(150,150,150,0.08); color: #8899aa;   border: 1px solid rgba(150,150,150,0.15); }
+
+  /* ── ROW ANIMATION STAGGER ── */
+  tbody tr:nth-child(1)  { animation-delay: 0.35s }
+  tbody tr:nth-child(2)  { animation-delay: 0.40s }
+  tbody tr:nth-child(3)  { animation-delay: 0.45s }
+  tbody tr:nth-child(4)  { animation-delay: 0.50s }
+  tbody tr:nth-child(5)  { animation-delay: 0.55s }
+  tbody tr:nth-child(6)  { animation-delay: 0.60s }
+  tbody tr:nth-child(7)  { animation-delay: 0.65s }
+  tbody tr:nth-child(8)  { animation-delay: 0.70s }
+  tbody tr:nth-child(9)  { animation-delay: 0.75s }
+
+  /* ── KEYFRAMES ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── FOOTER NOTE ── */
+  .footnote {
+    margin-top: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    animation: fadeUp 0.7s 0.8s ease both;
+  }
+
+  .fn-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .fn-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .diagram-grid { grid-template-columns: repeat(2, 1fr); }
+
+    thead th:nth-child(2),
+    tbody td:nth-child(2) { display: none; }
+
+    .proto-icon-sm { display: none; }
+
+    tbody td { padding: 14px 12px; }
+    thead th { padding: 14px 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .diagram-grid { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 2rem; }
+    .wrapper { padding: 40px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Navigation</div>
+      <div class="nav-item active" data-sec="comparison"><span>📊</span> Protocol Comparison</div>
+    </div>
+  </aside>
+  
+  <main class="main-content">
+    <section class="section active" id="comparison">
+      <div class="wrapper">
+        <!-- HEADER -->
+        <header>
+          <div class="label">Developer Reference</div>
+          <h1>Protocol Comparison</h1>
+          <p class="subtitle">A quick guide to choosing the right communication protocol for your architecture.</p>
+        </header>
+
+        <!-- LEGEND -->
+        <div class="legend">
+          <div class="legend-chip"><span class="chip-dot" style="background:#4f9eff"></span>Web & API</div>
+          <div class="legend-chip"><span class="chip-dot" style="background:#e846be"></span>Frontend</div>
+          <div class="legend-chip"><span class="chip-dot" style="background:#00e5a0"></span>Realtime / Micro</div>
+          <div class="legend-chip"><span class="chip-dot" style="background:#a080ff"></span>IoT / Pub-Sub</div>
+          <div class="legend-chip"><span class="chip-dot" style="background:#ff8fb8"></span>Enterprise</div>
+          <div class="legend-chip"><span class="chip-dot" style="background:#8899aa"></span>Legacy</div>
+        </div>
+
+        <!-- VISUAL DIAGRAM -->
+        <div class="diagram-section">
+          <div class="section-title">Architecture Diagram</div>
+          <div class="diagram-grid">
+            <div class="diagram-cell">
+              <div class="proto-icon">🌐</div>
+              <div class="proto-name">REST</div>
+              <div class="proto-comm">Request / Response</div>
+              <span class="proto-badge b-rest">Web APIs</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">🔍</div>
+              <div class="proto-name">GraphQL</div>
+              <div class="proto-comm">Query-based</div>
+              <span class="proto-badge b-gql">Frontends</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">⚡</div>
+              <div class="proto-name">Webhooks</div>
+              <div class="proto-comm">Event Push</div>
+              <span class="proto-badge b-wh">Automation</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">🔁</div>
+              <div class="proto-name">WebSocket</div>
+              <div class="proto-comm">Bidirectional</div>
+              <span class="proto-badge b-ws">Realtime apps</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">🚀</div>
+              <div class="proto-name">gRPC</div>
+              <div class="proto-comm">RPC Binary</div>
+              <span class="proto-badge b-grpc">Microservices</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">📡</div>
+              <div class="proto-name">MQTT</div>
+              <div class="proto-comm">Pub / Sub</div>
+              <span class="proto-badge b-mqtt">IoT</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">📬</div>
+              <div class="proto-name">AMQP</div>
+              <div class="proto-comm">Message Queue</div>
+              <span class="proto-badge b-amqp">Enterprise systems</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">📢</div>
+              <div class="proto-name">SSE</div>
+              <div class="proto-comm">Server Stream</div>
+              <span class="proto-badge b-sse">Notifications</span>
+            </div>
+            <div class="diagram-cell">
+              <div class="proto-icon">📄</div>
+              <div class="proto-name">SOAP</div>
+              <div class="proto-comm">Structured XML</div>
+              <span class="proto-badge b-soap">Enterprise legacy</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN TABLE -->
+        <div class="table-section">
+          <div class="section-title">Full Comparison Table</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Protocol</th>
+                  <th>Communication</th>
+                  <th>Best For</th>
+                  <th>Speed</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- REST -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-rest">🌐</div>
+                      <span class="proto-tag">REST</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">↔ Request / Response</span></td>
+                  <td><span class="best-tag b-rest">Web APIs</span></td>
+                  <td>
+                    <div class="col-speed speed-medium">
+                      <span class="speed-label">Medium</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- GraphQL -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-gql">🔍</div>
+                      <span class="proto-tag">GraphQL</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">⊛ Query-based</span></td>
+                  <td><span class="best-tag b-gql">Frontends</span></td>
+                  <td>
+                    <div class="col-speed speed-medium">
+                      <span class="speed-label">Medium</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- Webhooks -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-wh">⚡</div>
+                      <span class="proto-tag">Webhooks</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">→ Event Push</span></td>
+                  <td><span class="best-tag b-wh">Automation</span></td>
+                  <td>
+                    <div class="col-speed speed-fast">
+                      <span class="speed-label">Fast</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- WebSocket -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-ws">🔁</div>
+                      <span class="proto-tag">WebSocket</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">⇄ Bidirectional</span></td>
+                  <td><span class="best-tag b-ws">Realtime apps</span></td>
+                  <td>
+                    <div class="col-speed speed-fast">
+                      <span class="speed-label">Fast</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- gRPC -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-grpc">🚀</div>
+                      <span class="proto-tag">gRPC</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">⬡ RPC Binary</span></td>
+                  <td><span class="best-tag b-grpc">Microservices</span></td>
+                  <td>
+                    <div class="col-speed speed-vfast">
+                      <span class="speed-label">Very Fast</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- MQTT -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-mqtt">📡</div>
+                      <span class="proto-tag">MQTT</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">⊕ Pub / Sub</span></td>
+                  <td><span class="best-tag b-mqtt">IoT</span></td>
+                  <td>
+                    <div class="col-speed speed-light">
+                      <span class="speed-label">Lightweight</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- AMQP -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-amqp">📬</div>
+                      <span class="proto-tag">AMQP</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">▣ Message Queue</span></td>
+                  <td><span class="best-tag b-amqp">Enterprise systems</span></td>
+                  <td>
+                    <div class="col-speed speed-reliable">
+                      <span class="speed-label">Reliable</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- SSE -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-sse">📢</div>
+                      <span class="proto-tag">SSE</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">→ Server Stream</span></td>
+                  <td><span class="best-tag b-sse">Notifications</span></td>
+                  <td>
+                    <div class="col-speed speed-light">
+                      <span class="speed-label">Lightweight</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <!-- SOAP -->
+                <tr>
+                  <td>
+                    <div class="col-proto">
+                      <div class="proto-icon-sm p-soap">📄</div>
+                      <span class="proto-tag">SOAP</span>
+                    </div>
+                  </td>
+                  <td><span class="comm-pill">✦ Structured XML</span></td>
+                  <td><span class="best-tag b-soap">Enterprise legacy</span></td>
+                  <td>
+                    <div class="col-speed speed-heavy">
+                      <span class="speed-label">Heavy</span>
+                      <div class="speed-dots">
+                        <div class="dot filled"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- FOOTNOTES -->
+        <div class="footnote">
+          <div class="fn-item"><span class="fn-dot" style="background:#00e5a0"></span>gRPC is fastest for internal services</div>
+          <div class="fn-item"><span class="fn-dot" style="background:#4f9eff"></span>WebSocket for live chat / dashboards</div>
+          <div class="fn-item"><span class="fn-dot" style="background:#a080ff"></span>MQTT excels on constrained devices</div>
+          <div class="fn-item"><span class="fn-dot" style="background:#8899aa"></span>SOAP used mainly in legacy systems</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+
+</html>

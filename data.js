@@ -2343,6 +2343,33 @@ const GUIDES_DATA = [
     tags: ["Distributed Systems", "CAP Theorem", "Consensus", "Architecture"],
     color: "#00d4ff",
     url: "distributed-systems.html"
+  },
+  {
+    id: "g19",
+    icon: "🔌",
+    title: "Network Protocols Deep Dive",
+    desc: "A technical examination of HTTP/1.x, HTTP/2, HTTP/3, gRPC, and WebSockets.",
+    tags: ["Networking", "Protocols", "HTTP", "gRPC"],
+    color: "#00d4ff",
+    url: "protocol-deep-dive.html"
+  },
+  {
+    id: "g20",
+    icon: "⚖️",
+    title: "Network Protocols Comparison",
+    desc: "A comparative guide between major network protocols and their architectural tradeoffs.",
+    tags: ["Networking", "Comparison", "Protocols"],
+    color: "#ff3366",
+    url: "protocol-comparison.html"
+  },
+  {
+    id: "g21",
+    icon: "⏱️",
+    title: "Taming Tail Latency",
+    desc: "Strategies and mechanics for reducing high-percentile latency in distributed systems.",
+    tags: ["Performance", "Distributed Systems", "Latency"],
+    color: "#32CD32",
+    url: "tail-latency-blog.html"
   }
 ];
 

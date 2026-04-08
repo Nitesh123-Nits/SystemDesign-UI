@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Deep Dive</title>
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="shared-guides.js" defer></script>
+<script>window.GUIDE_ID = 'g19';</script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Navigation</div>
+      <div class="nav-item active" data-sec="overview"><span>🌐</span> Overview</div>
+      <div class="nav-item" data-sec="rest"><span>↔</span> REST</div>
+      <div class="nav-item" data-sec="gql"><span>🔍</span> GraphQL</div>
+      <div class="nav-item" data-sec="wh"><span>⚡</span> Webhooks</div>
+      <div class="nav-item" data-sec="ws"><span>🔁</span> WebSocket</div>
+      <div class="nav-item" data-sec="grpc"><span>🚀</span> gRPC</div>
+      <div class="nav-item" data-sec="mqtt"><span>📡</span> MQTT</div>
+      <div class="nav-item" data-sec="amqp"><span>📬</span> AMQP</div>
+      <div class="nav-item" data-sec="sse"><span>📢</span> SSE</div>
+      <div class="nav-item" data-sec="soap"><span>📄</span> SOAP</div>
+      <div class="nav-item" data-sec="performance"><span>📊</span> Performance</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+<style>
+
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 0;
+  }
+
+
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  margin-bottom: 96px;
+  animation: fadeDown 0.8s ease both;
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--rest);
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  padding: 6px 16px; border-radius: 24px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 60%, #3b82f6 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 20px;
+}
+
+.hero p {
+  font-size: 16px; color: var(--muted2); line-height: 1.7;
+  max-width: 520px; margin: 0 auto 40px;
+}
+
+.stats-row {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;
+}
+
+.stat-box {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px 28px;
+  text-align: center;
+}
+
+.stat-box .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px; font-weight: 500;
+  background: linear-gradient(135deg, #f1f5f9, #3b82f6);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.stat-box .lbl {
+  font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px;
+}
+
+/* ── SECTION PROTOCOL CARD ── */
+.proto-section {
+  margin-bottom: 72px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.proto-header {
+  display: flex; align-items: flex-start; gap: 20px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.proto-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+  color: var(--muted); margin-top: 4px; flex-shrink: 0;
+}
+
+.proto-icon-lg {
+  width: 56px; height: 56px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+
+.proto-meta { flex: 1; }
+
+.proto-meta h2 {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1.1; margin-bottom: 8px;
+}
+
+.proto-meta .tagline {
+  font-size: 14px; color: var(--muted2); line-height: 1.6;
+  max-width: 600px;
+}
+
+.proto-badges {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+}
+
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+  padding: 4px 10px; border-radius: 6px; text-transform: uppercase;
+}
+
+/* ── CONTENT GRID ── */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.full-width { grid-column: 1 / -1; }
+
+.info-card {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.info-card h3 {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.info-card h3::before {
+  content: ''; width: 3px; height: 14px; border-radius: 2px;
+  background: currentColor; opacity: 0.5;
+}
+
+.info-card p {
+  font-size: 14px; color: var(--muted2); line-height: 1.8;
+}
+
+.pros-cons {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+}
+
+.pro-item, .con-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; line-height: 1.6; color: var(--muted2);
+  margin-bottom: 10px;
+}
+
+.pro-item::before { content: '✓'; color: #10b981; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.con-item::before { content: '✗'; color: #ef4444; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+.use-case-list {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+.use-pill {
+  font-size: 12px; padding: 5px 13px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border2);
+  color: var(--muted2);
+}
+
+/* ── ANIMATED DIAGRAMS ── */
+.diagram-box {
+  background: #0a0e1a;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 28px 24px;
+  min-height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-box h3 {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.diagram-box h3::before {
+  content: ''; width: 3px; height: 14px; border-radius: 2px;
+  background: currentColor; opacity: 0.5;
+}
+
+/* ─ SVG diagrams ─ */
+.diag-svg { width: 100%; height: auto; display: block; }
+
+/* Node box */
+.node-rect {
+  rx: 8; ry: 8;
+  stroke-width: 1.5;
+}
+
+/* Animated packet along path */
+@keyframes packet-move {
+  0%   { offset-distance: 0%; opacity: 1; }
+  85%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+@keyframes packet-return {
+  0%   { offset-distance: 100%; opacity: 0; }
+  10%  { opacity: 1; }
+  100% { offset-distance: 0%; opacity: 0; }
+}
+
+@keyframes pulse-ring {
+  0%   { r: 6; opacity: 0.8; }
+  100% { r: 18; opacity: 0; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes float-up {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes slide-right {
+  0%   { transform: translateX(0); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(180px); opacity: 0; }
+}
+
+@keyframes slide-left {
+  0%   { transform: translateX(0); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(-180px); opacity: 0; }
+}
+
+@keyframes broadcast {
+  0%   { r: 4; opacity: 1; }
+  100% { r: 60; opacity: 0; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes data-flow {
+  0%   { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* Code snippet */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: #94a3b8;
+  overflow-x: auto;
+}
+
+.code-block .kw  { color: #7dd3fc; }
+.code-block .str { color: #86efac; }
+.code-block .fn  { color: #fbbf24; }
+.code-block .cm  { color: #475569; }
+.code-block .num { color: #f9a8d4; }
+
+/* ── COMPARISON BAR ── */
+.comparison-section {
+  margin-bottom: 72px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.comp-bar-wrap {
+  display: grid; gap: 14px;
+}
+
+.comp-row {
+  display: grid; grid-template-columns: 100px 1fr 70px;
+  align-items: center; gap: 14px;
+}
+
+.comp-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: var(--muted2); text-align: right;
+}
+
+.comp-bar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px; height: 10px;
+  overflow: hidden;
+}
+
+.comp-bar-fill {
+  height: 100%; border-radius: 6px;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+.comp-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--muted);
+}
+
+/* ── SECTION DIVIDER ── */
+.divider {
+  display: flex; align-items: center; gap: 16px;
+  margin: 64px 0 48px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+}
+
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .pros-cons { grid-template-columns: 1fr; }
+  .full-width { grid-column: auto; }
+  .proto-header { flex-wrap: wrap; }
+  .comp-row { grid-template-columns: 80px 1fr 60px; }
+}
+
+/* ─── PROTO-SPECIFIC COLORS ─── */
+.rest-color   { color: var(--rest); }
+.gql-color    { color: var(--gql); }
+.wh-color     { color: var(--wh); }
+.ws-color     { color: var(--ws); }
+.grpc-color   { color: var(--grpc); }
+.mqtt-color   { color: var(--mqtt); }
+.amqp-color   { color: var(--amqp); }
+.sse-color    { color: var(--sse); }
+.soap-color   { color: var(--soap); }
+
+/* stagger sections */
+.proto-section:nth-child(1)  { animation-delay: 0.05s }
+.proto-section:nth-child(2)  { animation-delay: 0.10s }
+.proto-section:nth-child(3)  { animation-delay: 0.15s }
+.proto-section:nth-child(4)  { animation-delay: 0.20s }
+.proto-section:nth-child(5)  { animation-delay: 0.25s }
+.proto-section:nth-child(6)  { animation-delay: 0.30s }
+.proto-section:nth-child(7)  { animation-delay: 0.35s }
+.proto-section:nth-child(8)  { animation-delay: 0.40s }
+.proto-section:nth-child(9)  { animation-delay: 0.45s }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <span>PROTOCOLS →</span>
+    <a class="nav-pill" href="#rest"   style="color:var(--rest);  background:rgba(59,130,246,0.1);  border-color:rgba(59,130,246,0.25)">REST</a>
+    <a class="nav-pill" href="#gql"    style="color:var(--gql);   background:rgba(236,72,153,0.1);  border-color:rgba(236,72,153,0.25)">GraphQL</a>
+    <a class="nav-pill" href="#wh"     style="color:var(--wh);    background:rgba(16,185,129,0.1);  border-color:rgba(16,185,129,0.25)">Webhooks</a>
+    <a class="nav-pill" href="#ws"     style="color:var(--ws);    background:rgba(6,182,212,0.1);   border-color:rgba(6,182,212,0.25)">WebSocket</a>
+    <a class="nav-pill" href="#grpc"   style="color:var(--grpc);  background:rgba(34,197,94,0.1);   border-color:rgba(34,197,94,0.25)">gRPC</a>
+    <a class="nav-pill" href="#mqtt"   style="color:var(--mqtt);  background:rgba(167,139,250,0.1); border-color:rgba(167,139,250,0.25)">MQTT</a>
+    <a class="nav-pill" href="#amqp"   style="color:var(--amqp);  background:rgba(249,115,22,0.1);  border-color:rgba(249,115,22,0.25)">AMQP</a>
+    <a class="nav-pill" href="#sse"    style="color:var(--sse);   background:rgba(234,179,8,0.1);   border-color:rgba(234,179,8,0.25)">SSE</a>
+    <a class="nav-pill" href="#soap"   style="color:var(--soap);  background:rgba(107,114,128,0.1); border-color:rgba(107,114,128,0.25)">SOAP</a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-eyebrow">⬡ Deep Dive Reference</div>
+  <h1>Protocol Deep Dive</h1>
+  <p>Comprehensive explanations, animated diagrams, real code examples, and architectural trade-offs for every major communication protocol.</p>
+  <div class="stats-row">
+    <div class="stat-box"><div class="num">9</div><div class="lbl">Protocols</div></div>
+    <div class="stat-box"><div class="num">36</div><div class="lbl">Code Examples</div></div>
+    <div class="stat-box"><div class="num">9</div><div class="lbl">Live Diagrams</div></div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 1. REST -->
+<!-- ══════════════════════════════════════════ -->
+<section class="proto-section" id="rest">
+  <div class="proto-header">
+    <div class="proto-num">01</div>
+    <div class="proto-icon-lg" style="background:rgba(59,130,246,0.12)">🌐</div>
+    <div class="proto-meta">
+      <h2 class="rest-color">REST</h2>
+      <p class="tagline">Representational State Transfer — the backbone of the modern web. Stateless, resource-based HTTP communication between client and server.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--rest);border:1px solid rgba(59,130,246,0.2)">HTTP/1.1 · HTTP/2</span>
+        <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--rest);border:1px solid rgba(59,130,246,0.2)">Stateless</span>
+        <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--rest);border:1px solid rgba(59,130,246,0.2)">JSON / XML</span>
+        <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--rest);border:1px solid rgba(59,130,246,0.2)">Speed: Medium</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <!-- DIAGRAM -->
+    <div class="diagram-box full-width">
+      <h3 class="rest-color">Request / Response Flow</h3>
+      <svg class="diag-svg" viewBox="0 0 700 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Client -->
+        <rect x="20" y="50" width="130" height="60" rx="10" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+        <text x="85" y="76" text-anchor="middle" fill="#93c5fd" font-family="JetBrains Mono" font-size="11" font-weight="500">CLIENT</text>
+        <text x="85" y="94" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Browser / App</text>
+
+        <!-- Server -->
+        <rect x="550" y="50" width="130" height="60" rx="10" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+        <text x="615" y="76" text-anchor="middle" fill="#93c5fd" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVER</text>
+        <text x="615" y="94" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">API Endpoint</text>
+
+        <!-- Request arrow -->
+        <line x1="155" y1="72" x2="545" y2="72" stroke="rgba(59,130,246,0.25)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <polygon points="545,67 558,72 545,77" fill="rgba(59,130,246,0.6)"/>
+        <text x="350" y="64" text-anchor="middle" fill="#60a5fa" font-family="JetBrains Mono" font-size="10">GET /api/users</text>
+
+        <!-- Response arrow -->
+        <line x1="545" y1="100" x2="155" y2="100" stroke="rgba(16,185,129,0.25)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <polygon points="155,95 142,100 155,105" fill="rgba(16,185,129,0.6)"/>
+        <text x="350" y="117" text-anchor="middle" fill="#34d399" font-family="JetBrains Mono" font-size="10">200 OK  {data: [...]}</text>
+
+        <!-- Animated packet going right -->
+        <circle r="6" fill="#3b82f6" opacity="0.9">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s">
+            <mpath href="#rest-path-req"/>
+          </animateMotion>
+        </circle>
+        <path id="rest-path-req" d="M155,72 L545,72" fill="none"/>
+
+        <!-- Animated packet going left -->
+        <circle r="6" fill="#10b981" opacity="0.9">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.25s">
+            <mpath href="#rest-path-res"/>
+          </animateMotion>
+        </circle>
+        <path id="rest-path-res" d="M545,100 L155,100" fill="none"/>
+
+        <!-- HTTP Methods -->
+        <g>
+          <rect x="220" y="128" width="44" height="20" rx="4" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+          <text x="242" y="142" text-anchor="middle" fill="#93c5fd" font-family="JetBrains Mono" font-size="9" font-weight="600">GET</text>
+          <rect x="271" y="128" width="44" height="20" rx="4" fill="rgba(16,185,129,0.15)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+          <text x="293" y="142" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="9" font-weight="600">POST</text>
+          <rect x="322" y="128" width="44" height="20" rx="4" fill="rgba(234,179,8,0.15)" stroke="rgba(234,179,8,0.3)" stroke-width="1"/>
+          <text x="344" y="142" text-anchor="middle" fill="#fcd34d" font-family="JetBrains Mono" font-size="9" font-weight="600">PUT</text>
+          <rect x="373" y="128" width="56" height="20" rx="4" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.3)" stroke-width="1"/>
+          <text x="401" y="142" text-anchor="middle" fill="#fca5a5" font-family="JetBrains Mono" font-size="9" font-weight="600">DELETE</text>
+          <rect x="436" y="128" width="52" height="20" rx="4" fill="rgba(168,139,250,0.15)" stroke="rgba(168,139,250,0.3)" stroke-width="1"/>
+          <text x="462" y="142" text-anchor="middle" fill="#c4b5fd" font-family="JetBrains Mono" font-size="9" font-weight="600">PATCH</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="rest-color">How It Works</h3>
+      <p>REST uses standard HTTP verbs (GET, POST, PUT, DELETE, PATCH) to perform CRUD operations on resources identified by URLs. Each request is completely <strong style="color:var(--text)">stateless</strong> — the server stores no session info. Responses are typically JSON or XML. The client sends a request and waits for a complete response before continuing.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="rest-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// Fetch user data via REST</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/users/42'</span>, {
+  method: <span class="str">'GET'</span>,
+  headers: {
+    <span class="str">'Authorization'</span>: <span class="str">'Bearer token'</span>
+  }
+});
+<span class="kw">const</span> user = <span class="kw">await</span> res.<span class="fn">json</span>();
+<span class="cm">// → { id: 42, name: "Alice" }</span>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="rest-color">Pros</h3>
+      <div class="pro-item">Universal — every platform supports HTTP natively</div>
+      <div class="pro-item">Stateless design scales horizontally with ease</div>
+      <div class="pro-item">Excellent caching via HTTP cache headers</div>
+      <div class="pro-item">Huge ecosystem of tools (Swagger, Postman, etc.)</div>
+      <h3 class="rest-color" style="margin-top:16px">Cons</h3>
+      <div class="con-item">Over-fetching or under-fetching data is common</div>
+      <div class="con-item">Multiple round-trips needed for related resources</div>
+      <div class="con-item">No real-time push — client must poll for updates</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="rest-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Public APIs</span>
+        <span class="use-pill">CRUD backends</span>
+        <span class="use-pill">Mobile apps</span>
+        <span class="use-pill">Microservices</span>
+        <span class="use-pill">E-commerce</span>
+        <span class="use-pill">Auth services</span>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(59,130,246,0.05);border-radius:8px;border-left:3px solid var(--rest)">
+        <p style="font-size:12px;color:var(--muted2)"><strong style="color:var(--rest)">Rule of thumb:</strong> If you're building a CRUD API consumed by multiple clients, REST is the default choice. It's well-understood, widely supported, and easy to debug.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 2. GraphQL -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">GraphQL</div>
+<section class="proto-section" id="gql">
+  <div class="proto-header">
+    <div class="proto-num">02</div>
+    <div class="proto-icon-lg" style="background:rgba(236,72,153,0.12)">🔍</div>
+    <div class="proto-meta">
+      <h2 class="gql-color">GraphQL</h2>
+      <p class="tagline">A query language for APIs — ask for exactly what you need, nothing more. Developed by Meta in 2012, open-sourced in 2015.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(236,72,153,0.1);color:var(--gql);border:1px solid rgba(236,72,153,0.2)">HTTP POST</span>
+        <span class="badge" style="background:rgba(236,72,153,0.1);color:var(--gql);border:1px solid rgba(236,72,153,0.2)">Single Endpoint</span>
+        <span class="badge" style="background:rgba(236,72,153,0.1);color:var(--gql);border:1px solid rgba(236,72,153,0.2)">Typed Schema</span>
+        <span class="badge" style="background:rgba(236,72,153,0.1);color:var(--gql);border:1px solid rgba(236,72,153,0.2)">Speed: Medium</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="gql-color">Query Resolution — Fetch Only What You Need</h3>
+      <svg class="diag-svg" viewBox="0 0 700 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Client -->
+        <rect x="20" y="55" width="130" height="60" rx="10" fill="rgba(236,72,153,0.08)" stroke="rgba(236,72,153,0.3)" stroke-width="1.5"/>
+        <text x="85" y="81" text-anchor="middle" fill="#f9a8d4" font-family="JetBrains Mono" font-size="11" font-weight="500">CLIENT</text>
+        <text x="85" y="97" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">query { user {...} }</text>
+
+        <!-- GraphQL server -->
+        <rect x="270" y="35" width="160" height="100" rx="10" fill="rgba(236,72,153,0.06)" stroke="rgba(236,72,153,0.25)" stroke-width="1.5"/>
+        <text x="350" y="60" text-anchor="middle" fill="#f9a8d4" font-family="JetBrains Mono" font-size="11" font-weight="500">GRAPHQL</text>
+        <text x="350" y="76" text-anchor="middle" fill="#f9a8d4" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVER</text>
+        <text x="350" y="97" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Schema · Resolvers</text>
+        <text x="350" y="112" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">/graphql endpoint</text>
+
+        <!-- Data sources -->
+        <rect x="540" y="20" width="140" height="44" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+        <text x="610" y="44" text-anchor="middle" fill="#93c5fd" font-family="JetBrains Mono" font-size="9">PostgreSQL DB</text>
+
+        <rect x="540" y="76" width="140" height="44" rx="8" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+        <text x="610" y="100" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="9">REST Microservice</text>
+
+        <rect x="540" y="132" width="140" height="30" rx="8" fill="rgba(234,179,8,0.08)" stroke="rgba(234,179,8,0.2)" stroke-width="1"/>
+        <text x="610" y="151" text-anchor="middle" fill="#fcd34d" font-family="JetBrains Mono" font-size="9">Cache / Redis</text>
+
+        <!-- Arrows -->
+        <line x1="152" y1="85" x2="268" y2="85" stroke="rgba(236,72,153,0.4)" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <polygon points="268,80 280,85 268,90" fill="rgba(236,72,153,0.7)"/>
+
+        <line x1="432" y1="65" x2="538" y2="42" stroke="rgba(59,130,246,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="432" y1="85" x2="538" y2="98" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="432" y1="105" x2="538" y2="147" stroke="rgba(234,179,8,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+        <!-- Animated packet -->
+        <circle r="5" fill="#ec4899" opacity="0.9">
+          <animateMotion dur="3s" repeatCount="indefinite">
+            <mpath href="#gql-path"/>
+          </animateMotion>
+        </circle>
+        <path id="gql-path" d="M152,85 L268,85" fill="none"/>
+
+        <text x="350" y="162" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">Resolvers aggregate multiple data sources into a single typed response</text>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="gql-color">How It Works</h3>
+      <p>GraphQL exposes a <strong style="color:var(--text)">single endpoint</strong> (typically <code style="font-family:JetBrains Mono;color:#f9a8d4">/graphql</code>). The client sends a query describing exactly which fields it needs. The server's resolvers fetch data from any source (DB, REST, cache) and return only the requested fields. Supports queries (read), mutations (write), and subscriptions (real-time).</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="gql-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// GraphQL query — ask for exactly what you need</span>
+<span class="kw">const</span> QUERY = <span class="str">`
+  query GetUser($id: ID!) {
+    user(id: $id) {
+      name
+      email
+      posts { title }
+    }
+  }
+`</span>;
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/graphql'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: JSON.<span class="fn">stringify</span>({
+    query: QUERY,
+    variables: { id: <span class="str">'42'</span> }
+  })
+});
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="gql-color">Pros & Cons</h3>
+      <div class="pro-item">No over-fetching — get exactly what you asked for</div>
+      <div class="pro-item">Self-documenting via introspection & typed schema</div>
+      <div class="pro-item">Aggregate multiple data sources in one request</div>
+      <div class="con-item">Complex caching (no URL-based HTTP caching)</div>
+      <div class="con-item">N+1 query problem without DataLoader pattern</div>
+      <div class="con-item">Learning curve for teams new to it</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="gql-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Complex frontends</span>
+        <span class="use-pill">Mobile apps</span>
+        <span class="use-pill">BFF layer</span>
+        <span class="use-pill">Data-heavy dashboards</span>
+        <span class="use-pill">Federated APIs</span>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(236,72,153,0.05);border-radius:8px;border-left:3px solid var(--gql)">
+        <p style="font-size:12px;color:var(--muted2)"><strong style="color:var(--gql)">Rule of thumb:</strong> Use GraphQL when different clients (mobile vs web) need different shapes of the same data, or when you're aggregating many microservices.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 3. Webhooks -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">Webhooks</div>
+<section class="proto-section" id="wh">
+  <div class="proto-header">
+    <div class="proto-num">03</div>
+    <div class="proto-icon-lg" style="background:rgba(16,185,129,0.12)">⚡</div>
+    <div class="proto-meta">
+      <h2 class="wh-color">Webhooks</h2>
+      <p class="tagline">Event-driven HTTP callbacks — the server pushes data to your URL when something happens, eliminating the need to poll.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--wh);border:1px solid rgba(16,185,129,0.2)">HTTP POST</span>
+        <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--wh);border:1px solid rgba(16,185,129,0.2)">Event-driven</span>
+        <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--wh);border:1px solid rgba(16,185,129,0.2)">Fire & Forget</span>
+        <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--wh);border:1px solid rgba(16,185,129,0.2)">Speed: Fast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="wh-color">Event Push — No Polling Required</h3>
+      <svg class="diag-svg" viewBox="0 0 700 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Event source -->
+        <rect x="20" y="45" width="150" height="60" rx="10" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="1.5"/>
+        <text x="95" y="71" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="11" font-weight="500">EVENT SOURCE</text>
+        <text x="95" y="87" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Stripe / GitHub / etc</text>
+
+        <!-- Event bubble -->
+        <circle cx="95" cy="28" r="10" fill="rgba(16,185,129,0.15)" stroke="rgba(16,185,129,0.4)" stroke-width="1.5">
+          <animate attributeName="r" values="10;15;10" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="95" y="32" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="8">EVENT</text>
+
+        <!-- Arrow -->
+        <line x1="172" y1="75" x2="380" y2="75" stroke="rgba(16,185,129,0.3)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <polygon points="380,70 393,75 380,80" fill="rgba(16,185,129,0.7)"/>
+        <text x="278" y="65" text-anchor="middle" fill="#34d399" font-family="JetBrains Mono" font-size="10">POST /webhook</text>
+        <text x="278" y="95" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">{ event: "payment.completed", ... }</text>
+
+        <!-- Your server -->
+        <rect x="395" y="45" width="150" height="60" rx="10" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="1.5"/>
+        <text x="470" y="71" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="11" font-weight="500">YOUR SERVER</text>
+        <text x="470" y="87" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Webhook handler</text>
+
+        <!-- Success response -->
+        <line x1="547" y1="75" x2="650" y2="75" stroke="rgba(234,179,8,0.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="650,70 663,75 650,80" fill="rgba(234,179,8,0.7)"/>
+        <text x="607" y="65" text-anchor="middle" fill="#fcd34d" font-family="JetBrains Mono" font-size="9">200 OK</text>
+
+        <!-- Retry label -->
+        <text x="95" y="130" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">⟳ Retries on failure</text>
+        <text x="280" y="130" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">HMAC signature verification</text>
+        <text x="500" y="130" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">Idempotency key check</text>
+
+        <!-- Animated packet -->
+        <circle r="6" fill="#10b981" opacity="0.9">
+          <animateMotion dur="2s" repeatCount="indefinite">
+            <mpath href="#wh-path"/>
+          </animateMotion>
+        </circle>
+        <path id="wh-path" d="M172,75 L393,75" fill="none"/>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="wh-color">How It Works</h3>
+      <p>You register a callback URL with a third-party service. When an event occurs (payment completed, PR merged, etc.), the service sends an HTTP POST to your URL with the event payload. Your server responds with <code style="font-family:JetBrains Mono;color:#6ee7b7">200 OK</code> to acknowledge. Unlike REST, <strong style="color:var(--text)">no polling</strong> — the service comes to you. Security is enforced via HMAC signature headers.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="wh-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// Express webhook handler</span>
+app.<span class="fn">post</span>(<span class="str">'/webhook/stripe'</span>, (req, res) => {
+  <span class="kw">const</span> sig = req.headers[<span class="str">'stripe-signature'</span>];
+  <span class="kw">const</span> event = stripe.webhooks.<span class="fn">constructEvent</span>(
+    req.body, sig, process.env.SECRET
+  );
+  <span class="kw">if</span> (event.type === <span class="str">'payment_intent.succeeded'</span>) {
+    <span class="fn">fulfillOrder</span>(event.data.object);
+  }
+  res.<span class="fn">json</span>({ received: <span class="kw">true</span> }); <span class="cm">// ACK</span>
+});
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="wh-color">Pros & Cons</h3>
+      <div class="pro-item">Zero polling overhead — events arrive instantly</div>
+      <div class="pro-item">Simple integration with any HTTP server</div>
+      <div class="pro-item">Automatic retries from the provider on failure</div>
+      <div class="con-item">Requires a publicly accessible endpoint</div>
+      <div class="con-item">Hard to debug locally (need tunnels like ngrok)</div>
+      <div class="con-item">Must handle duplicate delivery idempotently</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="wh-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Payment events</span>
+        <span class="use-pill">CI/CD triggers</span>
+        <span class="use-pill">Form submissions</span>
+        <span class="use-pill">E-commerce orders</span>
+        <span class="use-pill">Slack bots</span>
+        <span class="use-pill">Zapier / n8n flows</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 4. WebSocket -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">WebSocket</div>
+<section class="proto-section" id="ws">
+  <div class="proto-header">
+    <div class="proto-num">04</div>
+    <div class="proto-icon-lg" style="background:rgba(6,182,212,0.12)">🔁</div>
+    <div class="proto-meta">
+      <h2 class="ws-color">WebSocket</h2>
+      <p class="tagline">Full-duplex persistent connection over a single TCP socket. Both client and server can send messages at any time — true real-time communication.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(6,182,212,0.1);color:var(--ws);border:1px solid rgba(6,182,212,0.2)">TCP</span>
+        <span class="badge" style="background:rgba(6,182,212,0.1);color:var(--ws);border:1px solid rgba(6,182,212,0.2)">Bidirectional</span>
+        <span class="badge" style="background:rgba(6,182,212,0.1);color:var(--ws);border:1px solid rgba(6,182,212,0.2)">Persistent</span>
+        <span class="badge" style="background:rgba(6,182,212,0.1);color:var(--ws);border:1px solid rgba(6,182,212,0.2)">Speed: Fast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="ws-color">Persistent Bidirectional Channel</h3>
+      <svg class="diag-svg" viewBox="0 0 700 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Client -->
+        <rect x="20" y="50" width="130" height="60" rx="10" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1.5"/>
+        <text x="85" y="76" text-anchor="middle" fill="#67e8f9" font-family="JetBrains Mono" font-size="11" font-weight="500">CLIENT</text>
+        <text x="85" y="92" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">ws://connect</text>
+
+        <!-- Server -->
+        <rect x="550" y="50" width="130" height="60" rx="10" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1.5"/>
+        <text x="615" y="76" text-anchor="middle" fill="#67e8f9" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVER</text>
+        <text x="615" y="92" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">WS Handler</text>
+
+        <!-- Persistent connection line -->
+        <rect x="155" y="73" width="390" height="14" rx="7" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.2)" stroke-width="1"/>
+        <text x="350" y="83" text-anchor="middle" fill="#0891b2" font-family="JetBrains Mono" font-size="8">── PERSISTENT TCP CONNECTION ──</text>
+
+        <!-- Messages going both ways -->
+        <line x1="155" y1="65" x2="545" y2="65" stroke="rgba(6,182,212,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+        <line x1="545" y1="95" x2="155" y2="95" stroke="rgba(16,185,129,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+
+        <!-- Multiple animated packets right -->
+        <circle r="5" fill="#06b6d4">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="0s">
+            <mpath href="#ws-r1"/>
+          </animateMotion>
+        </circle>
+        <circle r="5" fill="#06b6d4" opacity="0.7">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="0.7s">
+            <mpath href="#ws-r1"/>
+          </animateMotion>
+        </circle>
+        <circle r="5" fill="#10b981">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="0.3s">
+            <mpath href="#ws-l1"/>
+          </animateMotion>
+        </circle>
+        <circle r="5" fill="#10b981" opacity="0.7">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="1.1s">
+            <mpath href="#ws-l1"/>
+          </animateMotion>
+        </circle>
+
+        <path id="ws-r1" d="M155,65 L545,65" fill="none"/>
+        <path id="ws-l1" d="M545,95 L155,95" fill="none"/>
+
+        <text x="350" y="125" text-anchor="middle" fill="#67e8f9" font-family="JetBrains Mono" font-size="10">→ client sends</text>
+        <text x="350" y="140" text-anchor="middle" fill="#34d399" font-family="JetBrains Mono" font-size="10">← server pushes</text>
+
+        <!-- Handshake label -->
+        <text x="85" y="135" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="8">HTTP → WS upgrade</text>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="ws-color">How It Works</h3>
+      <p>WebSocket starts with an HTTP handshake (Upgrade request), then upgrades to a persistent TCP connection. Once connected, either side can send <strong style="color:var(--text)">frames</strong> at any time with no request-response overhead. The connection stays open until either side closes it — making it ideal for live collaboration, gaming, and real-time dashboards.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="ws-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// Server (Node.js / ws library)</span>
+<span class="kw">const</span> wss = <span class="kw">new</span> WebSocketServer({ port: <span class="num">8080</span> });
+wss.on(<span class="str">'connection'</span>, (ws) => {
+  ws.on(<span class="str">'message'</span>, (msg) => {
+    <span class="cm">// Broadcast to all clients</span>
+    wss.clients.<span class="fn">forEach</span>(c => c.<span class="fn">send</span>(msg));
+  });
+});
+
+<span class="cm">// Client</span>
+<span class="kw">const</span> ws = <span class="kw">new</span> <span class="fn">WebSocket</span>(<span class="str">'wss://api.example.com'</span>);
+ws.onmessage = (e) => <span class="fn">render</span>(e.data);
+ws.<span class="fn">send</span>(JSON.<span class="fn">stringify</span>({ type: <span class="str">'chat'</span>, text }));
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="ws-color">Pros & Cons</h3>
+      <div class="pro-item">True real-time — sub-millisecond message delivery</div>
+      <div class="pro-item">Low overhead after handshake (2–10 byte frames)</div>
+      <div class="pro-item">Full-duplex — server pushes without polling</div>
+      <div class="con-item">Stateful — harder to scale horizontally</div>
+      <div class="con-item">Firewalls / proxies may interfere with long connections</div>
+      <div class="con-item">Reconnection logic must be implemented manually</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="ws-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Live chat</span>
+        <span class="use-pill">Multiplayer games</span>
+        <span class="use-pill">Live dashboards</span>
+        <span class="use-pill">Collaborative editing</span>
+        <span class="use-pill">Trading platforms</span>
+        <span class="use-pill">Live sports scores</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 5. gRPC -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">gRPC</div>
+<section class="proto-section" id="grpc">
+  <div class="proto-header">
+    <div class="proto-num">05</div>
+    <div class="proto-icon-lg" style="background:rgba(34,197,94,0.12)">🚀</div>
+    <div class="proto-meta">
+      <h2 class="grpc-color">gRPC</h2>
+      <p class="tagline">Google's high-performance RPC framework using Protocol Buffers over HTTP/2. The standard for microservice-to-microservice communication.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--grpc);border:1px solid rgba(34,197,94,0.2)">HTTP/2</span>
+        <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--grpc);border:1px solid rgba(34,197,94,0.2)">Protocol Buffers</span>
+        <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--grpc);border:1px solid rgba(34,197,94,0.2)">Bi-streaming</span>
+        <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--grpc);border:1px solid rgba(34,197,94,0.2)">Speed: Very Fast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="grpc-color">Binary Protocol Over HTTP/2 Multiplexed Streams</h3>
+      <svg class="diag-svg" viewBox="0 0 700 165" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Service A -->
+        <rect x="20" y="50" width="140" height="65" rx="10" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)" stroke-width="1.5"/>
+        <text x="90" y="76" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVICE A</text>
+        <text x="90" y="92" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">gRPC client stub</text>
+        <text x="90" y="107" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">auto-generated</text>
+
+        <!-- Protobuf middle -->
+        <rect x="265" y="40" width="170" height="85" rx="10" fill="rgba(34,197,94,0.05)" stroke="rgba(34,197,94,0.2)" stroke-width="1.5"/>
+        <text x="350" y="65" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="11" font-weight="500">HTTP/2</text>
+        <text x="350" y="82" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Multiplexed streams</text>
+        <text x="350" y="97" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Binary Protobuf frames</text>
+        <text x="350" y="112" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Header compression</text>
+
+        <!-- Service B -->
+        <rect x="540" y="50" width="140" height="65" rx="10" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)" stroke-width="1.5"/>
+        <text x="610" y="76" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVICE B</text>
+        <text x="610" y="92" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">gRPC server impl</text>
+        <text x="610" y="107" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">proto contract</text>
+
+        <!-- Arrows -->
+        <line x1="162" y1="70" x2="263" y2="70" stroke="rgba(34,197,94,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="263,65 276,70 263,75" fill="rgba(34,197,94,0.7)"/>
+        <line x1="436" y1="70" x2="538" y2="70" stroke="rgba(34,197,94,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="538,65 551,70 538,75" fill="rgba(34,197,94,0.7)"/>
+        <line x1="538" y1="95" x2="436" y2="95" stroke="rgba(34,197,94,0.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="436,90 423,95 436,100" fill="rgba(34,197,94,0.5)"/>
+
+        <!-- Animated binary packet (square = binary) -->
+        <rect x="-5" y="-5" width="10" height="10" rx="2" fill="#22c55e">
+          <animateMotion dur="1.5s" repeatCount="indefinite" begin="0s">
+            <mpath href="#grpc-path"/>
+          </animateMotion>
+        </rect>
+        <rect x="-5" y="-5" width="10" height="10" rx="2" fill="#22c55e" opacity="0.6">
+          <animateMotion dur="1.5s" repeatCount="indefinite" begin="0.5s">
+            <mpath href="#grpc-path"/>
+          </animateMotion>
+        </rect>
+        <path id="grpc-path" d="M162,70 L263,70 L436,70 L538,70" fill="none"/>
+
+        <!-- Proto schema label -->
+        <rect x="240" y="140" width="220" height="20" rx="5" fill="rgba(34,197,94,0.05)" stroke="rgba(34,197,94,0.15)" stroke-width="1"/>
+        <text x="350" y="154" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="9">message User { int32 id = 1; string name = 2; }</text>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="grpc-color">How It Works</h3>
+      <p>Define your service contract in a <code style="font-family:JetBrains Mono;color:#86efac">.proto</code> file. The <code>protoc</code> compiler generates type-safe client/server stubs in any language. Messages are serialized to compact binary (Protobuf) — ~5–10× smaller than JSON. Transported over HTTP/2 which provides multiplexing, streaming, and header compression. Supports 4 call types: unary, server-streaming, client-streaming, and bidirectional.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="grpc-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// user.proto</span>
+<span class="kw">service</span> UserService {
+  rpc <span class="fn">GetUser</span>(UserRequest) <span class="kw">returns</span> (User);
+  rpc <span class="fn">StreamUsers</span>(Filter) <span class="kw">returns</span> <span class="kw">stream</span> User;
+}
+
+<span class="cm">// Node.js client call</span>
+<span class="kw">const</span> stub = <span class="kw">new</span> <span class="fn">UserServiceClient</span>(addr, creds);
+stub.<span class="fn">getUser</span>({ id: <span class="num">42</span> }, (err, user) => {
+  console.<span class="fn">log</span>(user.name); <span class="cm">// binary deserialized</span>
+});
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="grpc-color">Pros & Cons</h3>
+      <div class="pro-item">Extremely fast — binary serialization, HTTP/2 multiplexing</div>
+      <div class="pro-item">Strongly typed — compile-time contract enforcement</div>
+      <div class="pro-item">Polyglot — generates code for 10+ languages</div>
+      <div class="pro-item">Built-in streaming support (4 modes)</div>
+      <div class="con-item">Not human-readable (binary) — harder to debug</div>
+      <div class="con-item">Limited browser support without gRPC-Web proxy</div>
+      <div class="con-item">Schema changes require proto recompilation</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="grpc-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Microservices mesh</span>
+        <span class="use-pill">Real-time streaming</span>
+        <span class="use-pill">Mobile backends</span>
+        <span class="use-pill">ML model serving</span>
+        <span class="use-pill">Low-latency APIs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 6. MQTT -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">MQTT</div>
+<section class="proto-section" id="mqtt">
+  <div class="proto-header">
+    <div class="proto-num">06</div>
+    <div class="proto-icon-lg" style="background:rgba(167,139,250,0.12)">📡</div>
+    <div class="proto-meta">
+      <h2 class="mqtt-color">MQTT</h2>
+      <p class="tagline">Message Queuing Telemetry Transport — a lightweight pub/sub protocol designed for constrained devices and unreliable networks.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--mqtt);border:1px solid rgba(167,139,250,0.2)">TCP</span>
+        <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--mqtt);border:1px solid rgba(167,139,250,0.2)">Pub / Sub</span>
+        <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--mqtt);border:1px solid rgba(167,139,250,0.2)">2-byte header</span>
+        <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--mqtt);border:1px solid rgba(167,139,250,0.2)">Speed: Lightweight</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="mqtt-color">Publish / Subscribe via Central Broker</h3>
+      <svg class="diag-svg" viewBox="0 0 700 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Broker center -->
+        <rect x="275" y="55" width="150" height="60" rx="12" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.4)" stroke-width="2"/>
+        <text x="350" y="81" text-anchor="middle" fill="#c4b5fd" font-family="JetBrains Mono" font-size="12" font-weight="500">BROKER</text>
+        <text x="350" y="97" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">Mosquitto / HiveMQ</text>
+
+        <!-- Publishers -->
+        <rect x="20" y="20" width="120" height="44" rx="8" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.2)" stroke-width="1.5"/>
+        <text x="80" y="41" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9" font-weight="500">SENSOR A</text>
+        <text x="80" y="56" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">pub: sensors/temp</text>
+
+        <rect x="20" y="80" width="120" height="44" rx="8" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.2)" stroke-width="1.5"/>
+        <text x="80" y="101" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9" font-weight="500">SENSOR B</text>
+        <text x="80" y="116" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">pub: sensors/humidity</text>
+
+        <rect x="20" y="140" width="120" height="24" rx="6" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.15)" stroke-width="1"/>
+        <text x="80" y="156" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">pub: sensors/pressure</text>
+
+        <!-- Subscribers -->
+        <rect x="560" y="20" width="120" height="44" rx="8" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.2)" stroke-width="1.5"/>
+        <text x="620" y="41" text-anchor="middle" fill="#67e8f9" font-family="JetBrains Mono" font-size="9" font-weight="500">DASHBOARD</text>
+        <text x="620" y="56" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">sub: sensors/#</text>
+
+        <rect x="560" y="80" width="120" height="44" rx="8" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.2)" stroke-width="1.5"/>
+        <text x="620" y="101" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="9" font-weight="500">ALERT SVC</text>
+        <text x="620" y="116" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">sub: sensors/temp</text>
+
+        <rect x="560" y="140" width="120" height="24" rx="6" fill="rgba(34,197,94,0.06)" stroke="rgba(34,197,94,0.15)" stroke-width="1"/>
+        <text x="620" y="156" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">sub: sensors/+</text>
+
+        <!-- Arrows to broker -->
+        <line x1="142" y1="42" x2="273" y2="72" stroke="rgba(167,139,250,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="142" y1="102" x2="273" y2="85" stroke="rgba(167,139,250,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="142" y1="152" x2="273" y2="100" stroke="rgba(167,139,250,0.2)" stroke-width="1" stroke-dasharray="3 4"/>
+
+        <!-- Arrows from broker -->
+        <line x1="427" y1="72" x2="558" y2="42" stroke="rgba(6,182,212,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="427" y1="85" x2="558" y2="102" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="427" y1="100" x2="558" y2="152" stroke="rgba(34,197,94,0.2)" stroke-width="1" stroke-dasharray="3 4"/>
+
+        <!-- Animated packets -->
+        <circle r="5" fill="#a78bfa">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="0s">
+            <mpath href="#mqtt-p1"/>
+          </animateMotion>
+        </circle>
+        <circle r="5" fill="#67e8f9">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="0.8s">
+            <mpath href="#mqtt-p2"/>
+          </animateMotion>
+        </circle>
+        <path id="mqtt-p1" d="M142,102 L273,85" fill="none"/>
+        <path id="mqtt-p2" d="M427,85 L558,102" fill="none"/>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="mqtt-color">How It Works</h3>
+      <p>Devices (publishers) send messages to <strong style="color:var(--text)">topics</strong> on a broker (e.g., <code style="font-family:JetBrains Mono;color:#c4b5fd">sensors/temperature</code>). Other devices (subscribers) tell the broker which topics they care about using wildcards (<code style="font-family:JetBrains Mono;color:#c4b5fd">sensors/#</code>). The broker routes messages. With a <strong style="color:var(--text)">2-byte minimum header</strong>, MQTT is ideal for microcontrollers with limited RAM and bandwidth. Supports 3 QoS levels (0, 1, 2).</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="mqtt-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// Node.js MQTT publisher (IoT device)</span>
+<span class="kw">const</span> client = mqtt.<span class="fn">connect</span>(<span class="str">'mqtt://broker.io'</span>);
+client.on(<span class="str">'connect'</span>, () => {
+  client.<span class="fn">publish</span>(
+    <span class="str">'sensors/temperature'</span>,
+    JSON.<span class="fn">stringify</span>({ val: <span class="num">23.4</span>, unit: <span class="str">'C'</span> }),
+    { qos: <span class="num">1</span> } <span class="cm">// at-least-once delivery</span>
+  );
+});
+
+<span class="cm">// Subscriber (dashboard)</span>
+client.<span class="fn">subscribe</span>(<span class="str">'sensors/#'</span>);
+client.on(<span class="str">'message'</span>, (topic, msg) =>
+  <span class="fn">updateDashboard</span>(topic, <span class="fn">parse</span>(msg))
+);
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="mqtt-color">Pros & Cons</h3>
+      <div class="pro-item">Ultra-lightweight — 2-byte header, ideal for IoT</div>
+      <div class="pro-item">Decoupled — publishers & subscribers don't know each other</div>
+      <div class="pro-item">QoS levels for guaranteed delivery</div>
+      <div class="con-item">Central broker is a single point of failure</div>
+      <div class="con-item">No built-in message queuing (use broker features)</div>
+      <div class="con-item">Binary topics — no native HTTP semantics</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="mqtt-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">IoT sensor networks</span>
+        <span class="use-pill">Smart home devices</span>
+        <span class="use-pill">Industrial SCADA</span>
+        <span class="use-pill">Vehicle telemetry</span>
+        <span class="use-pill">Wearables</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 7. AMQP -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">AMQP</div>
+<section class="proto-section" id="amqp">
+  <div class="proto-header">
+    <div class="proto-num">07</div>
+    <div class="proto-icon-lg" style="background:rgba(249,115,22,0.12)">📬</div>
+    <div class="proto-meta">
+      <h2 class="amqp-color">AMQP</h2>
+      <p class="tagline">Advanced Message Queuing Protocol — enterprise-grade reliable messaging with routing, acknowledgments, and durable queues.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(249,115,22,0.1);color:var(--amqp);border:1px solid rgba(249,115,22,0.2)">TCP</span>
+        <span class="badge" style="background:rgba(249,115,22,0.1);color:var(--amqp);border:1px solid rgba(249,115,22,0.2)">Message Queue</span>
+        <span class="badge" style="background:rgba(249,115,22,0.1);color:var(--amqp);border:1px solid rgba(249,115,22,0.2)">Durable</span>
+        <span class="badge" style="background:rgba(249,115,22,0.1);color:var(--amqp);border:1px solid rgba(249,115,22,0.2)">Speed: Reliable</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="amqp-color">Exchange → Queue → Consumer Routing</h3>
+      <svg class="diag-svg" viewBox="0 0 700 155" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Producer -->
+        <rect x="20" y="55" width="120" height="50" rx="8" fill="rgba(249,115,22,0.08)" stroke="rgba(249,115,22,0.3)" stroke-width="1.5"/>
+        <text x="80" y="78" text-anchor="middle" fill="#fb923c" font-family="JetBrains Mono" font-size="10" font-weight="500">PRODUCER</text>
+        <text x="80" y="93" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">publishes msg</text>
+
+        <!-- Exchange -->
+        <rect x="180" y="45" width="110" height="70" rx="8" fill="rgba(249,115,22,0.06)" stroke="rgba(249,115,22,0.25)" stroke-width="1.5"/>
+        <text x="235" y="72" text-anchor="middle" fill="#fb923c" font-family="JetBrains Mono" font-size="10" font-weight="500">EXCHANGE</text>
+        <text x="235" y="87" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">direct / topic</text>
+        <text x="235" y="101" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">fanout / headers</text>
+
+        <!-- Queues -->
+        <rect x="350" y="20" width="110" height="40" rx="6" fill="rgba(249,115,22,0.06)" stroke="rgba(249,115,22,0.2)" stroke-width="1"/>
+        <text x="405" y="38" text-anchor="middle" fill="#fb923c" font-family="JetBrains Mono" font-size="9" font-weight="500">QUEUE A</text>
+        <text x="405" y="52" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">orders.new</text>
+
+        <rect x="350" y="80" width="110" height="40" rx="6" fill="rgba(249,115,22,0.06)" stroke="rgba(249,115,22,0.2)" stroke-width="1"/>
+        <text x="405" y="98" text-anchor="middle" fill="#fb923c" font-family="JetBrains Mono" font-size="9" font-weight="500">QUEUE B</text>
+        <text x="405" y="112" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">notifications</text>
+
+        <!-- Consumers -->
+        <rect x="530" y="20" width="110" height="40" rx="6" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+        <text x="585" y="40" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="9" font-weight="500">CONSUMER 1</text>
+        <text x="585" y="53" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">ACK → done</text>
+
+        <rect x="530" y="80" width="110" height="40" rx="6" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+        <text x="585" y="100" text-anchor="middle" fill="#6ee7b7" font-family="JetBrains Mono" font-size="9" font-weight="500">CONSUMER 2</text>
+        <text x="585" y="113" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">NACK → requeue</text>
+
+        <!-- Arrows -->
+        <line x1="142" y1="80" x2="178" y2="80" stroke="rgba(249,115,22,0.5)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="178,75 192,80 178,85" fill="rgba(249,115,22,0.7)"/>
+
+        <line x1="292" y1="70" x2="348" y2="40" stroke="rgba(249,115,22,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="292" y1="90" x2="348" y2="100" stroke="rgba(249,115,22,0.35)" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+        <line x1="462" y1="40" x2="528" y2="40" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="528,35 542,40 528,45" fill="rgba(16,185,129,0.7)"/>
+        <line x1="462" y1="100" x2="528" y2="100" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="528,95 542,100 528,105" fill="rgba(16,185,129,0.7)"/>
+
+        <!-- Animated packet -->
+        <circle r="5" fill="#f97316">
+          <animateMotion dur="3s" repeatCount="indefinite">
+            <mpath href="#amqp-path"/>
+          </animateMotion>
+        </circle>
+        <path id="amqp-path" d="M142,80 L178,80 L292,70 L348,40 L462,40 L528,40" fill="none"/>
+
+        <text x="350" y="140" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">Messages persisted to disk — survive broker restart. ACK/NACK for delivery guarantees.</text>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="amqp-color">How It Works</h3>
+      <p>Producers send messages to an <strong style="color:var(--text)">Exchange</strong> with a routing key. The exchange routes based on type (direct, topic, fanout, headers) to one or more <strong style="color:var(--text)">Queues</strong>. Consumers pull from queues and send ACK/NACK to confirm processing. Messages are durably persisted to disk. If a consumer fails, the broker re-queues the message. RabbitMQ is the most popular AMQP 0-9-1 implementation.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="amqp-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// RabbitMQ with amqplib</span>
+<span class="kw">const</span> ch = <span class="kw">await</span> conn.<span class="fn">createChannel</span>();
+<span class="kw">await</span> ch.<span class="fn">assertQueue</span>(<span class="str">'orders'</span>, { durable: <span class="kw">true</span> });
+
+<span class="cm">// Producer</span>
+ch.<span class="fn">sendToQueue</span>(<span class="str">'orders'</span>,
+  Buffer.<span class="fn">from</span>(JSON.<span class="fn">stringify</span>(order)),
+  { persistent: <span class="kw">true</span> }
+);
+
+<span class="cm">// Consumer (with manual ACK)</span>
+ch.<span class="fn">consume</span>(<span class="str">'orders'</span>, async (msg) => {
+  <span class="kw">await</span> <span class="fn">processOrder</span>(JSON.<span class="fn">parse</span>(msg.content));
+  ch.<span class="fn">ack</span>(msg); <span class="cm">// remove from queue</span>
+});
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="amqp-color">Pros & Cons</h3>
+      <div class="pro-item">Guaranteed delivery with ACK/NACK mechanism</div>
+      <div class="pro-item">Flexible routing via exchange types</div>
+      <div class="pro-item">Message persistence survives broker restart</div>
+      <div class="con-item">Higher infrastructure overhead than MQTT</div>
+      <div class="con-item">More complex setup vs. REST webhooks</div>
+      <div class="con-item">Not suitable for real-time interactive apps</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="amqp-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Order processing</span>
+        <span class="use-pill">Task queues</span>
+        <span class="use-pill">Email / SMS dispatch</span>
+        <span class="use-pill">Background jobs</span>
+        <span class="use-pill">Saga orchestration</span>
+        <span class="use-pill">Audit logging</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 8. SSE -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">SSE</div>
+<section class="proto-section" id="sse">
+  <div class="proto-header">
+    <div class="proto-num">08</div>
+    <div class="proto-icon-lg" style="background:rgba(234,179,8,0.12)">📢</div>
+    <div class="proto-meta">
+      <h2 class="sse-color">SSE</h2>
+      <p class="tagline">Server-Sent Events — a simple, lightweight one-way stream from server to client over regular HTTP. Perfect for live updates and notifications.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(234,179,8,0.1);color:var(--sse);border:1px solid rgba(234,179,8,0.2)">HTTP/1.1+</span>
+        <span class="badge" style="background:rgba(234,179,8,0.1);color:var(--sse);border:1px solid rgba(234,179,8,0.2)">text/event-stream</span>
+        <span class="badge" style="background:rgba(234,179,8,0.1);color:var(--sse);border:1px solid rgba(234,179,8,0.2)">Auto-reconnect</span>
+        <span class="badge" style="background:rgba(234,179,8,0.1);color:var(--sse);border:1px solid rgba(234,179,8,0.2)">Speed: Lightweight</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="sse-color">Unidirectional Server-to-Client Stream</h3>
+      <svg class="diag-svg" viewBox="0 0 700 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Client -->
+        <rect x="20" y="45" width="130" height="55" rx="10" fill="rgba(234,179,8,0.08)" stroke="rgba(234,179,8,0.3)" stroke-width="1.5"/>
+        <text x="85" y="71" text-anchor="middle" fill="#fcd34d" font-family="JetBrains Mono" font-size="11" font-weight="500">CLIENT</text>
+        <text x="85" y="86" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">EventSource API</text>
+
+        <!-- Server -->
+        <rect x="550" y="45" width="130" height="55" rx="10" fill="rgba(234,179,8,0.08)" stroke="rgba(234,179,8,0.3)" stroke-width="1.5"/>
+        <text x="615" y="71" text-anchor="middle" fill="#fcd34d" font-family="JetBrains Mono" font-size="11" font-weight="500">SERVER</text>
+        <text x="615" y="86" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">text/event-stream</text>
+
+        <!-- One-way stream (server → client only) -->
+        <line x1="548" y1="72" x2="155" y2="72" stroke="rgba(234,179,8,0.3)" stroke-width="2" stroke-dasharray="6 4"/>
+        <polygon points="155,67 142,72 155,77" fill="rgba(234,179,8,0.7)"/>
+
+        <!-- Multiple animated events -->
+        <circle r="6" fill="#eab308">
+          <animateMotion dur="2.4s" repeatCount="indefinite" begin="0s">
+            <mpath href="#sse-path"/>
+          </animateMotion>
+        </circle>
+        <circle r="6" fill="#eab308" opacity="0.7">
+          <animateMotion dur="2.4s" repeatCount="indefinite" begin="0.8s">
+            <mpath href="#sse-path"/>
+          </animateMotion>
+        </circle>
+        <circle r="6" fill="#eab308" opacity="0.5">
+          <animateMotion dur="2.4s" repeatCount="indefinite" begin="1.6s">
+            <mpath href="#sse-path"/>
+          </animateMotion>
+        </circle>
+        <path id="sse-path" d="M548,72 L155,72" fill="none"/>
+
+        <!-- Event labels flowing down -->
+        <text x="350" y="60" text-anchor="middle" fill="#f59e0b" font-family="JetBrains Mono" font-size="10">data: {"price": 42.5}</text>
+        <text x="350" y="95" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">event: priceUpdate  id: 1234</text>
+
+        <!-- X mark on reverse -->
+        <text x="85" y="120" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">✓ Server → Client only  ✗ No client → server messages</text>
+        <text x="530" y="120" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="9">✓ Auto-reconnects with Last-Event-ID</text>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="sse-color">How It Works</h3>
+      <p>The client opens a single HTTP connection with <code style="font-family:JetBrains Mono;color:#fcd34d">Accept: text/event-stream</code>. The server keeps the connection open and streams newline-delimited text events. Each event has an optional <code>id</code>, <code>event</code> type, and <code>data</code> field. The browser's built-in <code>EventSource</code> API handles <strong style="color:var(--text)">automatic reconnection</strong> using the last event ID. Unlike WebSockets, it runs over plain HTTP — no upgrade needed.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="sse-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">// Express SSE endpoint</span>
+app.<span class="fn">get</span>(<span class="str">'/events'</span>, (req, res) => {
+  res.<span class="fn">setHeader</span>(<span class="str">'Content-Type'</span>, <span class="str">'text/event-stream'</span>);
+  res.<span class="fn">setHeader</span>(<span class="str">'Cache-Control'</span>, <span class="str">'no-cache'</span>);
+
+  <span class="kw">const</span> send = (data) =>
+    res.<span class="fn">write</span>(<span class="str">`data: ${JSON.stringify(data)}\n\n`</span>);
+
+  <span class="kw">const</span> iv = <span class="fn">setInterval</span>(() =>
+    <span class="fn">send</span>({ price: <span class="fn">getLatestPrice</span>() }), <span class="num">1000</span>
+  );
+  req.on(<span class="str">'close'</span>, () => <span class="fn">clearInterval</span>(iv));
+});
+
+<span class="cm">// Client</span>
+<span class="kw">const</span> es = <span class="kw">new</span> <span class="fn">EventSource</span>(<span class="str">'/events'</span>);
+es.onmessage = (e) => <span class="fn">updatePrice</span>(JSON.<span class="fn">parse</span>(e.data));
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="sse-color">SSE vs WebSocket</h3>
+      <div class="pro-item">Works over HTTP — no firewall issues, proxy-friendly</div>
+      <div class="pro-item">Automatic reconnection built into EventSource</div>
+      <div class="pro-item">Much simpler than WebSocket for one-way data</div>
+      <div class="con-item">Server → Client only (use fetch for client→server)</div>
+      <div class="con-item">HTTP/1.1 limit of 6 connections per browser</div>
+      <div class="con-item">Text-only (no binary frames like WebSocket)</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="sse-color">Best Use Cases</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Live notifications</span>
+        <span class="use-pill">News feeds</span>
+        <span class="use-pill">Stock tickers</span>
+        <span class="use-pill">AI token streaming</span>
+        <span class="use-pill">Progress bars</span>
+        <span class="use-pill">Log tailing</span>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(234,179,8,0.05);border-radius:8px;border-left:3px solid var(--sse)">
+        <p style="font-size:12px;color:var(--muted2)"><strong style="color:var(--sse)">Note:</strong> This is how LLM APIs (like Claude) stream tokens back to the browser — SSE is perfect for progressive text generation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 9. SOAP -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">SOAP</div>
+<section class="proto-section" id="soap">
+  <div class="proto-header">
+    <div class="proto-num">09</div>
+    <div class="proto-icon-lg" style="background:rgba(107,114,128,0.12)">📄</div>
+    <div class="proto-meta">
+      <h2 class="soap-color">SOAP</h2>
+      <p class="tagline">Simple Object Access Protocol — a heavyweight, XML-based protocol with strict contracts via WSDL. The enterprise standard before REST took over.</p>
+      <div class="proto-badges">
+        <span class="badge" style="background:rgba(107,114,128,0.1);color:var(--soap);border:1px solid rgba(107,114,128,0.2)">HTTP · SMTP · TCP</span>
+        <span class="badge" style="background:rgba(107,114,128,0.1);color:var(--soap);border:1px solid rgba(107,114,128,0.2)">XML / WSDL</span>
+        <span class="badge" style="background:rgba(107,114,128,0.1);color:var(--soap);border:1px solid rgba(107,114,128,0.2)">WS-Security</span>
+        <span class="badge" style="background:rgba(107,114,128,0.1);color:var(--soap);border:1px solid rgba(107,114,128,0.2)">Speed: Heavy</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="diagram-box full-width">
+      <h3 class="soap-color">SOAP Envelope Structure</h3>
+      <svg class="diag-svg" viewBox="0 0 700 155" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Envelope outer -->
+        <rect x="20" y="20" width="310" height="125" rx="10" fill="rgba(107,114,128,0.06)" stroke="rgba(107,114,128,0.3)" stroke-width="1.5"/>
+        <text x="175" y="40" text-anchor="middle" fill="#9ca3af" font-family="JetBrains Mono" font-size="11" font-weight="500">&lt;soap:Envelope&gt;</text>
+
+        <!-- Header -->
+        <rect x="35" y="48" width="280" height="30" rx="6" fill="rgba(107,114,128,0.08)" stroke="rgba(107,114,128,0.2)" stroke-width="1"/>
+        <text x="175" y="68" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono" font-size="9">&lt;soap:Header&gt; WS-Security · Auth Token &lt;/Header&gt;</text>
+
+        <!-- Body -->
+        <rect x="35" y="87" width="280" height="48" rx="6" fill="rgba(107,114,128,0.08)" stroke="rgba(107,114,128,0.2)" stroke-width="1"/>
+        <text x="175" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono" font-size="9">&lt;soap:Body&gt;</text>
+        <text x="175" y="118" text-anchor="middle" fill="#9ca3af" font-family="JetBrains Mono" font-size="9">  &lt;GetUserRequest&gt;&lt;userId&gt;42&lt;/userId&gt;</text>
+        <text x="175" y="128" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono" font-size="9">  &lt;/GetUserRequest&gt;&lt;/soap:Body&gt;</text>
+
+        <!-- Arrow -->
+        <line x1="335" y1="82" x2="390" y2="82" stroke="rgba(107,114,128,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="390,77 403,82 390,87" fill="rgba(107,114,128,0.6)"/>
+
+        <!-- Server + WSDL -->
+        <rect x="405" y="20" width="270" height="60" rx="10" fill="rgba(107,114,128,0.06)" stroke="rgba(107,114,128,0.25)" stroke-width="1.5"/>
+        <text x="540" y="48" text-anchor="middle" fill="#9ca3af" font-family="JetBrains Mono" font-size="10" font-weight="500">SOAP SERVICE</text>
+        <text x="540" y="64" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="8">Contract defined by WSDL file</text>
+
+        <rect x="405" y="95" width="270" height="45" rx="10" fill="rgba(59,130,246,0.05)" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+        <text x="540" y="116" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono" font-size="9">WSDL = Web Service Description Language</text>
+        <text x="540" y="131" text-anchor="middle" fill="#475569" font-family="JetBrains Mono" font-size="8">Defines operations, types, bindings, port</text>
+
+        <!-- Animated packet -->
+        <rect x="-6" y="-4" width="12" height="8" rx="2" fill="#6b7280">
+          <animateMotion dur="3s" repeatCount="indefinite">
+            <mpath href="#soap-path"/>
+          </animateMotion>
+        </rect>
+        <path id="soap-path" d="M335,82 L403,82" fill="none"/>
+      </svg>
+    </div>
+
+    <div class="info-card">
+      <h3 class="soap-color">How It Works</h3>
+      <p>Every SOAP message is wrapped in an XML <strong style="color:var(--text)">Envelope</strong> containing a Header (authentication, routing) and Body (the actual operation). The service is described in a <strong style="color:var(--text)">WSDL</strong> (Web Services Description Language) file which clients use to auto-generate typed proxies. SOAP supports WS-Security for enterprise-grade security, transactions (WS-AtomicTransaction), and reliable messaging.</p>
+    </div>
+
+    <div class="info-card">
+      <h3 class="soap-color">Code Example</h3>
+      <div class="code-block">
+<span class="cm">/* SOAP request envelope */</span>
+&lt;?xml version=<span class="str">"1.0"</span>?&gt;
+&lt;soap:Envelope
+  xmlns:soap=<span class="str">"http://schemas.xmlsoap.org/..."</span>&gt;
+  &lt;soap:Header&gt;
+    &lt;auth&gt;&lt;token&gt;<span class="str">abc123</span>&lt;/token&gt;&lt;/auth&gt;
+  &lt;/soap:Header&gt;
+  &lt;soap:Body&gt;
+    &lt;GetUser xmlns=<span class="str">"http://example.com"</span>&gt;
+      &lt;UserId&gt;<span class="num">42</span>&lt;/UserId&gt;
+    &lt;/GetUser&gt;
+  &lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="soap-color">Pros & Cons</h3>
+      <div class="pro-item">Strict contracts prevent integration mismatches</div>
+      <div class="pro-item">WS-Security for enterprise compliance (HIPAA, PCI)</div>
+      <div class="pro-item">Works over HTTP, SMTP, TCP — transport agnostic</div>
+      <div class="con-item">Extremely verbose XML — high bandwidth overhead</div>
+      <div class="con-item">Complex tooling required (WSDL parsers, code gen)</div>
+      <div class="con-item">REST is simpler for 95% of modern use cases</div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="soap-color">When You Still Need It</h3>
+      <div class="use-case-list">
+        <span class="use-pill">Banking systems</span>
+        <span class="use-pill">Healthcare (HL7)</span>
+        <span class="use-pill">Government portals</span>
+        <span class="use-pill">Legacy ERP (SAP)</span>
+        <span class="use-pill">Payment gateways</span>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(107,114,128,0.06);border-radius:8px;border-left:3px solid var(--soap)">
+        <p style="font-size:12px;color:var(--muted2)"><strong style="color:var(--soap)">Modern reality:</strong> Avoid SOAP for new projects. Use it only when integrating with legacy enterprise systems that mandate it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SPEED COMPARISON CHART -->
+<!-- ══════════════════════════════════════════ -->
+<div class="divider">Speed Comparison</div>
+<div class="comparison-section">
+  <div class="info-card full-width">
+    <h3 style="color:var(--muted2)">Relative Performance Index</h3>
+    <br>
+    <div class="comp-bar-wrap">
+      <div class="comp-row">
+        <div class="comp-name">gRPC</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:96%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+        <div class="comp-val">Very Fast</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">WebSocket</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:80%;background:linear-gradient(90deg,#06b6d4,#67e8f9)"></div></div>
+        <div class="comp-val">Fast</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">Webhooks</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:72%;background:linear-gradient(90deg,#10b981,#6ee7b7)"></div></div>
+        <div class="comp-val">Fast</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">SSE</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:65%;background:linear-gradient(90deg,#eab308,#fcd34d)"></div></div>
+        <div class="comp-val">Lightweight</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">MQTT</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:62%;background:linear-gradient(90deg,#a78bfa,#c4b5fd)"></div></div>
+        <div class="comp-val">Lightweight</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">GraphQL</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:54%;background:linear-gradient(90deg,#ec4899,#f9a8d4)"></div></div>
+        <div class="comp-val">Medium</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">REST</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:50%;background:linear-gradient(90deg,#3b82f6,#93c5fd)"></div></div>
+        <div class="comp-val">Medium</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">AMQP</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:46%;background:linear-gradient(90deg,#f97316,#fb923c)"></div></div>
+        <div class="comp-val">Reliable</div>
+      </div>
+      <div class="comp-row">
+        <div class="comp-name">SOAP</div>
+        <div class="comp-bar-track"><div class="comp-bar-fill" style="width:18%;background:linear-gradient(90deg,#6b7280,#9ca3af)"></div></div>
+        <div class="comp-val">Heavy</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:20px;font-family:JetBrains Mono">* Performance is relative and depends on payload size, network conditions, and implementation. MQTT/SSE are "lightweight" — optimized for low overhead rather than raw throughput.</p>
+  </div>
+</div>
+
+      </div><!-- /wrapper -->
+    </main><!-- /main-content -->
+  </div><!-- /layout -->
+</body>
+</html>

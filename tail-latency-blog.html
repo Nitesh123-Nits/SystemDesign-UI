@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tail Latency — A System Design Deep Dive</title>
+<link rel="stylesheet" href="shared-guides.css">
+<script src="data.js" defer></script>
+<script src="shared-guides.js" defer></script>
+<script>window.GUIDE_ID = 'g21';</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Main Concept</div>
+      <div class="nav-item active" data-sec="overview"><span>⏱️</span> Tail Latency Overview</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Navigation</div>
+      <div class="nav-item" data-sec="percentiles"><span>📊</span> Percentiles (P95/P99)</div>
+      <div class="nav-item" data-sec="causes"><span>🔥</span> Causes of Latency</div>
+      <div class="nav-item" data-sec="strategies"><span>🛡️</span> Mitigation Strategies</div>
+      <div class="nav-item" data-sec="casestudy"><span>🏢</span> Case Study</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --paper: #f5f0e8;
+    --accent: #c84b2f;
+    --accent2: #2563be;
+    --muted: #7a7268;
+    --rule: #d4cec4;
+    --highlight: #fff3cd;
+    --code-bg: #0f1117;
+    --code-text: #e2e8f0;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Instrument Serif', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 18px;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+
+  .site-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--paper);
+    text-decoration: none;
+  }
+
+  .site-title span { color: var(--accent); }
+
+  nav { display: flex; gap: 1.5rem; align-items: center; }
+
+  nav a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: #a0998c;
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--paper); }
+
+  /* HERO */
+  .hero {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 5rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(255,255,255,0.04) 39px,
+      rgba(255,255,255,0.04) 40px
+    );
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .hero-tag::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(2.8rem, 7vw, 5rem);
+    line-height: 1.08;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: #8a8278;
+    line-height: 1.6;
+    max-width: 600px;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #6a6258;
+    letter-spacing: 0.05em;
+  }
+  .meta-item strong {
+    display: block;
+    color: #c4bdb4;
+    margin-bottom: 2px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* LATENCY CHART HERO */
+  .latency-viz {
+    margin-top: 3rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+    padding: 1.5rem;
+  }
+
+  .viz-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: #6a6258;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .percentile-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 80px;
+  }
+
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 2px 2px 0 0;
+    transition: opacity 0.3s;
+    position: relative;
+  }
+
+  .bar-p50  { height: 18px; background: var(--green); }
+  .bar-p75  { height: 28px; background: #65a30d; }
+  .bar-p90  { height: 40px; background: var(--yellow); }
+  .bar-p95  { height: 52px; background: #ea580c; }
+  .bar-p99  { height: 68px; background: var(--red); }
+  .bar-p999 { height: 80px; background: #991b1b; }
+
+  .bar-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #8a8278;
+    letter-spacing: 0.05em;
+  }
+
+  .bar-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: #c4bdb4;
+    text-align: center;
+  }
+
+  /* LAYOUT */
+  .page-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .page-wrap {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .sidebar { order: -1; }
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: sticky;
+    top: 80px;
+  }
+
+  .toc {
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 1.5rem;
+    background: white;
+  }
+
+  .toc-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+  }
+
+  .toc li {
+    counter-increment: toc;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.5rem 0;
+  }
+
+  .toc li:last-child { border-bottom: none; }
+
+  .toc a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    transition: color 0.2s;
+    line-height: 1.4;
+  }
+
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--rule);
+    flex-shrink: 0;
+    font-size: 0.6rem;
+  }
+
+  .toc a:hover { color: var(--accent); }
+
+  .sidebar-card {
+    margin-top: 1.5rem;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.5rem;
+  }
+
+  .sidebar-card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .sidebar-card p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #8a8278;
+    line-height: 1.6;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border: 1px solid #2a2a35;
+    color: #6a6258;
+    letter-spacing: 0.05em;
+  }
+
+  /* MAIN CONTENT */
+  .article-body { max-width: 720px; }
+
+  /* SECTIONS */
+  section { margin-bottom: 4rem; }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin: 2rem 0 0.75rem;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+
+  p { margin-bottom: 1.25rem; color: #2a2820; }
+
+  strong { font-weight: 600; }
+
+  /* CALLOUTS */
+  .callout {
+    padding: 1.25rem 1.5rem;
+    margin: 2rem 0;
+    position: relative;
+    border-left: 4px solid;
+  }
+
+  .callout-warn {
+    background: #fef9e7;
+    border-color: var(--yellow);
+  }
+
+  .callout-info {
+    background: #eff6ff;
+    border-color: var(--accent2);
+  }
+
+  .callout-danger {
+    background: #fef2f2;
+    border-color: var(--red);
+  }
+
+  .callout-success {
+    background: #f0fdf4;
+    border-color: var(--green);
+  }
+
+  .callout-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .callout-warn .callout-label { color: #92400e; }
+  .callout-info .callout-label { color: #1e40af; }
+  .callout-danger .callout-label { color: #991b1b; }
+  .callout-success .callout-label { color: #14532d; }
+
+  .callout p {
+    font-size: 0.92rem;
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+
+  /* CODE */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1.5rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    border: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .code-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #4a5568;
+    background: #1a1f2e;
+    padding: 4px 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom-left-radius: 4px;
+  }
+
+  .kw  { color: #c792ea; }
+  .fn  { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .num { color: #f78c6c; }
+  .op  { color: #89ddff; }
+
+  code {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82em;
+    background: #eee9df;
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: var(--accent);
+  }
+
+  /* DIAGRAMS */
+  .diagram {
+    border: 1px solid var(--rule);
+    background: white;
+    margin: 2rem 0;
+    overflow: hidden;
+  }
+
+  .diagram-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.75rem 1rem;
+    background: #f8f5f0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .diagram-body {
+    padding: 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.8;
+    color: #3a3530;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+  }
+
+  .compare-table th {
+    background: var(--ink);
+    color: var(--paper);
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .compare-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .compare-table tr:nth-child(even) td { background: #faf7f2; }
+
+  .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-green { background: #dcfce7; color: #14532d; }
+  .badge-yellow { background: #fef9c3; color: #713f12; }
+
+  /* TIMELINE / STEPS */
+  .steps {
+    border-left: 2px solid var(--rule);
+    padding-left: 2rem;
+    margin: 2rem 0;
+    position: relative;
+  }
+
+  .step {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .step::before {
+    content: '';
+    position: absolute;
+    left: -2.5rem;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 3px solid var(--paper);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    color: var(--ink);
+  }
+
+  .step p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+    color: #4a4540;
+  }
+
+  /* PULLQUOTE */
+  .pullquote {
+    margin: 3rem -1rem;
+    padding: 1.5rem 2rem;
+    border-top: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    text-align: center;
+  }
+
+  .pullquote p {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .pullquote cite {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 0.75rem;
+  }
+
+  /* MATH / FORMULA */
+  .formula {
+    background: #f0ede8;
+    border: 1px solid var(--rule);
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--ink);
+    border-radius: 2px;
+  }
+
+  .formula .eq { font-size: 1.1rem; letter-spacing: 0.05em; }
+  .formula .note { font-size: 0.65rem; color: var(--muted); margin-top: 0.5rem; }
+
+  /* GRID CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: white;
+    padding: 1.25rem;
+  }
+
+  .card-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+    color: var(--ink);
+  }
+
+  .card p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* INLINE STAT */
+  .stat-row {
+    display: flex;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  .stat {
+    flex: 1;
+    padding: 1.25rem;
+    background: white;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Instrument Serif', serif;
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--accent);
+    display: block;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+    display: block;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: #6a6258;
+    padding: 3rem 2rem;
+    text-align: center;
+    border-top: 3px solid var(--accent);
+  }
+
+  footer p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    margin-bottom: 0;
+    line-height: 2;
+    color: #6a6258;
+  }
+
+  footer a { color: #8a8278; text-decoration: none; }
+  footer a:hover { color: var(--paper); }
+
+  /* DIVIDER */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 2.5rem 0;
+    color: var(--rule);
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .divider span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--rule);
+    letter-spacing: 0.2em;
+    flex-shrink: 0;
+  }
+
+  /* MOBILE NAV */
+  .mobile-toc-btn {
+    display: none;
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 0.75rem 1.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    z-index: 200;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 900px) {
+    .mobile-toc-btn { display: block; }
+    nav a { display: none; }
+    nav a:last-child { display: block; }
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 3rem 1.25rem 2.5rem; }
+    .page-wrap { padding: 2.5rem 1.25rem; }
+    .pullquote { margin: 2rem 0; }
+    .stat-row { flex-wrap: wrap; }
+    .stat { flex: 0 0 50%; }
+    .hero-meta { gap: 1rem; }
+    .percentile-bars { height: 60px; }
+    .bar-p999 { height: 60px; }
+    .bar-p99  { height: 51px; }
+    .bar-p95  { height: 40px; }
+    .bar-p90  { height: 30px; }
+    .bar-p75  { height: 21px; }
+    .bar-p50  { height: 14px; }
+  }
+
+  /* SCROLL ANIMATIONS */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a class="site-title" href="#">SYS<span>DEEP</span></a>
+    <nav>
+      <a href="#why">Why It Matters</a>
+      <a href="#causes">Root Causes</a>
+      <a href="#mitigation">Mitigations</a>
+      <a href="#patterns">Patterns</a>
+      <a href="#tldr">TL;DR</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">System Design Field Notes · Vol. 07</div>
+
+    <h1>The <em>Tail Latency</em><br>Problem in Distributed Systems</h1>
+
+    <p class="hero-sub">
+      Why p99 can destroy user experience even when your median looks healthy — and the engineering toolkit to fight back.
+    </p>
+
+    <div class="hero-meta">
+      <div class="meta-item">
+        <strong>Author</strong>
+        SysDeep Editorial
+      </div>
+      <div class="meta-item">
+        <strong>Published</strong>
+        April 7, 2026
+      </div>
+      <div class="meta-item">
+        <strong>Read time</strong>
+        ~18 min
+      </div>
+      <div class="meta-item">
+        <strong>Difficulty</strong>
+        Intermediate → Advanced
+      </div>
+    </div>
+
+    <div class="latency-viz">
+      <div class="viz-label">Latency distribution — same service, different percentiles</div>
+      <div class="percentile-bars">
+        <div class="bar-group">
+          <div class="bar-val">12ms</div>
+          <div class="bar bar-p50"></div>
+          <div class="bar-label">p50</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val">18ms</div>
+          <div class="bar bar-p75"></div>
+          <div class="bar-label">p75</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val">35ms</div>
+          <div class="bar bar-p90"></div>
+          <div class="bar-label">p90</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val">62ms</div>
+          <div class="bar bar-p95"></div>
+          <div class="bar-label">p95</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val">210ms</div>
+          <div class="bar bar-p99"></div>
+          <div class="bar-label">p99</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-val">850ms</div>
+          <div class="bar bar-p999"></div>
+          <div class="bar-label">p99.9</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE LAYOUT -->
+<div class="page-wrap">
+
+  <!-- MAIN CONTENT -->
+  <main class="article-body">
+
+    <!-- 1. WHAT IS TAIL LATENCY -->
+    <section id="what" class="fade-in">
+      <div class="section-num">01 / Foundation</div>
+      <h2>What Is Tail Latency?</h2>
+
+      <p>
+        Tail latency refers to the <strong>high-percentile response times</strong> of a system — the latency experienced by the slowest fraction of requests. While your median (p50) latency might be a perfectly acceptable 12 milliseconds, your p99 could be 210ms and your p99.9 could be nearly a second. That gap is the "tail."
+      </p>
+
+      <p>
+        The term comes from the statistical distribution of response times. If you were to plot all request latencies on a histogram, you'd see a bulk of fast responses followed by a long, thin tail stretching rightward — representing rare but very slow requests.
+      </p>
+
+      <div class="callout callout-info">
+        <div class="callout-label">📐 Key Definition</div>
+        <p>
+          <strong>p99 latency</strong> means 99% of your requests complete faster than that value. Equivalently, 1 in 100 requests is slower. At 10,000 req/s, that's 100 users every second experiencing your worst-case performance.
+        </p>
+      </div>
+
+      <p>
+        Most engineers intuitively optimize for mean or median latency. This is a trap. Averages mask outliers, and in distributed systems, outliers compound in ways that systematically hurt real users.
+      </p>
+
+      <div class="diagram">
+        <div class="diagram-title">Latency Percentile Reference</div>
+        <div class="diagram-body">Percentile  │  Meaning                           │  At 10K rps
+────────────┼────────────────────────────────────┼───────────────────
+p50 (median)│  50% of requests are ≤ this value  │  5,000 slow req/s
+p90         │  10% of requests exceed this        │  1,000 slow req/s
+p95         │  5% of requests exceed this         │    500 slow req/s
+p99         │  1% of requests exceed this         │    100 slow req/s
+p99.9       │  0.1% of requests exceed this       │     10 slow req/s
+p99.99      │  0.01% of requests exceed this      │      1 slow req/s</div>
+      </div>
+    </section>
+
+    <!-- 2. WHY IT MATTERS -->
+    <section id="why" class="fade-in">
+      <div class="section-num">02 / The Stakes</div>
+      <h2>Why Tail Latency Destroys User Experience</h2>
+
+      <p>
+        The cruel irony of tail latency is that it disproportionately affects your <strong>most active users</strong>. A user who makes 100 requests per session has a very high probability of encountering at least one slow response, even if only 1% of requests are slow.
+      </p>
+
+      <div class="formula">
+        <div class="eq">P(at least one slow request) = 1 − (1 − p99_rate)<sup>N</sup></div>
+        <div class="note">Where N = number of requests in a session. At N=100, p99 rate = 0.01: P ≈ 63%</div>
+      </div>
+
+      <p>
+        This means your heaviest users — the ones most invested in your product — are more likely to experience tail latency than a casual user who fires off a single request. You're penalizing loyalty.
+      </p>
+
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-num">63%</span>
+          <span class="stat-label">Chance of hitting p99 in a 100-request session</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">~1s</span>
+          <span class="stat-label">Amazon's reported revenue impact threshold per second of latency</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">70ms</span>
+          <span class="stat-label">Latency at which user perception shifts from "instant" to "noticed"</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">10×</span>
+          <span class="stat-label">Typical fan-out in a microservice call chain — tail latency amplifier</span>
+        </div>
+      </div>
+
+      <h3>The Fan-Out Amplification Effect</h3>
+
+      <p>
+        In a microservices architecture, a single user request often fans out to many backend services. If each downstream call has a p99 of 50ms and you make 10 parallel calls, the latency of your response is determined by the <strong>slowest</strong> of those calls.
+      </p>
+
+      <div class="diagram">
+        <div class="diagram-title">Fan-out Amplification — Serial vs Parallel</div>
+        <div class="diagram-body">User Request
+    │
+    ├─── Service A (p99: 50ms) ──┐
+    ├─── Service B (p99: 50ms) ──┤  MAX of all = your p99
+    ├─── Service C (p99: 50ms) ──┤  With 10 services, p99 of composed
+    ├─── Service D (p99: 50ms) ──┤  request ≈ 1 − (0.99)^10 ≈ ~10%
+    └─── Service E (p99: 50ms) ──┘  chance of being slow!
+
+Serial chain:
+User → A → B → C → D → E → Response
+Latency = SUM of each hop's latency
+p99 compound = dramatically worse</div>
+      </div>
+
+      <div class="callout callout-danger">
+        <div class="callout-label">⚠️ The Math Is Brutal</div>
+        <p>
+          With 100 downstream calls at p99 reliability each, the probability your top-level request completes in the p99 window is only (0.99)^100 ≈ <strong>37%</strong>. Nearly two-thirds of top-level requests are degraded — even though each service looks healthy in isolation.
+        </p>
+      </div>
+    </section>
+
+    <!-- 3. ROOT CAUSES -->
+    <section id="causes" class="fade-in">
+      <div class="section-num">03 / Root Causes</div>
+      <h2>Where Does Tail Latency Come From?</h2>
+
+      <p>
+        Tail latency isn't a single bug — it's a constellation of systemic causes that interact in complex ways. Understanding the sources is the prerequisite for targeting the right interventions.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">Resource Contention & Queueing</div>
+          <p>When requests arrive faster than they can be served, queues form. Queueing theory (M/M/1 model) tells us latency explodes non-linearly as utilization approaches 100%. Even at 80% utilization, queuing adds significant variance.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Garbage Collection Pauses</div>
+          <p>JVM languages (Java, Scala, Kotlin) pause all threads during GC. A full GC can take hundreds of milliseconds, creating a "pause storm" visible directly in latency percentiles. Go's concurrent GC has dramatically improved this, but it still exists.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">CPU Scheduling Jitter</div>
+          <p>The OS kernel can preempt threads at inopportune moments. A thread waiting for CPU time adds jitter measured in milliseconds that's invisible in median stats but visible in the tail.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Network Variance</div>
+          <p>TCP retransmits, packet loss, congestion window resets, and head-of-line blocking all cause occasional spikes. A single retransmit adds the full RTT (often 50-200ms) to that request's latency.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Cold Caches & Cache Stampedes</div>
+          <p>A cache miss forces a backend lookup that can be 10-1000x slower. Cache expiry stampedes cause synchronized misses. Connection pool exhaustion causes requests to queue waiting for a DB connection.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Lock Contention & Serialization</div>
+          <p>A mutex protecting shared state can serialize concurrent requests. The unlucky request that arrives during contention pays the full wait time on top of its own processing time.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Noisy Neighbors (Cloud Environments)</div>
+          <p>In multi-tenant cloud environments, other tenants on the same physical host can steal CPU, memory bandwidth, network I/O, or disk I/O — causing unpredictable jitter that you cannot control from within your application.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"><span>§</span></div>
+
+    <!-- 4. MITIGATION -->
+    <section id="mitigation" class="fade-in">
+      <div class="section-num">04 / Mitigation Strategies</div>
+      <h2>Engineering Toolkit for Taming the Tail</h2>
+
+      <p>
+        No single technique eliminates tail latency. Real-world systems use layered defenses, accepting that some irreducible tail will always exist while aggressively targeting the addressable portion.
+      </p>
+
+      <h3>1. Hedged Requests</h3>
+
+      <p>
+        Pioneered at Google and described in the famous <em>"The Tail at Scale"</em> paper, hedged requests send a duplicate request to a second server after a short delay (the "hedge delay"). The first response to arrive wins; the slower one is cancelled.
+      </p>
+
+      <pre><code class="code-label">pseudocode</code><span class="cm">// Send primary request, hedge after threshold</span>
+<span class="kw">async function</span> <span class="fn">hedgedRequest</span>(endpoint, payload) {
+  <span class="kw">const</span> hedgeDelay = <span class="num">10</span>; <span class="cm">// ms — typically p95 of baseline</span>
+  
+  <span class="kw">const</span> controller = <span class="kw">new</span> AbortController();
+  
+  <span class="kw">const</span> primary = fetch(endpoint, { signal: controller.signal, body: payload });
+  
+  <span class="kw">const</span> hedge = <span class="fn">sleep</span>(hedgeDelay).then(() =>
+    fetch(endpoint + <span class="str">'?replica=1'</span>, { signal: controller.signal, body: payload })
+  );
+  
+  <span class="kw">const</span> result = <span class="kw">await</span> Promise.race([primary, hedge]);
+  controller.abort(); <span class="cm">// cancel the loser</span>
+  <span class="kw">return</span> result;
+}</pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-label">⚡ Tradeoff</div>
+        <p>
+          Hedged requests increase backend load — at hedge delay p5, you'd send ~5% extra requests. The hedge delay must be tuned carefully. Too short and you double all load; too long and you don't catch the tail.
+        </p>
+      </div>
+
+      <h3>2. Tied Requests (Cross-Server Cancellation)</h3>
+
+      <p>
+        A refinement of hedging: send duplicate requests to two servers simultaneously, but include a cancellation token. When one server begins processing (acquires a lock or dequeues the request), it notifies the other server to cancel. This bounds the extra work performed.
+      </p>
+
+      <h3>3. Request Timeouts + Retry Budgets</h3>
+
+      <p>
+        Aggressive per-request timeouts prevent tail requests from holding resources indefinitely. But naive retries amplify load — if a service is degraded, retries cause a retry storm. A <strong>retry budget</strong> limits the fraction of requests that can be retried at any given time.
+      </p>
+
+      <pre><code class="code-label">concept</code><span class="cm">// Retry budget: allow retries only if budget permits</span>
+<span class="kw">class</span> <span class="fn">RetryBudget</span> {
+  <span class="fn">constructor</span>(ratio = <span class="num">0.1</span>) { <span class="cm">// 10% retry budget</span>
+    <span class="kw">this</span>.ratio = ratio;
+    <span class="kw">this</span>.totalRequests = <span class="num">0</span>;
+    <span class="kw">this</span>.retries = <span class="num">0</span>;
+  }
+  
+  <span class="fn">canRetry</span>() {
+    <span class="kw">return</span> <span class="kw">this</span>.retries / (<span class="kw">this</span>.totalRequests || <span class="num">1</span>) < <span class="kw">this</span>.ratio;
+  }
+  
+  <span class="fn">record</span>(isRetry) {
+    <span class="kw">this</span>.totalRequests++;
+    <span class="kw">if</span> (isRetry) <span class="kw">this</span>.retries++;
+  }
+}</pre>
+
+      <h3>4. Load Balancing with Latency Awareness</h3>
+
+      <p>
+        Round-robin load balancing ignores server health, often sending requests to already-overloaded backends. Alternatives:
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <span class="card-icon">⚖️</span>
+          <div class="card-title">Least Connections</div>
+          <p>Route to server with fewest active connections. Better than round-robin but still reactive.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">🎲</span>
+          <div class="card-title">Power of Two Choices</div>
+          <p>Pick 2 random servers, send to the one with fewer connections. Near-optimal at scale with O(1) complexity.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">📊</span>
+          <div class="card-title">EWMA Latency</div>
+          <p>Track exponentially-weighted moving average of response time per backend. Route to the fastest.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">🔑</span>
+          <div class="card-title">Peak EWMA</div>
+          <p>Like EWMA but uses peak (max) instead of average — more sensitive to latency spikes.</p>
+        </div>
+      </div>
+
+      <h3>5. Controlled Queueing (Little's Law)</h3>
+
+      <p>
+        The best insight from queueing theory: <strong>keep queues short</strong>. A long queue doesn't improve throughput — it just adds latency. <em>Little's Law</em> tells us:
+      </p>
+
+      <div class="formula">
+        <div class="eq">L = λ × W</div>
+        <div class="note">L = avg items in system, λ = arrival rate, W = avg time per item. To reduce W (latency), reduce L (queue depth).</div>
+      </div>
+
+      <p>
+        <strong>CoDel (Controlled Delay)</strong> and <strong>FQ-CoDel</strong> are algorithms that actively shed load when queueing delay exceeds a threshold — they drop or reject requests when the queue is growing, preventing the latency spiral that follows from unbounded queueing.
+      </p>
+
+      <h3>6. Bulkhead Pattern</h3>
+
+      <p>
+        Isolate resources so a failure or slowdown in one subsystem doesn't cascade to others. Named after ship compartments, the pattern uses separate thread pools or connection pools per downstream service.
+      </p>
+
+      <div class="diagram">
+        <div class="diagram-title">Without Bulkheads vs With Bulkheads</div>
+        <div class="diagram-body">WITHOUT BULKHEADS:
+┌────────────────────────────────────┐
+│  Shared Thread Pool (100 threads)  │
+│                                    │
+│  [Service A calls]  ←── slow!      │
+│  [Service B calls]  ←── blocked    │
+│  [Service C calls]  ←── blocked    │
+└────────────────────────────────────┘
+Service A slowdown starves B and C.
+
+WITH BULKHEADS:
+┌────────────┐ ┌────────────┐ ┌────────────┐
+│  Pool A    │ │  Pool B    │ │  Pool C    │
+│  (30 th)   │ │  (30 th)   │ │  (40 th)   │
+│  ← slow!   │ │  ← fine    │ │  ← fine    │
+└────────────┘ └────────────┘ └────────────┘
+A's failure is contained. B and C are unaffected.</div>
+      </div>
+
+      <h3>7. Circuit Breakers</h3>
+
+      <p>
+        When a downstream service is degraded, continuing to send requests to it adds latency (waiting for timeouts) AND worsens the degradation. A circuit breaker tracks the error rate and, when it exceeds a threshold, <strong>fails fast</strong> — returning an immediate error instead of waiting.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">Closed (Normal)</div>
+          <p>All requests pass through. Failure count tracked in a sliding window.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Open (Tripped)</div>
+          <p>Circuit has tripped. Requests fail immediately without hitting the backend. Timer starts.</p>
+        </div>
+        <div class="step">
+          <div class="step-title">Half-Open (Probing)</div>
+          <p>Timer expires. One test request is sent. If it succeeds, circuit closes. If it fails, circuit re-opens.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. MEASUREMENT -->
+    <section id="measurement" class="fade-in">
+      <div class="section-num">05 / Measurement</div>
+      <h2>Measuring Tail Latency Correctly</h2>
+
+      <p>
+        You cannot optimize what you cannot measure — and you cannot measure latency well with naive tooling. Most monitoring systems make common measurement mistakes that hide the tail.
+      </p>
+
+      <div class="callout callout-danger">
+        <div class="callout-label">🚨 Common Measurement Mistake</div>
+        <p>
+          Averaging percentiles across time windows or across servers is <strong>mathematically incorrect</strong>. You cannot take the p99 from server A and the p99 from server B and average them to get the overall p99. You must aggregate raw observations first, then compute percentiles.
+        </p>
+      </div>
+
+      <h3>HDR Histogram</h3>
+
+      <p>
+        The <strong>HdrHistogram</strong> library (available in Java, C, Go, and other languages) is purpose-built for recording latency distributions efficiently. It uses a compressed histogram format that supports high-dynamic-range values, making it ideal for capturing both sub-millisecond and multi-second latency in the same structure.
+      </p>
+
+      <pre><code class="code-label">java</code><span class="cm">// HdrHistogram — record latency, compute percentiles</span>
+<span class="kw">import</span> org.HdrHistogram.Histogram;
+
+Histogram histogram = <span class="kw">new</span> <span class="fn">Histogram</span>(<span class="num">3600000000000L</span>, <span class="num">3</span>); <span class="cm">// 1hr, 3 sig figs</span>
+
+<span class="cm">// Record each request latency in nanoseconds</span>
+histogram.<span class="fn">recordValue</span>(latencyNanos);
+
+<span class="cm">// Query percentiles</span>
+<span class="kw">long</span> p50 = histogram.<span class="fn">getValueAtPercentile</span>(<span class="num">50.0</span>);
+<span class="kw">long</span> p99 = histogram.<span class="fn">getValueAtPercentile</span>(<span class="num">99.0</span>);
+<span class="kw">long</span> p999 = histogram.<span class="fn">getValueAtPercentile</span>(<span class="num">99.9</span>);
+
+<span class="cm">// Merge histograms from multiple servers correctly</span>
+Histogram merged = <span class="kw">new</span> <span class="fn">Histogram</span>(<span class="num">3600000000000L</span>, <span class="num">3</span>);
+merged.<span class="fn">add</span>(histogram_server_1);
+merged.<span class="fn">add</span>(histogram_server_2);
+merged.<span class="fn">add</span>(histogram_server_3);</pre>
+
+      <h3>SLO vs SLA: The Contractual Layer</h3>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>Meaning</th>
+            <th>Typical Form</th>
+            <th>Consequence of Violation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SLI</strong> (Indicator)</td>
+            <td>The actual metric being measured</td>
+            <td>p99 latency = 180ms</td>
+            <td>None (just a measurement)</td>
+          </tr>
+          <tr>
+            <td><strong>SLO</strong> (Objective)</td>
+            <td>Internal target for the SLI</td>
+            <td>p99 ≤ 200ms, 99.5% of time</td>
+            <td><span class="badge badge-yellow">Internal escalation</span></td>
+          </tr>
+          <tr>
+            <td><strong>SLA</strong> (Agreement)</td>
+            <td>External contract with customers</td>
+            <td>p99 ≤ 500ms, or credits issued</td>
+            <td><span class="badge badge-red">Financial / legal</span></td>
+          </tr>
+          <tr>
+            <td><strong>Error Budget</strong></td>
+            <td>Allowable SLO violation headroom</td>
+            <td>0.5% of requests can miss p99 target</td>
+            <td><span class="badge badge-green">Feature freeze if exhausted</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 6. PATTERNS -->
+    <section id="patterns" class="fade-in">
+      <div class="section-num">06 / Architecture Patterns</div>
+      <h2>System Design Patterns for Latency Stability</h2>
+
+      <h3>Read-Through Cache with Jitter</h3>
+
+      <p>
+        Expiring all cache entries at the same wall-clock time causes cache stampedes. Add random jitter to TTLs so expirations are distributed across time:
+      </p>
+
+      <pre><code class="code-label">pseudocode</code><span class="cm">// Jittered TTL — prevents synchronized expiry</span>
+<span class="kw">function</span> <span class="fn">setWithJitter</span>(key, value, baseTTL) {
+  <span class="kw">const</span> jitter = Math.<span class="fn">random</span>() * baseTTL * <span class="num">0.2</span>; <span class="cm">// ±20%</span>
+  <span class="kw">const</span> ttl = baseTTL + jitter;
+  cache.<span class="fn">set</span>(key, value, ttl);
+}</pre>
+
+      <h3>Backpressure & Load Shedding</h3>
+
+      <p>
+        A system that accepts unlimited load will degrade unpredictably under pressure. Instead, implement <strong>backpressure</strong>: when load exceeds capacity, signal upstream components to slow down. When backpressure fails (e.g., from external clients), <strong>shed load</strong> by returning HTTP 429 / 503 for the requests that would cause the worst tail latency anyway.
+      </p>
+
+      <div class="callout callout-success">
+        <div class="callout-label">✅ Best Practice</div>
+        <p>
+          Shedding 5% of requests with an immediate 503 is usually better than serving 100% of requests with p99 latency 10× above normal. Degraded service with predictable latency beats highly variable service.
+        </p>
+      </div>
+
+      <h3>Exponential Backoff with Jitter</h3>
+
+      <p>
+        When retrying failed requests, naive exponential backoff causes synchronized retry storms (all clients retry at similar intervals). The fix: add full jitter to the backoff window.
+      </p>
+
+      <pre><code class="code-label">javascript</code><span class="kw">function</span> <span class="fn">backoffWithJitter</span>(attempt, baseMs = <span class="num">100</span>, maxMs = <span class="num">30000</span>) {
+  <span class="cm">// Full jitter: random in [0, min(cap, base * 2^attempt)]</span>
+  <span class="kw">const</span> cap = Math.<span class="fn">min</span>(maxMs, baseMs * Math.<span class="fn">pow</span>(<span class="num">2</span>, attempt));
+  <span class="kw">return</span> Math.<span class="fn">random</span>() * cap;
+}
+
+<span class="cm">// "Decorrelated jitter" (AWS recommendation):</span>
+<span class="kw">function</span> <span class="fn">decorrelatedJitter</span>(attempt, prev = baseMs) {
+  <span class="kw">return</span> Math.<span class="fn">min</span>(maxMs, Math.<span class="fn">random</span>() * (prev * <span class="num">3</span> - baseMs) + baseMs);
+}</pre>
+
+      <h3>Async Completions / Response Hedging in Databases</h3>
+
+      <p>
+        For read-heavy workloads with replicas, you can apply hedging at the database layer: send reads to the primary, and if no response within a threshold, also query a replica. First result wins. This is equivalent to application-level hedging but implemented in the database driver.
+      </p>
+
+      <h3>Priority Queues</h3>
+
+      <p>
+        Not all requests deserve equal treatment. Tiered priority queuing ensures latency-sensitive requests (interactive user queries) are processed before batch or background requests under load. This doesn't improve average latency, but dramatically improves p99 for the high-priority tier.
+      </p>
+    </section>
+
+    <!-- 7. REAL WORLD -->
+    <section id="realworld" class="fade-in">
+      <div class="section-num">07 / Industry Examples</div>
+      <h2>How Top Companies Handle Tail Latency</h2>
+
+      <div class="card-grid">
+        <div class="card">
+          <span class="card-icon">🔍</span>
+          <div class="card-title">Google</div>
+          <p>"The Tail at Scale" paper introduced hedged requests and tied requests. Bigtable uses hedging to keep p99 predictable. Borg scheduler prioritizes latency-sensitive work.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">🛒</span>
+          <div class="card-title">Amazon</div>
+          <p>Dynamo uses consistent hashing + sloppy quorum to reduce tail via parallel reads. AWS SDK implements Adaptive Retry with retry budgets. Every 100ms of latency translates to measurable revenue impact.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">🎬</span>
+          <div class="card-title">Netflix</div>
+          <p>Hystrix library popularized circuit breakers and bulkheads for JVM services. Ribbon load balancer uses weighted response time. Chaos engineering (Chaos Monkey) validates resilience under failure.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">🐦</span>
+          <div class="card-title">Twitter</div>
+          <p>Finagle RPC framework includes built-in tail latency mitigation: backup requests, latency-aware load balancing, and deadline propagation so work isn't done after the client has given up.</p>
+        </div>
+      </div>
+
+      <div class="pullquote">
+        <p>"Tolerating variability means accepting that a few users will always have a worse experience. The question is: which users, and how much worse?"</p>
+        <cite>Jeff Dean & Luiz André Barroso — The Tail at Scale, CACM 2013</cite>
+      </div>
+    </section>
+
+    <!-- 8. TLDR -->
+    <section id="tldr" class="fade-in">
+      <div class="section-num">08 / Summary</div>
+      <h2>TL;DR — The Tail Latency Cheat Sheet</h2>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Problem</th>
+            <th>Root Cause</th>
+            <th>Primary Mitigation</th>
+            <th>Difficulty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Outlier slow requests</td>
+            <td>Resource contention, GC, OS jitter</td>
+            <td>Hedged / tied requests</td>
+            <td><span class="badge badge-yellow">Medium</span></td>
+          </tr>
+          <tr>
+            <td>Fan-out amplification</td>
+            <td>Many parallel downstream calls</td>
+            <td>Latency-aware LB + hedging</td>
+            <td><span class="badge badge-yellow">Medium</span></td>
+          </tr>
+          <tr>
+            <td>Cascading failures</td>
+            <td>Slow downstream starves resources</td>
+            <td>Circuit breaker + bulkheads</td>
+            <td><span class="badge badge-yellow">Medium</span></td>
+          </tr>
+          <tr>
+            <td>Retry storms</td>
+            <td>Naive retries on degraded services</td>
+            <td>Retry budgets + backoff jitter</td>
+            <td><span class="badge badge-green">Low</span></td>
+          </tr>
+          <tr>
+            <td>Queue buildup</td>
+            <td>Arrival > service rate</td>
+            <td>CoDel / load shedding</td>
+            <td><span class="badge badge-red">Hard</span></td>
+          </tr>
+          <tr>
+            <td>Cache stampedes</td>
+            <td>Synchronized TTL expiry</td>
+            <td>TTL jitter + probabilistic refresh</td>
+            <td><span class="badge badge-green">Low</span></td>
+          </tr>
+          <tr>
+            <td>Hidden GC pauses</td>
+            <td>JVM stop-the-world collection</td>
+            <td>Tune GC / use GC-friendly languages</td>
+            <td><span class="badge badge-red">Hard</span></td>
+          </tr>
+          <tr>
+            <td>Noisy neighbors</td>
+            <td>Cloud multi-tenancy</td>
+            <td>Dedicated instances / CPU pinning</td>
+            <td><span class="badge badge-red">Hard</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="callout-label">📚 Essential Reading</div>
+        <p>
+          <strong>The Tail at Scale</strong> — Jeff Dean & Luiz André Barroso (CACM, Feb 2013). The foundational paper. Free to read online. Required reading for anyone designing distributed systems. Also see <strong>Latency Numbers Every Programmer Should Know</strong> by Jeff Dean.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="toc">
+      <div class="toc-title">In This Article</div>
+      <ol>
+        <li><a href="#what">What Is Tail Latency?</a></li>
+        <li><a href="#why">Why It Destroys UX</a></li>
+        <li><a href="#causes">Root Causes</a></li>
+        <li><a href="#mitigation">Mitigation Strategies</a></li>
+        <li><a href="#measurement">Measuring Correctly</a></li>
+        <li><a href="#patterns">Architecture Patterns</a></li>
+        <li><a href="#realworld">Industry Examples</a></li>
+        <li><a href="#tldr">TL;DR Cheat Sheet</a></li>
+      </ol>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">Key Techniques</div>
+      <div class="tag-list">
+        <span class="tag">Hedged Requests</span>
+        <span class="tag">Circuit Breaker</span>
+        <span class="tag">Bulkhead</span>
+        <span class="tag">Retry Budget</span>
+        <span class="tag">CoDel</span>
+        <span class="tag">HdrHistogram</span>
+        <span class="tag">Power of Two Choices</span>
+        <span class="tag">EWMA LB</span>
+        <span class="tag">TTL Jitter</span>
+        <span class="tag">Backpressure</span>
+        <span class="tag">Load Shedding</span>
+        <span class="tag">Priority Queues</span>
+      </div>
+    </div>
+
+    <div class="sidebar-card" style="margin-top:1.5rem; background: #1a0a06; border-top: 3px solid var(--accent);">
+      <div class="sidebar-card-title">Quick Reference</div>
+      <p>p50 = median<br>p99 = 1 in 100 slow<br>p99.9 = 1 in 1000 slow<br><br>
+         At 10K rps, p99 = 100 slow req/s<br><br>
+         N fan-out at p99:<br>Failure chance ≈ 1 − 0.99^N<br><br>
+         At N=100: ~63% chance of tail
+      </p>
+    </div>
+  </aside>
+
+</div>
+
+<footer>
+  <p>
+    SysDeep · System Design Field Notes<br>
+    <a href="#">Home</a> · <a href="#">Archive</a> · <a href="#">About</a> · <a href="#">RSS</a><br><br>
+    Diagrams and code examples are illustrative. Always benchmark your specific stack.
+  </p>
+</footer>
+
+<button class="mobile-toc-btn" onclick="document.querySelector('.toc').scrollIntoView({behavior:'smooth'})">
+  ↑ Contents
+</button>
+
+<script>
+  // Scroll-triggered fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+    </main>
+  </div>
+</body>
+</html>
